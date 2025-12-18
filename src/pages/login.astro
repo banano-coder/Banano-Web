@@ -1,0 +1,99 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+---
+
+<Layout title="Login">
+  <main class="container mx-auto p-4 flex justify-center items-center min-h-screen">
+    <div class="w-full max-w-md">
+      <div class="bg-white dark:bg-gray-900 shadow-md rounded-lg p-8">
+        <h1 class="text-2xl font-bold text-center mb-6">Login</h1>
+        <form id="login-form" class="space-y-6">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input type="email" id="email" placeholder="m@example.com" required />
+          </div>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input type="password" id="password" required />
+          </div>
+          <Button type="submit" className="w-full">Login</Button>
+        </form>
+        <p id="error-message" class="text-red-500 mt-4 text-center"></p>
+				<p class="mt-4 text-center text-sm">
+					Don't have an account? 
+					<a href="/register" class="underline">Sign up</a>
+				</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    import { FetchData } from "@/services/fetch";
+    import {API_ENDPOINTS} from "@/services/api"
+    // No longer need API_ENDPOINTS here, we call our local proxy
+
+    // This interface still correctly represents the data we get back from our proxy
+    interface AuthResponse {
+      message: string;
+      token: string;
+      user: {
+        id_usuario: string;
+        nombre: string;
+        email: string;
+        roles: string[];
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById("login-form");
+      const errorMessage = document.getElementById("error-message");
+
+      if (form && errorMessage) {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          errorMessage.textContent = "";
+
+          const emailInput = document.getElementById("email") as HTMLInputElement;
+          const passwordInput = document.getElementById("password") as HTMLInputElement;
+
+          if (!emailInput.value || !passwordInput.value) {
+            errorMessage.textContent = "Email and password are required.";
+            return;
+          }
+
+          const credentials = {
+            email: emailInput.value,
+            password: passwordInput.value,
+          };
+
+          try {
+            console.log(credentials)
+            // The fetch call now points to the local API route, which will act as a proxy.
+            const data = await FetchData<AuthResponse>(API_ENDPOINTS.LOGIN, 'POST', {
+              body: credentials
+            });
+            console.log(data)
+            if (data && data.token && data.user) {
+              // Set the token in a cookie
+              document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict;`; // Expires in 1 day
+
+              // Store user information in localStorage
+              localStorage.setItem('user', JSON.stringify(data.user));
+
+              // Redirect to the dashboard
+              window.location.href = "/dashboard";
+            } else {
+              errorMessage.textContent = "Login failed: Invalid response from server.";
+            }
+          } catch (error) {
+             const message = (error as Error).message || "An unknown error occurred.";
+             errorMessage.textContent = `Login failed: ${message}`;
+          }
+        });
+      }
+    });
+  </script>
+</Layout>

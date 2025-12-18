@@ -1,0 +1,84 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+---
+
+<Layout title="Register">
+  <main class="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
+    <Card class="w-full max-w-md mx-4">
+      <CardHeader>
+        <CardTitle class="text-2xl font-bold text-center">Register</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form id="register-form" class="space-y-4">
+            <div class="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" type="text" placeholder="John Doe" required />
+              </div>
+          <div class="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" placeholder="m@example.com" required />
+          </div>
+          <div class="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" required />
+          </div>
+          <Button type="submit" class="w-full">Register</Button>
+        </form>
+        <div id="message" class="text-center mt-4 text-sm font-medium"></div>
+        <div class="mt-4 text-center text-sm">
+          Already have an account?
+          <a href="/login" class="underline">Login</a>
+        </div>
+      </CardContent>
+    </Card>
+  </main>
+</Layout>
+
+<script>
+  import { FetchData } from "../services/fetch";
+  import { AUTH_ROUTES } from "../services/api";
+
+  interface RegisterResponse {
+    message: string;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const registerForm = document.getElementById("register-form");
+    const messageElement = document.getElementById("message");
+
+    if (registerForm && messageElement) {
+        registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const usernameInput = document.getElementById("username") as HTMLInputElement;
+        const emailInput = document.getElementById("email") as HTMLInputElement;
+        const passwordInput = document.getElementById("password") as HTMLInputElement;
+
+        if (emailInput && passwordInput && usernameInput) {
+          const email = emailInput.value;
+          const password = passwordInput.value;
+          const username = usernameInput.value;
+
+          try {
+            const data = await FetchData<RegisterResponse>(AUTH_ROUTES.REGISTER, "POST", { email, password, username });
+
+            messageElement.textContent = "Registration successful! Please login.";
+            messageElement.className = "text-center text-sm font-medium text-green-500";
+
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 1500);
+          } catch (error) {
+            console.error("Registration failed:", error);
+            messageElement.textContent = (error as Error).message || "An error occurred. Please try again later.";
+            messageElement.className = "text-center text-sm font-medium text-red-500";
+          }
+        }
+      });
+    }
+  });
+</script>

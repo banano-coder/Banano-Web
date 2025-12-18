@@ -1,0 +1,19 @@
+<header class="flex items-center justify-between p-4 bg-gray-800/80 backdrop-blur-sm border-b border-gray-700">
+    <h1 class="text-2xl font-bold text-white">Dashboard</h1>
+    <button id="logout-button" class="px-4 py-2 text-white bg-purple-600 rounded-md hover:bg-purple-700">Logout</button>
+</header>
+
+<script>
+    const logoutButton = document.getElementById('logout-button');
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            // Remove the auth token cookie
+            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            // Remove user data from localStorage
+            localStorage.removeItem('user');
+            // Redirect to the login page
+            window.location.href = '/login';
+        });
+    }
+</script>
