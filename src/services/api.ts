@@ -7,19 +7,19 @@ export const API_ENDPOINTS = {
   ME: `/api/auth/me`,
   CATALOG: {
     PRODUCTS: `/api/catalog/products`,
-    CATEGORIES: `/api/catalog/categories`,
-    BRANDS: `/api/catalog/brands`,
+    CATEGORIES: `/api/categories`,
+    BRANDS: `/api/brands`
   },
   USERS: {
     LIST: `/api/users`,
     CREATE: `/api/users`,
-    UPDATE: (id: string, action: string) => `/api/users/${id}/${action}`,
+    UPDATE: (id: string, action: string) => `/api/users/${id}/${action}`
   },
   PRODUCTS: {
     LIST: `/api/products`,
     CREATE: `/api/products`,
     DETAIL: (id: string | number) => `/api/products/${id}`,
     UPDATE: (id: string | number) => `/api/products/${id}`,
-    DELETE: (id: string | number) => `/api/products/${id}`,
+    DELETE: (id: string | number) => `/api/products/${id}`
   }
-};
+}
