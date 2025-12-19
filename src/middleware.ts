@@ -5,24 +5,28 @@ import { defineMiddleware } from "astro:middleware";
 
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
-// This function now calls our *local* proxy endpoint, not the real API.
-async function validateToken(token: string, host: string): Promise<boolean> {
-  try {
-    // Construct the full URL for the local API endpoint
-    const validationUrl = `${host}/api/auth/me`;
+// This function now calls our *external* validation endpoint.
+const validateToken = async (token: string): Promise<boolean> => {
+    const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
+    if (!externalApiBase) {
+      console.error("PUBLIC_EXTERNAL_API_BASE is not defined.");
+      return false;
+    }
 
-    const response = await fetch(validationUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    return response.ok;
-  } catch (error) {
-    console.error('Token validation fetch error in middleware:', error);
-    return false;
-  }
-}
+    try {
+        const response = await fetch(`${externalApiBase}/auth/me`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        return response.ok;
+    } catch (error) {
+        console.error("Token validation error:", error);
+        return false;
+    }
+};
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, cookies, redirect } = context;
@@ -41,11 +45,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return redirect("/login");
   }
   
-  // We need to pass the request's host to the validation function
-  // so it knows which server to call (e.g., localhost:4321)
-  const host = url.origin;
-
-  const isTokenValid = await validateToken(token, host);
+  const isTokenValid = await validateToken(token);
 
   if (isTokenValid) {
     return next();

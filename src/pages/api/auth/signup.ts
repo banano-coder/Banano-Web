@@ -1,9 +1,6 @@
 import type { APIRoute } from 'astro';
 
-// IMPORTANT: This endpoint is using MOCK DATA.
-
 export const POST: APIRoute = async ({ request }) => {
-  // Defensive check for the Content-Type header
   if (request.headers.get("Content-Type") !== "application/json") {
     return new Response(JSON.stringify({ message: 'Unsupported Media Type. Expected application/json.' }), {
       status: 415,
@@ -13,29 +10,33 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const { email, password } = body;
+    let { email, password, nombre } = body;
 
-    if (!email || !password) {
-      return new Response(JSON.stringify({ message: 'Email and password are required' }), {
+    // Basic validation
+    if (!email || !password || !nombre) {
+      return new Response(JSON.stringify({ message: 'Nombre, email and password are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // Normalize email
+    email = email.toLowerCase();
+
     const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
     
     if (!externalApiBase) {
        console.error("PUBLIC_EXTERNAL_API_BASE is not defined in environment variables.");
-       throw new Error("Misconfiguration: API Base URL missing");
+       return new Response(JSON.stringify({ message: 'Server misconfiguration' }), { status: 500 });
     }
 
     // Proxy request to external API
-    const response = await fetch(`${externalApiBase}/auth/login`, {
+    const response = await fetch(`${externalApiBase}/auth/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, nombre }),
     });
 
     const data = await response.json();
@@ -46,7 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('Error in /api/auth/login:', error);
+    console.error('Error in /api/auth/signup:', error);
     return new Response(JSON.stringify({ message: 'An internal server error occurred while processing the request.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

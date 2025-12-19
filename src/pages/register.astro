@@ -7,16 +7,16 @@ import { Label } from "../components/ui/label";
 ---
 
 <Layout title="Register">
-  <main class="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
-    <Card class="w-full max-w-md mx-4">
+  <main class="flex items-center justify-center min-h-screen bg-background">
+    <Card className="w-full max-w-md mx-4">
       <CardHeader>
-        <CardTitle class="text-2xl font-bold text-center">Register</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Register</CardTitle>
       </CardHeader>
       <CardContent>
         <form id="register-form" class="space-y-4">
             <div class="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input id="username" type="text" placeholder="John Doe" required />
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input id="nombre" type="text" placeholder="Juan Pérez" required />
               </div>
           <div class="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -26,7 +26,7 @@ import { Label } from "../components/ui/label";
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required />
           </div>
-          <Button type="submit" class="w-full">Register</Button>
+          <Button type="submit" className="w-full">Register</Button>
         </form>
         <div id="message" class="text-center mt-4 text-sm font-medium"></div>
         <div class="mt-4 text-center text-sm">
@@ -40,7 +40,7 @@ import { Label } from "../components/ui/label";
 
 <script>
   import { FetchData } from "../services/fetch";
-  import { AUTH_ROUTES } from "../services/api";
+  import { API_ENDPOINTS } from "../services/api";
 
   interface RegisterResponse {
     message: string;
@@ -54,17 +54,19 @@ import { Label } from "../components/ui/label";
         registerForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const usernameInput = document.getElementById("username") as HTMLInputElement;
+        const nombreInput = document.getElementById("nombre") as HTMLInputElement;
         const emailInput = document.getElementById("email") as HTMLInputElement;
         const passwordInput = document.getElementById("password") as HTMLInputElement;
 
-        if (emailInput && passwordInput && usernameInput) {
+        if (emailInput && passwordInput && nombreInput) {
           const email = emailInput.value;
           const password = passwordInput.value;
-          const username = usernameInput.value;
+          const nombre = nombreInput.value;
 
           try {
-            const data = await FetchData<RegisterResponse>(AUTH_ROUTES.REGISTER, "POST", { email, password, username });
+            const data = await FetchData<RegisterResponse>(API_ENDPOINTS.REGISTER, "POST", { 
+              body: { email, password, nombre } 
+            });
 
             messageElement.textContent = "Registration successful! Please login.";
             messageElement.className = "text-center text-sm font-medium text-green-500";
