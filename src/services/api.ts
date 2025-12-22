@@ -20,6 +20,18 @@ export const API_ENDPOINTS = {
     CREATE: `/api/products`,
     DETAIL: (id: string | number) => `/api/products/${id}`,
     UPDATE: (id: string | number) => `/api/products/${id}`,
-    DELETE: (id: string | number) => `/api/products/${id}`
+    DELETE: (id: string | number) => `/api/products/${id}`,
+    VARIANTS: (id: string | number) => `/api/products/${id}/variants`,
+    IMAGES: (id: string | number) => `/api/products/${id}/images`
+  },
+  VARIANTS: {
+    ITEM: (id: string | number) => `/api/variants/${id}`
+  },
+  IMAGES: {
+    ITEM: (productId: number | string, imgId: number | string) => `/api/products/${productId}/images/${imgId}`
+  },
+  INVENTORY: {
+    MOVEMENTS: `/api/inventario/movimientos`,
+    STOCK: (id: string | number) => `/api/inventario/stock/${id}`
   }
 }

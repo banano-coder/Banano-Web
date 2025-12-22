@@ -125,6 +125,7 @@ export const ProductList = () => {
                                 <TableHead>SKU</TableHead>
                                 <TableHead>Categoría</TableHead>
                                 <TableHead>Marca</TableHead>
+                                <TableHead>Stock</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
@@ -132,13 +133,13 @@ export const ProductList = () => {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                         Cargando productos...
                                     </TableCell>
                                 </TableRow>
                             ) : products.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                         No se encontraron productos.
                                     </TableCell>
                                 </TableRow>
@@ -147,8 +148,9 @@ export const ProductList = () => {
                                     <TableRow key={product.id_producto}>
                                         <TableCell className="font-medium">{product.nombre}</TableCell>
                                         <TableCell>{product.sku_base || '-'}</TableCell>
-                                        <TableCell>{product.Categoria?.nombre || '-'}</TableCell>
-                                        <TableCell>{product.Marca?.nombre || '-'}</TableCell>
+                                        <TableCell>{product.category_name || product.Categoria?.nombre || '-'}</TableCell>
+                                        <TableCell>{product.brand_name || product.Marca?.nombre || '-'}</TableCell>
+                                        <TableCell>{product.total_stock ?? 0}</TableCell>
                                         <TableCell>
                                             {product.activo ? (
                                                 <Badge className="bg-green-500 hover:bg-green-600">Activo</Badge>

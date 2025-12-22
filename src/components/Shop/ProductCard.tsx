@@ -2,21 +2,16 @@ import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Product } from './CartConfig';
-import { addCartItem } from '@/store/cartStore';
 import { ShoppingCart } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
+  onSelect: (product: Product) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const handleAddToCart = () => {
-    addCartItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image
-    });
+export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) => {
+  const handleAction = () => {
+    onSelect(product);
   };
 
   return (
@@ -37,10 +32,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </CardContent>
       <CardFooter>
         <Button 
-          onClick={handleAddToCart}
+          onClick={handleAction}
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
         >
-          <ShoppingCart className="mr-2 h-4 w-4" /> Agregar
+          <ShoppingCart className="mr-2 h-4 w-4" /> Ver / Agregar
         </Button>
       </CardFooter>
     </Card>

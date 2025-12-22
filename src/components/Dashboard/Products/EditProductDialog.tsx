@@ -18,9 +18,15 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FetchData } from '@/services/fetch'
 import { API_ENDPOINTS } from '@/services/api'
 import type { Product, Category, Brand } from '@/types'
+
+// Sub-components
+import { ProductVariantsTab } from './tabs/ProductVariantsTab';
+import { ProductImagesTab } from './tabs/ProductImagesTab';
+import { ProductInventoryTab } from './tabs/ProductInventoryTab';
 
 interface EditProductDialogProps {
   open: boolean
@@ -55,19 +61,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         setNombre(product.nombre)
         setSku(product.sku_base || '')
         setDescripcion(product.descripcion || '')
-        // Assuming product has Categoria/Marca objects with names, but we need IDs to update.
-        // If the product object doesn't have IDs directly, we might need a DETAIL fetch or rely on what's available.
-        // API GET /products list usually returns full objects with joined tables.
-        // Assuming product has id_categoria/id_marca OR we extract from nested if possible?
-        // The provided interface for ProductList has Categoria: { nombre }. It might not have ID.
-        // Let's check "User Request": GET /api/products returns list.
-        // If list doesn't have IDs, we should fetch DETAIL.
-        // Plan: Fetch DETAIL first to be safe, or just use what we have if we update the interface to include IDs.
-        // I will add id_categoria and id_marca to the Product interface in ProductList if they are returned.
-        // FOR NOW, I will try to fetch DETAIL to get IDs if I can't find them.
-        // Actually, I'll assume they are present in the product object even if not displayed,
-        // but types might block me.
-        // Let's fetch Detail content to be sure.
+        
         if (product.id_producto) {
           fetchProductDetail(product.id_producto)
         }
@@ -88,9 +82,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   const fetchProductDetail = async (id: number) => {
     try {
-      const data = await FetchData<any>(API_ENDPOINTS.PRODUCTS.DETAIL(id)) // any to bypass strict checks for now
+      const data = await FetchData<any>(API_ENDPOINTS.PRODUCTS.DETAIL(id))
       if (data) {
-        // Assuming data returned has the fields
         setNombre(data.nombre)
         setSku(data.sku_base || '')
         setDescripcion(data.descripcion || '')
@@ -120,12 +113,13 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             descripcion,
             id_categoria: parseInt(categoryId),
             id_marca: parseInt(brandId),
-            activo: product.activo // preserve active status
+            activo: product.activo
           }
         }
       )
       onProductUpdated()
-      onClose()
+      // onClose() // Don't close, user might want to edit variants next
+      alert("Producto actualizado correctamente");
     } catch (err: any) {
       setError(err.message || 'Error updating product')
     } finally {
@@ -133,104 +127,132 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     }
   }
 
+  if (!product) return null;
+
   return (
     <Dialog open={open} onOpenChange={val => !val && onClose()}>
-      <DialogContent className="sm:max-w-[550px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Editar Producto</DialogTitle>
+      <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0 gap-0 bg-background">
+        <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Gestionar Producto: {product.nombre}</DialogTitle>
             <DialogDescription>
-              Modifica los detalles del producto{' '}
-              <strong>{product?.nombre}</strong>.
+             Edita información general, variantes, imágenes e inventario.
             </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-nombre">Nombre</Label>
-              <Input
-                id="edit-nombre"
-                value={nombre}
-                onChange={e => setNombre(e.target.value)}
-                placeholder="Nombre del producto"
-              />
+        </DialogHeader>
+
+        <Tabs defaultValue="general" className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-6 border-b">
+                <TabsList>
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="variants">Variantes</TabsTrigger>
+                    <TabsTrigger value="images">Imágenes</TabsTrigger>
+                    <TabsTrigger value="inventory">Inventario</TabsTrigger>
+                </TabsList>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Categoría</Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories
-                      .filter(c => c.id_categoria != null)
-                      .map(c => (
-                        <SelectItem
-                          key={c.id_categoria}
-                          value={c.id_categoria.toString()}>
-                          {c.nombre || 'Sin nombre'}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Marca</Label>
-                <Select value={brandId} onValueChange={setBrandId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands
-                      .filter(b => b.id_marca != null)
-                      .map(b => (
-                        <SelectItem
-                          key={b.id_marca}
-                          value={b.id_marca.toString()}>
-                          {b.nombre || 'Sin nombre'}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+                <TabsContent value="general" className="mt-0 h-full">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-nombre">Nombre</Label>
+                            <Input
+                                id="edit-nombre"
+                                value={nombre}
+                                onChange={e => setNombre(e.target.value)}
+                                placeholder="Nombre del producto"
+                            />
+                        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit-sku">SKU Base</Label>
-              <Input
-                id="edit-sku"
-                value={sku}
-                onChange={e => setSku(e.target.value)}
-                placeholder="SKU"
-              />
-            </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label>Categoría</Label>
+                                <Select value={categoryId} onValueChange={setCategoryId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories
+                                    .filter(c => c.id_categoria != null)
+                                    .map(c => (
+                                        <SelectItem
+                                        key={c.id_categoria}
+                                        value={c.id_categoria.toString()}>
+                                        {c.nombre || 'Sin nombre'}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Marca</Label>
+                                <Select value={brandId} onValueChange={setBrandId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {brands
+                                    .filter(b => b.id_marca != null)
+                                    .map(b => (
+                                        <SelectItem
+                                        key={b.id_marca}
+                                        value={b.id_marca.toString()}>
+                                        {b.nombre || 'Sin nombre'}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit-descripcion">Descripción</Label>
-              <Textarea
-                id="edit-descripcion"
-                value={descripcion}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                  setDescripcion(e.target.value)
-                }
-                placeholder="Detalles..."
-              />
-            </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-sku">SKU Base</Label>
+                            <Input
+                                id="edit-sku"
+                                value={sku}
+                                onChange={e => setSku(e.target.value)}
+                                placeholder="SKU"
+                            />
+                        </div>
 
-            {error && (
-              <div className="text-red-500 text-sm font-medium">{error}</div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
-            </Button>
-          </DialogFooter>
-        </form>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-descripcion">Descripción</Label>
+                            <Textarea
+                                id="edit-descripcion"
+                                value={descripcion}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                setDescripcion(e.target.value)
+                                }
+                                placeholder="Detalles..."
+                            />
+                        </div>
+
+                        {error && (
+                            <div className="text-red-500 text-sm font-medium">{error}</div>
+                        )}
+                        
+                        <div className="pt-4 flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={onClose}>
+                                Cerrar
+                            </Button>
+                            <Button type="submit" disabled={loading}>
+                                {loading ? 'Guardando...' : 'Guardar Información General'}
+                            </Button>
+                        </div>
+                    </form>
+                </TabsContent>
+                
+                <TabsContent value="variants" className="mt-0">
+                    <ProductVariantsTab product={product} />
+                </TabsContent>
+
+                <TabsContent value="images" className="mt-0">
+                    <ProductImagesTab product={product} />
+                </TabsContent>
+
+                <TabsContent value="inventory" className="mt-0">
+                     <ProductInventoryTab product={product} />
+                </TabsContent>
+            </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

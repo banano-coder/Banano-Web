@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
 import { cartItems, removeCartItem, type CartItem } from '@/store/cartStore';
 import { Button } from "@/components/ui/button";
-import { X, Trash2, ArrowRight } from 'lucide-react';
+import { X, Trash2, ArrowRight, Minus, Plus } from 'lucide-react';
 
 export const CartDrawer: React.FC = () => {
     const $cartItems = useStore(cartItems);
@@ -46,7 +46,15 @@ export const CartDrawer: React.FC = () => {
         const name = customerName.trim() || "Cliente";
         
         // Format Items
-        const itemsList = items.map(item => `   - ${item.name} (x${item.quantity}): $${(item.price * item.quantity).toFixed(2)}`).join('\n');
+        const itemsList = items.map(item => {
+            let details = '';
+            if (item.sku) details += ` (SKU: ${item.sku})`;
+            if (item.attributes) {
+                const attrs = Object.entries(item.attributes).map(([k,v]) => `${k}: ${v}`).join(', ');
+                if (attrs) details += ` [${attrs}]`;
+            }
+            return `   - ${item.name}${details} (x${item.quantity}): $${(item.price * item.quantity).toFixed(2)}`;
+        }).join('\n');
         
         // Format Message
         const message = `*Hola Banano Shop!* 🍌\n\nMi nombre es *${name}* y quisiera hacer el siguiente pedido:\n\n${itemsList}\n\n*Total: $${total.toFixed(2)}*\n\n¿Cómo procedo con el pago?`;
@@ -80,28 +88,49 @@ export const CartDrawer: React.FC = () => {
                             <p className="text-sm mt-2">¡Agrega algunos bananos!</p>
                         </div>
                     ) : (
-                        items.map((item) => (
-                            <div key={item.id} className="flex gap-4 bg-secondary/20 p-3 rounded-lg">
-                                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-md" />
-                                <div className="flex-1">
-                                    <h3 className="font-bold text-sm">{item.name}</h3>
-                                    <div className="text-primary text-sm font-medium">
-                                        ${item.price.toFixed(2)} x {item.quantity}
-                                    </div>
-                                    <div className="text-muted-foreground text-xs mt-1">
-                                        Subtotal: ${(item.price * item.quantity).toFixed(2)}
+                        items.map((item) => {
+                            const key = item.variantId ? `${item.id}-${item.variantId}` : item.id;
+                            const attrString = item.attributes ? Object.entries(item.attributes).map(([k,v]) => `${k}: ${v}`).join(', ') : '';
+
+                            return (
+                                <div key={key} className="flex gap-4 bg-secondary/20 p-3 rounded-lg">
+                                    <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-md" />
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-sm truncate pr-2">{item.name}</h3>
+                                        {attrString && <p className="text-xs text-muted-foreground truncate">{attrString}</p>}
+                                        {item.sku && <p className="text-[10px] text-muted-foreground/80">SKU: {item.sku}</p>}
+                                        
+                                        <div className="flex items-center justify-between mt-2">
+                                            <div className="text-primary text-sm font-bold">
+                                                ${(item.price * item.quantity).toFixed(2)}
+                                            </div>
+                                            
+                                            {/* Quantity Controls */}
+                                            <div className="flex items-center border border-input rounded-md bg-background shadow-sm h-7">
+                                                 <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-full w-7 rounded-r-none hover:bg-gray-100 p-0"
+                                                    onClick={() => import('@/store/cartStore').then(mod => mod.updateItemQuantity(key, -1))}
+                                                >
+                                                    {item.quantity === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3" />}
+                                                </Button>
+                                                <div className="w-8 text-center text-xs font-semibold select-none">{item.quantity}</div>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-full w-7 rounded-l-none hover:bg-gray-100 p-0"
+                                                    onClick={() => import('@/store/cartStore').then(mod => mod.updateItemQuantity(key, 1))}
+                                                    disabled={item.maxStock !== undefined && item.quantity >= item.maxStock}
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => removeCartItem(item.id)}
-                                    className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 

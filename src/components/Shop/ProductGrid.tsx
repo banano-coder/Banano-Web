@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Input } from "@/components/ui/input";
 import { ProductCard } from './ProductCard';
+import { ProductDetailDialog } from './ProductDetailDialog';
 import { Search } from 'lucide-react';
 import type { Product } from './CartConfig';
 import { API_ENDPOINTS } from '@/services/api';
@@ -9,6 +10,10 @@ import { FetchData } from '@/services/fetch';
 export const ProductGrid: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Dialog State
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
   
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,15 +40,24 @@ export const ProductGrid: React.FC = () => {
         // Based on user description: GET /api/catalog/categories
         // I will log them to check structure if needed, but for now map broadly
         
-        if (catsData) {
-            setCategories([{ id: 'all', name: 'Todos' }, ...catsData.map((c: any) => ({ 
+        // Helper to extract array from response
+        const getList = (data: any) => {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.data)) return data.data;
+            return [];
+        };
+
+        const catsList = getList(catsData);
+        if (catsList.length > 0) {
+            setCategories([{ id: 'all', name: 'Todos' }, ...catsList.map((c: any) => ({ 
                 id: c.id_categoria || c.id || String(c), 
                 name: c.nombre || c.name || String(c) 
             }))]);
         }
 
-        if (brandsData) {
-            setBrands([{ id: 'all', name: 'Todas' }, ...brandsData.map((b: any) => ({ 
+        const brandsList = getList(brandsData);
+        if (brandsList.length > 0) {
+            setBrands([{ id: 'all', name: 'Todas' }, ...brandsList.map((b: any) => ({ 
                 id: b.id_marca || b.id || String(b), 
                 name: b.nombre || b.name || String(b) 
             }))]);
@@ -235,7 +249,14 @@ export const ProductGrid: React.FC = () => {
              <div className="col-span-full text-center py-20 text-muted-foreground">Cargando productos... 🍌</div>
         ) : filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard 
+                key={product.id} 
+                product={product} 
+                onSelect={(p) => { 
+                    setSelectedProductId(Number(p.id)); 
+                    setDetailOpen(true); 
+                }}
+            />
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-muted-foreground">
@@ -243,6 +264,12 @@ export const ProductGrid: React.FC = () => {
           </div>
         )}
       </div>
+      
+      <ProductDetailDialog 
+        isOpen={detailOpen} 
+        onClose={() => setDetailOpen(false)} 
+        productId={selectedProductId} 
+      />
     </div>
   );
 };

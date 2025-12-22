@@ -47,6 +47,7 @@ export async function FetchData<T>(
     const config: RequestInit = {
         method,
         headers,
+        cache: 'no-store',
         ...restOptions, // Pasa signal, cache, mode, etc.
     };
 
