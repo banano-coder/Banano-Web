@@ -5,20 +5,35 @@ import { cn } from "@/lib/utils";
 import { ProductGrid } from "@/components/Shop/ProductGrid";
 import { CartWidget } from "@/components/Shop/CartWidget";
 import { CartDrawer } from "@/components/Shop/CartDrawer";
-import { LogIn } from 'lucide-react';
+import { LogIn, MapPin } from 'lucide-react';
+
+const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
+let settings: any = {};
+
+try {
+    const response = await fetch(`${externalApiBase}/public/settings`);
+    if (response.ok) {
+        settings = await response.json();
+    }
+} catch (e) {
+    console.error("Error fetching settings for index.astro:", e);
+}
+
+const tienda = settings.tienda || {};
+const title = tienda.nombre || "Banano Shop";
 ---
 
-<Layout title="Banano Shop">
+<Layout title={title}>
   <!-- Interactive Elements (Islands) -->
   <CartWidget client:load />
   <CartDrawer client:load />
 
-  <main class="flex-1 bg-background min-h-screen text-foreground bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
+  <main class="flex flex-col min-h-screen bg-background text-foreground bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
     <!-- Hero / Header Section -->
     <header class="container px-4 py-8 flex justify-between items-center border-b border-border">
       <div class="flex items-center space-x-2">
          <span class="text-3xl">🍌</span>
-         <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">Banano Shop</h1>
+         <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">{title}</h1>
       </div>
       
       <div class="flex items-center space-x-4">
@@ -32,19 +47,69 @@ import { LogIn } from 'lucide-react';
       </div>
     </header>
 
-    <!-- Hero Banner -->
-    <section class="py-12 md:py-20 text-center container px-4">
-      <h2 class="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
-        Deliciosos <span class="text-primary">Bananos</span> Frescos
-      </h2>
-      <p class="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
-        La mejor selección de productos derivados del banano, entregados directamente a tu puerta. Frescura garantizada y sabor inigualable.
-      </p>
-    </section>
+    <div class="flex-1">
+      <!-- Hero Banner -->
+      <section class="py-12 md:py-20 text-center container px-4">
+        <h2 class="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
+          Deliciosos <span class="text-primary">Bananos</span> Frescos
+        </h2>
+        <p class="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
+          La mejor selección de productos derivados del banano, entregados directamente a tu puerta. Frescura garantizada y sabor inigualable.
+        </p>
+      </section>
 
-    <!-- Product Grid -->
-    <section class="container px-4 pb-20">
-      <ProductGrid client:load />
-    </section>
+      <!-- Product Grid -->
+      <section class="container px-4 pb-20">
+        <ProductGrid client:load />
+      </section>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="border-t border-border bg-card/50 backdrop-blur-sm py-12">
+        <div class="container px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
+                <div class="space-y-4 max-w-sm">
+                    <div class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="text-2xl">🍌</span>
+                        <h3 class="text-xl font-bold text-primary">{title}</h3>
+                    </div>
+                    <p class="text-sm text-muted-foreground">
+                        Liderando el mercado de productos naturales y artesanales con la mejor calidad de exportación.
+                    </p>
+                </div>
+
+                {tienda.mostrar_info && (
+                    <div class="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                        {tienda.direccion && (
+                            <div class="flex flex-col items-center md:items-start gap-1 max-w-xs">
+                                <div class="flex items-center gap-2 text-primary font-bold uppercase tracking-tight text-[10px]">
+                                    <MapPin className="h-3 w-3" />
+                                    Dirección
+                                </div>
+                                <p class="text-xs text-foreground bg-primary/5 p-2 rounded-lg border border-primary/10 shadow-sm text-center md:text-left">
+                                    {tienda.direccion}
+                                </p>
+                            </div>
+                        )}
+
+                        {(tienda.telefono || tienda.email_contacto) && (
+                            <div class="space-y-3 flex flex-col items-center md:items-start">
+                                <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Contacto</p>
+                                <div class="space-y-1 text-center md:text-left">
+                                    {tienda.telefono && <p class="text-sm font-bold text-primary">{tienda.telefono}</p>}
+                                    {tienda.email_contacto && <p class="text-xs font-medium text-muted-foreground">{tienda.email_contacto}</p>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            <div class="mt-12 pt-8 border-t border-border text-center">
+                <p class="text-[10px] text-muted-foreground font-medium uppercase tracking-[0.2em]">
+                    &copy; {new Date().getFullYear()} {title}. PROYECTO DE GRADO - Todos los derechos reservados.
+                </p>
+            </div>
+        </div>
+    </footer>
   </main>
 </Layout>

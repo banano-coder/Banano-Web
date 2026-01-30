@@ -13,7 +13,8 @@ export const API_ENDPOINTS = {
   USERS: {
     LIST: `/api/users`,
     CREATE: `/api/users`,
-    UPDATE: (id: string, action: string) => `/api/users/${id}/${action}`
+    UPDATE: (id: string, action: string) => `/api/users/${id}/${action}`,
+    DELETE: (id: string) => `/api/users/${id}`
   },
   PRODUCTS: {
     LIST: `/api/products`,

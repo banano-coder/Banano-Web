@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+import {
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { 
-    Card, CardContent, CardHeader, CardTitle 
+import {
+    Card, CardContent, CardHeader, CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-    Search, Plus,  Edit, Ban, CheckCircle, ChevronLeft, ChevronRight 
+import {
+    Search, Plus, Edit, Ban, CheckCircle, ChevronLeft, ChevronRight, Trash, Trash2,
+    CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import { CreateProductDialog } from './CreateProductDialog';
 import { EditProductDialog } from './EditProductDialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Product } from '@/types';
 
@@ -36,27 +37,37 @@ export const ProductList = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null); // For Edit
     const [productToToggle, setProductToToggle] = useState<Product | null>(null); // For Deactivate/Activate
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null); // For permanent deletion
     const [statusLoading, setStatusLoading] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => setMessage(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
 
     const fetchProducts = async () => {
         setLoading(true);
         try {
             // Logic similar to UserList
-             const queryParams = new URLSearchParams();
+            const queryParams = new URLSearchParams();
             // queryParams.append('page', page.toString()); // If API supports it
             if (searchTerm) queryParams.append('search', searchTerm);
+            queryParams.append('_t', Date.now().toString());
 
             const url = `${API_ENDPOINTS.PRODUCTS.LIST}?${queryParams.toString()}`;
-             const data = await FetchData<Product[]>(url); // API GET /products returns array directly or paginated object? 
-             // "lista todos los productos ordenados por fecha_creacion desc." implying array?
-             // UserList had specific structure. I'll assume array for now based on "lista todos".
-             
-             if (Array.isArray(data)) {
-                 setProducts(data);
-                 setTotalPages(1); // No pagination mentioned?
-             } else {
-                 setProducts([]);
-             }
+            const data = await FetchData<Product[]>(url); // API GET /products returns array directly or paginated object? 
+            // "lista todos los productos ordenados por fecha_creacion desc." implying array?
+            // UserList had specific structure. I'll assume array for now based on "lista todos".
+
+            if (Array.isArray(data)) {
+                setProducts(data);
+                setTotalPages(1); // No pagination mentioned?
+            } else {
+                setProducts([]);
+            }
 
         } catch (error) {
             console.error('Failed to fetch products', error);
@@ -73,24 +84,16 @@ export const ProductList = () => {
         if (!productToToggle) return;
         setStatusLoading(true);
         try {
-            // API DELETE /products/:id to deactivate (as per user request "DELETE ... desactiva")
-            // Or if activating, we might need a different endpoint?
-            // User said: "DELETE /api/products/:id ... desactiva (activo=false)"
-            // User did NOT specify how to ACTIVATE. 
-            // However, PUT /api/products/:id accepts "activo".
-            // So for activation, I should use PUT with { activo: true }.
-            // For deactivation, I can use DELETE or PUT { activo: false }. 
-            // I'll use DELETE for deactivation as requested, and PUT for activation.
-            
-            if (productToToggle.activo) {
-                 await FetchData(API_ENDPOINTS.PRODUCTS.DELETE(productToToggle.id_producto), 'DELETE');
-            } else {
-                 await FetchData(API_ENDPOINTS.PRODUCTS.UPDATE(productToToggle.id_producto), 'PUT', {
-                     body: { activo: true }
-                 });
-            }
+            // Se usa PUT para cambiar el estado (activar o desactivar)
+            await FetchData(API_ENDPOINTS.PRODUCTS.UPDATE(productToToggle.id_producto), 'PUT', {
+                body: { activo: !productToToggle.activo }
+            });
 
             await fetchProducts();
+            setMessage({
+                type: 'success',
+                text: `Producto ${productToToggle.activo ? 'desactivado' : 'activado'} correctamente.`
+            });
             setProductToToggle(null);
         } catch (error) {
             console.error('Error toggling product status:', error);
@@ -99,23 +102,46 @@ export const ProductList = () => {
         }
     };
 
+    const handleHardDelete = async () => {
+        if (!productToDelete) return;
+        setStatusLoading(true);
+        try {
+            await FetchData(API_ENDPOINTS.PRODUCTS.DELETE(productToDelete.id_producto), 'DELETE');
+            setMessage({ type: 'success', text: 'Producto eliminado permanentemente.' });
+            await fetchProducts();
+            setProductToDelete(null);
+        } catch (error: any) {
+            console.error('Error deleting product:', error);
+            setMessage({ type: 'error', text: error.message || 'No se pudo eliminar el producto. Puede que tenga pedidos asociados.' });
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-4">
-             <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center">
                 <div className="relative w-72">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input 
-                        placeholder="Buscar productos..." 
+                    <Input
+                        placeholder="Buscar productos..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-9"
                     />
                 </div>
-                 <CreateProductDialog onProductCreated={fetchProducts} />
+                <CreateProductDialog onProductCreated={fetchProducts} />
             </div>
             <Card>
-                <CardHeader className="py-4">
-                     <CardTitle className="text-lg">Inventario de Productos</CardTitle>
+                <CardHeader className="py-4 flex flex-row items-center justify-between space-y-0">
+                    <CardTitle className="text-lg">Inventario de Productos</CardTitle>
+                    {message && (
+                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border animate-in fade-in slide-in-from-right-1 ${message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+                            }`}>
+                            {message.type === 'success' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                            <span className="text-xs font-medium">{message.text}</span>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -160,17 +186,17 @@ export const ProductList = () => {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
                                                     title="Editar"
                                                     onClick={() => setSelectedProduct(product)}
                                                 >
                                                     <Edit className="h-4 w-4 text-muted-foreground" />
                                                 </Button>
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
                                                     title={product.activo ? "Desactivar" : "Activar"}
                                                     onClick={() => setProductToToggle(product)}
                                                 >
@@ -179,6 +205,14 @@ export const ProductList = () => {
                                                     ) : (
                                                         <CheckCircle className="h-4 w-4 text-green-500" />
                                                     )}
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    title="Eliminar permanentemente"
+                                                    onClick={() => setProductToDelete(product)}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-600" />
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -190,11 +224,11 @@ export const ProductList = () => {
                 </CardContent>
             </Card>
 
-            <EditProductDialog 
-                open={!!selectedProduct} 
-                onClose={() => setSelectedProduct(null)} 
+            <EditProductDialog
+                open={!!selectedProduct}
+                onClose={() => setSelectedProduct(null)}
                 onProductUpdated={fetchProducts}
-                product={selectedProduct} 
+                product={selectedProduct}
             />
 
             <AlertDialog open={!!productToToggle} onOpenChange={() => setProductToToggle(null)}>
@@ -211,6 +245,22 @@ export const ProductList = () => {
                         <AlertDialogCancel disabled={statusLoading}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction onClick={handleToggleStatus} disabled={statusLoading} className={productToToggle?.activo ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}>
                             {statusLoading ? 'Procesando...' : (productToToggle?.activo ? 'Desactivar' : 'Activar')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={!!productToDelete} onOpenChange={(val) => !val && setProductToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar producto de forma permanente?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción eliminará el producto <strong>{productToDelete?.nombre}</strong> del sistema. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={statusLoading}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleHardDelete} disabled={statusLoading} className="bg-red-600 hover:bg-red-700">
+                            {statusLoading ? 'Eliminando...' : 'Eliminar permanentemente'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

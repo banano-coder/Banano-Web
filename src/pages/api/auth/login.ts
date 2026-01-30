@@ -23,10 +23,27 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
-    
+
+    // MOCK MODE: If no external API is defined, return mock success
     if (!externalApiBase) {
-       console.error("PUBLIC_EXTERNAL_API_BASE is not defined in environment variables.");
-       throw new Error("Misconfiguration: API Base URL missing");
+      console.warn("PUBLIC_EXTERNAL_API_BASE not defined. Returning MOCK response.");
+      return new Response(JSON.stringify({
+        message: 'Login exitoso (MOCK MODE)',
+        token: 'mock-jwt-token-xyz-123',
+        user: {
+          id: 'mock-user-id-123',
+          email: email,
+          nombre: 'Usuario Mock',
+          role: 'customer'
+        }
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          // Set a cookie for the mock token
+          'Set-Cookie': 'token=mock-jwt-token-xyz-123; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400'
+        },
+      });
     }
 
     // Proxy request to external API
@@ -40,9 +57,16 @@ export const POST: APIRoute = async ({ request }) => {
 
     const data = await response.json();
 
+    // Check for Set-Cookie header from backend and forward it if present
+    const setCookie = response.headers.get('Set-Cookie');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (setCookie) {
+      headers['Set-Cookie'] = setCookie;
+    }
+
     return new Response(JSON.stringify(data), {
       status: response.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
     });
 
   } catch (error) {

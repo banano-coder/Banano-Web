@@ -34,6 +34,21 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -52,17 +67,65 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
   }, [open])
 
   const fetchDependencies = async () => {
+    setLoading(true)
     try {
       const cats = await FetchData<Category[]>(API_ENDPOINTS.CATALOG.CATEGORIES)
       const brs = await FetchData<Brand[]>(API_ENDPOINTS.CATALOG.BRANDS)
-      // Catalog endpoints might return { data: [...] } or just [...]
-      // Assuming array for now based on pattern, but if object check data prop
       setCategories(Array.isArray(cats) ? cats : (cats as any).data || [])
       setBrands(Array.isArray(brs) ? brs : (brs as any).data || [])
     } catch (err) {
       console.error('Error fetching dependencies', err)
+    } finally {
+      setLoading(false)
     }
   }
+
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [isAddingBrand, setIsAddingBrand] = useState(false)
+  const [newBrandName, setNewBrandName] = useState('')
+
+  const handleSaveNewCategory = async () => {
+    if (!newCategoryName || newCategoryName.trim() === '') return;
+    setLoading(true);
+    try {
+      const res = await FetchData<any>(API_ENDPOINTS.CATALOG.CATEGORIES, 'POST', {
+        body: { nombre: newCategoryName.trim() }
+      });
+      const catId = res.id_categoria || res.category?.id_categoria;
+      if (res && catId) {
+        await fetchDependencies();
+        setCategoryId(catId.toString());
+        setIsAddingCategory(false);
+        setNewCategoryName('');
+      }
+    } catch (err: any) {
+      setError(err.message || "Error al crear categoría");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveNewBrand = async () => {
+    if (!newBrandName || newBrandName.trim() === '') return;
+    setLoading(true);
+    try {
+      const res = await FetchData<any>(API_ENDPOINTS.CATALOG.BRANDS, 'POST', {
+        body: { nombre: newBrandName.trim() }
+      });
+      const brId = res.id_marca || res.brand?.id_marca;
+      if (res && brId) {
+        await fetchDependencies();
+        setBrandId(brId.toString());
+        setIsAddingBrand(false);
+        setNewBrandName('');
+      }
+    } catch (err: any) {
+      setError(err.message || "Error al crear marca");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,14 +149,17 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
           activo: true
         }
       })
-      onProductCreated()
-      setOpen(false)
-      // Reset form
-      setNombre('')
-      setSku('')
-      setDescripcion('')
-      setCategoryId('')
-      setBrandId('')
+      setSuccess("Producto creado correctamente");
+      setTimeout(() => {
+        onProductCreated()
+        setOpen(false)
+        // Reset form
+        setNombre('')
+        setSku('')
+        setDescripcion('')
+        setCategoryId('')
+        setBrandId('')
+      }, 1500);
     } catch (err: any) {
       setError(err.message || 'Error creating product')
     } finally {
@@ -129,54 +195,111 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Categoría *</Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories
-                      .filter(c => c.id_categoria != null)
-                      .map(c => (
-                        <SelectItem
-                          key={c.id_categoria}
-                          value={c.id_categoria.toString()}>
-                          {c.nombre || 'Sin nombre'}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <Label>Categoría *</Label>
+                </div>
+                {!isAddingCategory ? (
+                  <div className="space-y-2">
+                    <Select value={categoryId} onValueChange={setCategoryId} disabled={loading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loading ? "Cargando..." : "Seleccionar"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories
+                          .filter(c => c.id_categoria != null)
+                          .map(c => (
+                            <SelectItem
+                              key={c.id_categoria}
+                              value={c.id_categoria.toString()}>
+                              {c.nombre || 'Sin nombre'}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="px-0 h-auto text-xs"
+                      onClick={() => setIsAddingCategory(true)}
+                    >
+                      + Agregar categoría
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 border p-2 rounded-md bg-muted/30">
+                    <Input
+                      placeholder="Nueva categoría..."
+                      className="h-8 text-xs"
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" className="h-7 text-[10px] flex-1" onClick={handleSaveNewCategory} disabled={loading}>
+                        Aceptar
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] flex-1" onClick={() => setIsAddingCategory(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid gap-2">
-                <Label>Marca *</Label>
-                <Select value={brandId} onValueChange={setBrandId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands
-                      .filter(b => b.id_marca != null)
-                      .map(b => (
-                        <SelectItem
-                          key={b.id_marca}
-                          value={b.id_marca.toString()}>
-                          {b.nombre || 'Sin nombre'}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <Label>Marca *</Label>
+                </div>
+                {!isAddingBrand ? (
+                  <div className="space-y-2">
+                    <Select value={brandId} onValueChange={setBrandId} disabled={loading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loading ? "Cargando..." : "Seleccionar"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {brands
+                          .filter(b => b.id_marca != null)
+                          .map(b => (
+                            <SelectItem
+                              key={b.id_marca}
+                              value={b.id_marca.toString()}>
+                              {b.nombre || 'Sin nombre'}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="px-0 h-auto text-xs"
+                      onClick={() => setIsAddingBrand(true)}
+                    >
+                      + Agregar marca
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 border p-2 rounded-md bg-muted/30">
+                    <Input
+                      placeholder="Nueva marca..."
+                      className="h-8 text-xs"
+                      value={newBrandName}
+                      onChange={e => setNewBrandName(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" className="h-7 text-[10px] flex-1" onClick={handleSaveNewBrand} disabled={loading}>
+                        Aceptar
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] flex-1" onClick={() => setIsAddingBrand(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="sku">SKU Base</Label>
-              <Input
-                id="sku"
-                value={sku}
-                onChange={e => setSku(e.target.value)}
-                placeholder="Ej. BN-CV-001"
-              />
-            </div>
 
             <div className="grid gap-2">
               <Label htmlFor="descripcion">Descripción</Label>
@@ -190,8 +313,16 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
               />
             </div>
 
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-md text-sm font-medium animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {success}
+              </div>
+            )}
+
             {error && (
-              <div className="text-red-500 text-sm font-medium">{error}</div>
+              <div className="p-3 bg-red-50 border border-red-200 text-red-500 text-sm font-medium animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {error}
+              </div>
             )}
           </div>
           <DialogFooter>

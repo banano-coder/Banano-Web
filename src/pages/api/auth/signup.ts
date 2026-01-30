@@ -24,10 +24,23 @@ export const POST: APIRoute = async ({ request }) => {
     email = email.toLowerCase();
 
     const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
-    
+
+    // MOCK MODE: If no external API is defined, return mock success
     if (!externalApiBase) {
-       console.error("PUBLIC_EXTERNAL_API_BASE is not defined in environment variables.");
-       return new Response(JSON.stringify({ message: 'Server misconfiguration' }), { status: 500 });
+      console.warn("PUBLIC_EXTERNAL_API_BASE not defined. Returning MOCK response.");
+      return new Response(JSON.stringify({
+        message: 'Usuario registrado exitosamente (MOCK MODE)',
+        user: {
+          id: 'mock-user-id-' + Date.now(),
+          email,
+          nombre,
+          role: 'customer'
+        },
+        token: 'mock-jwt-token-xyz-123'
+      }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Proxy request to external API
@@ -39,7 +52,15 @@ export const POST: APIRoute = async ({ request }) => {
       body: JSON.stringify({ email, password, nombre }),
     });
 
-    const data = await response.json();
+    // Check if the response from the external API has content
+    const text = await response.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (e) {
+      console.error("Failed to parse JSON from external API:", text);
+      return new Response(JSON.stringify({ message: "Invalid response from external API" }), { status: 502 });
+    }
 
     return new Response(JSON.stringify(data), {
       status: response.status,

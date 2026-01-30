@@ -1,25 +1,37 @@
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = async ({ params, request }) => {
+export const ALL: APIRoute = async ({ params, request }) => {
   const { path } = params;
   const url = new URL(request.url);
-  const searchParams = url.search; // Includes ?query=...
+  const searchParams = url.search;
 
   const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
-  
+
   if (!externalApiBase) {
-     return new Response(JSON.stringify({ message: 'Server misconfiguration' }), { status: 500 });
+    return new Response(JSON.stringify({ message: 'Server misconfiguration' }), { status: 500 });
   }
+
+  // Extract token for authorized requests (like POST)
+  const token = request.headers.get('cookie')?.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
 
   try {
     const targetUrl = `${externalApiBase}/catalog/${path}${searchParams}`;
-    
-    // Forward the request to the external API
+
+    // Read body for POST/PUT
+    const body = request.method !== 'GET' ? await request.text() : undefined;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(targetUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      }
+      method: request.method,
+      headers,
+      body
     });
 
     const data = await response.json();

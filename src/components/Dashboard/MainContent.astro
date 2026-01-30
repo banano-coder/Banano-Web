@@ -1,4 +1,31 @@
-<main class="flex-1 p-8">
-    <h2 class="text-3xl font-bold text-white">Welcome to your Dashboard</h2>
-    <p class="mt-2 text-gray-400">Here is your main content area.</p>
+---
+import { StockAlerts } from "./Home/StockAlerts";
+import { RecentOutlets } from "./Home/RecentOutlets";
+---
+
+<main class="flex-1 p-8 overflow-y-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-foreground tracking-tight">Dashboard Overview</h2>
+        <p class="mt-2 text-muted-foreground">Bienvenido de nuevo al panel de control.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Main Stats or Charts could go here */}
+        <div class="col-span-1 md:col-span-2 lg:col-span-2 rounded-xl border bg-card/50 backdrop-blur-sm text-card-foreground p-6 shadow-sm min-h-[300px] flex items-center justify-center border-dashed">
+            <p class="text-muted-foreground">Estadísticas Principales (Próximamente)</p>
+        </div>
+
+        {/* Low Stock Alerts Widget */}
+        <div class="col-span-1">
+            <StockAlerts client:visible />
+        </div>
+
+        {/* Recent Outlets Widget */}
+        <div class="col-span-1">
+            <RecentOutlets client:visible />
+        </div>
+        <div class="col-span-1 rounded-xl border bg-card/50 backdrop-blur-sm text-card-foreground p-6 shadow-sm min-h-[200px] flex items-center justify-center border-dashed">
+            <p class="text-muted-foreground">Top Productos (Próximamente)</p>
+        </div>
+    </div>
 </main>

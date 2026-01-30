@@ -1,49 +1,51 @@
-import type { APIRoute } from 'astro'
+import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = async ({ request }) => {
-  const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE
+export const ALL: APIRoute = async ({ request, params }) => {
+  const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
 
   if (!externalApiBase) {
-    return new Response(
-      JSON.stringify({ message: 'Server misconfiguration' }),
-      { status: 500 }
-    )
+    return new Response(JSON.stringify({ message: 'Server misconfiguration' }), { status: 500 });
   }
 
-  // Auth check: Extract token from cookie
-  const token = request.headers
-    .get('cookie')
-    ?.split('; ')
-    .find(row => row.startsWith('token='))
-    ?.split('=')[1]
+  // Extract token from cookie for authenticated requests
+  const token = request.headers.get('cookie')?.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
 
   if (!token) {
-    return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-      status: 401
-    })
+    return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
   }
 
   try {
-    const targetUrl = `${externalApiBase}/categories`
+    const url = new URL(request.url);
+    const searchParams = url.search;
+
+    // Forward to /categories on the backend
+    const targetUrl = `${externalApiBase}/categories${searchParams}`;
+
+    // Forward the body only for non-GET requests
+    const body = request.method !== 'GET' ? await request.text() : undefined;
 
     const response = await fetch(targetUrl, {
-      method: 'GET',
+      method: request.method,
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
-    })
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body
+    });
 
-    const data = await response.json()
+    if (response.status === 204) {
+      return new Response(null, { status: 204 });
+    }
+
+    const data = await response.json();
 
     return new Response(JSON.stringify(data), {
       status: response.status,
-      headers: { 'Content-Type': 'application/json' }
-    })
+      headers: { 'Content-Type': 'application/json' },
+    });
+
   } catch (error) {
-    console.error(`Error proxying categories request`, error)
-    return new Response(JSON.stringify({ message: 'Internal Server Error' }), {
-      status: 500
-    })
+    console.error(`Error proxying categories request:`, error);
+    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
   }
-}
+};

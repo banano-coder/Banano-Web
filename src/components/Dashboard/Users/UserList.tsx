@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+import {
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { 
-    Card, CardContent, CardHeader, CardTitle 
+import {
+    Card, CardContent, CardHeader, CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-    Search, Key, Settings, Ban, CheckCircle, ChevronLeft, ChevronRight 
+import {
+    Search, Key, Settings, Ban, CheckCircle, ChevronLeft, ChevronRight, Trash, Trash2,
+    CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { CreateUserDialog } from './CreateUserDialog';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
@@ -51,7 +52,36 @@ export const UserList = () => {
     const [selectedUserForPassword, setSelectedUserForPassword] = useState<User | null>(null);
     const [selectedUserForRole, setSelectedUserForRole] = useState<User | null>(null);
     const [userToToggleStatus, setUserToToggleStatus] = useState<User | null>(null);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null); // For Hard Delete
     const [statusLoading, setStatusLoading] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => setMessage(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
+
+
+    const handleHardDelete = async () => {
+        if (!userToDelete) return;
+        setStatusLoading(true);
+        try {
+            await FetchData(API_ENDPOINTS.USERS.DELETE(userToDelete.id_usuario), 'DELETE');
+            setMessage({ type: 'success', text: 'Usuario eliminado permanentemente.' });
+            await fetchUsers();
+            setUserToDelete(null);
+        } catch (error: any) {
+            console.error('Error deleting user:', error);
+            setMessage({
+                type: 'error',
+                text: error.message || 'No se pudo eliminar el usuario. Puede que tenga registros asociados.'
+            });
+        } finally {
+            setStatusLoading(false);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -62,9 +92,9 @@ export const UserList = () => {
 
             // Using the centralized API endpoint
             const url = `${API_ENDPOINTS.USERS.LIST}?${queryParams.toString()}`;
-            
+
             const data = await FetchData<UsersApiResponse>(url);
-            
+
             if (data && Array.isArray(data.data)) {
                 setUsers(data.data);
                 // Calculate total pages based on total records and limit
@@ -86,19 +116,19 @@ export const UserList = () => {
         const timer = setTimeout(() => {
             // Reset to page 1 if search changes
             if (page !== 1 && searchTerm !== '') {
-                 setPage(1);
+                setPage(1);
             } else {
-                 fetchUsers();
+                fetchUsers();
             }
         }, 500);
         return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm]);
 
     // Fetch on page change (skip if triggered by search reset which handles it)
     useEffect(() => {
         fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page]);
 
     const handleToggleStatus = async () => {
@@ -122,8 +152,8 @@ export const UserList = () => {
             <div className="flex justify-between items-center">
                 <div className="relative w-72">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input 
-                        placeholder="Buscar usuarios..." 
+                    <Input
+                        placeholder="Buscar usuarios..."
                         value={searchTerm}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                         className="pl-9"
@@ -133,8 +163,17 @@ export const UserList = () => {
             </div>
 
             <Card>
-                <CardHeader className="py-4">
+                <CardHeader className="py-4 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-lg">Usuarios del Sistema</CardTitle>
+                    {message && (
+                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border animate-in fade-in slide-in-from-right-1 ${message.type === 'success'
+                                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                                : 'bg-red-500/10 border-red-500/20 text-red-400'
+                            }`}>
+                            {message.type === 'success' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                            <span className="text-xs font-medium">{message.text}</span>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -179,25 +218,25 @@ export const UserList = () => {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
                                                     title="Cambiar Password"
                                                     onClick={() => setSelectedUserForPassword(user)}
                                                 >
                                                     <Key className="h-4 w-4 text-muted-foreground" />
                                                 </Button>
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
                                                     title="Editar Rol"
                                                     onClick={() => setSelectedUserForRole(user)}
                                                 >
                                                     <Settings className="h-4 w-4 text-muted-foreground" />
                                                 </Button>
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
                                                     title={user.activo ? "Desactivar" : "Activar"}
                                                     onClick={() => setUserToToggleStatus(user)}
                                                 >
@@ -206,6 +245,14 @@ export const UserList = () => {
                                                     ) : (
                                                         <CheckCircle className="h-4 w-4 text-green-500" />
                                                     )}
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    title="Eliminar permanentemente"
+                                                    onClick={() => setUserToDelete(user)}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-600" />
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -241,18 +288,18 @@ export const UserList = () => {
                     </div>
                 </CardContent>
             </Card>
-            
-            <ChangePasswordDialog 
-                open={!!selectedUserForPassword} 
-                onClose={() => setSelectedUserForPassword(null)} 
-                user={selectedUserForPassword} 
+
+            <ChangePasswordDialog
+                open={!!selectedUserForPassword}
+                onClose={() => setSelectedUserForPassword(null)}
+                user={selectedUserForPassword}
             />
 
-            <EditRoleDialog 
-                open={!!selectedUserForRole} 
-                onClose={() => setSelectedUserForRole(null)} 
+            <EditRoleDialog
+                open={!!selectedUserForRole}
+                onClose={() => setSelectedUserForRole(null)}
                 onUserUpdated={fetchUsers}
-                user={selectedUserForRole} 
+                user={selectedUserForRole}
             />
 
             <AlertDialog open={!!userToToggleStatus} onOpenChange={() => setUserToToggleStatus(null)}>
@@ -274,6 +321,23 @@ export const UserList = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+
+            <AlertDialog open={!!userToDelete} onOpenChange={(val) => !val && setUserToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar usuario de forma permanente?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción eliminará al usuario <strong>{userToDelete?.nombre}</strong> del sistema. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={statusLoading}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleHardDelete} disabled={statusLoading} className="bg-red-600 hover:bg-red-700">
+                            {statusLoading ? 'Eliminando...' : 'Eliminar permanentemente'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div >
     );
 };

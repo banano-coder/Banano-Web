@@ -6,6 +6,16 @@ import type { Product, ProductImage, Variant } from '@/types';
 import { Loader2, Upload, Trash, Star, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProductImagesTabProps {
     product: Product;
@@ -21,12 +31,13 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
     // "all" = show all images (gallery view)
     // "generic" = show images with id_variante_producto === null
     // "123" = show images for variant 123
-    
+
     // For Upload: 
     // If viewing "all", we default to "generic" or ask? 
     // Let's add a robust selector for upload.
 
     const [uploadVariantId, setUploadVariantId] = useState<string>("generic");
+    const [imageToDelete, setImageToDelete] = useState<number | null>(null);
 
     const fetchRes = async () => {
         if (!product?.id_producto) return;
@@ -35,7 +46,7 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
             // Fetch Images
             const imgRes = await FetchData<any>(API_ENDPOINTS.PRODUCTS.IMAGES(product.id_producto));
             setImages(imgRes.data || []);
-            
+
             // Fetch Variants for filter
             const varRes = await FetchData<any>(API_ENDPOINTS.PRODUCTS.VARIANTS(product.id_producto));
             setVariants(varRes.data || []);
@@ -56,7 +67,7 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
         const file = e.target.files[0];
         const formData = new FormData();
         formData.append('image', file);
-        
+
         // Associate with variant if selected
         if (uploadVariantId && uploadVariantId !== "generic") {
             formData.append('id_variante_producto', uploadVariantId);
@@ -64,8 +75,8 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
 
         try {
             await FetchData(
-                API_ENDPOINTS.PRODUCTS.IMAGES(product.id_producto), 
-                'POST', 
+                API_ENDPOINTS.PRODUCTS.IMAGES(product.id_producto),
+                'POST',
                 { body: formData }
             );
             fetchRes();
@@ -74,25 +85,27 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
             alert("Error al subir imagen");
         } finally {
             setUploading(false);
-            e.target.value = ''; 
+            e.target.value = '';
         }
     };
 
-    const handleDelete = async (imgId: number) => {
-        if(!confirm("¿Eliminar imagen?")) return;
+    const confirmDelete = async () => {
+        if (!imageToDelete) return;
         try {
-            await FetchData(API_ENDPOINTS.IMAGES.ITEM(product.id_producto, imgId), 'DELETE');
+            await FetchData(API_ENDPOINTS.IMAGES.ITEM(product.id_producto, imageToDelete), 'DELETE');
             fetchRes();
         } catch (error) {
             console.error("Error deleting image", error);
             alert("No se pudo eliminar la imagen. Verifique la consola.");
+        } finally {
+            setImageToDelete(null);
         }
     };
 
     const handleSetPrincipal = async (imgId: number) => {
         try {
             await FetchData(
-                `${API_ENDPOINTS.IMAGES.ITEM(product.id_producto, imgId)}?principal=true`, 
+                `${API_ENDPOINTS.IMAGES.ITEM(product.id_producto, imgId)}?principal=true`,
                 'PATCH'
             );
             fetchRes();
@@ -117,17 +130,14 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
     const getImageUrl = (url: string) => {
         if (!url) return '';
         if (url.startsWith('http')) return url;
-        // If relative, prepend external API base (need to pass this or configure logic)
-        // Since we are client side, import.meta.env.PUBLIC_EXTERNAL_API_BASE works
-        const baseUrl = import.meta.env.PUBLIC_EXTERNAL_API_BASE || 'http://localhost:3000';
-        return `${baseUrl}${url}`;
+        return url;
     };
 
     return (
         <div className="space-y-6 pt-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-2">
-                     <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
+                    <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
                         <SelectTrigger className="w-[180px]">
                             <SelectValue placeholder="Filtrar por..." />
                         </SelectTrigger>
@@ -163,11 +173,11 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
                     </Select>
 
                     <div className="relative">
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            id="image-upload" 
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            id="image-upload"
                             onChange={handleUpload}
                             disabled={uploading}
                         />
@@ -198,7 +208,7 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
                                     <Star className="w-3 h-3 mr-1 fill-current" /> Principal
                                 </div>
                             )}
-                             <div className="absolute top-2 right-2 z-10 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full shadow-sm">
+                            <div className="absolute top-2 right-2 z-10 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-full shadow-sm">
                                 {getVariantName(img.id_variante_producto ?? null)}
                             </div>
 
@@ -206,14 +216,14 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
                                 <img src={getImageUrl(img.url)} alt="Product" className="w-full h-full object-cover" />
                             </div>
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button 
+                                <Button
                                     variant="ghost" size="icon" className="h-8 w-8 text-white hover:text-red-400 hover:bg-transparent"
-                                    onClick={() => handleDelete(img.id_imagen_producto)}
+                                    onClick={() => setImageToDelete(img.id_imagen_producto)}
                                 >
                                     <Trash className="h-4 w-4" />
                                 </Button>
                                 {!img.es_principal && (
-                                    <Button 
+                                    <Button
                                         variant="ghost" className="h-6 text-white hover:text-yellow-400 hover:bg-transparent text-xs px-2"
                                         onClick={() => handleSetPrincipal(img.id_imagen_producto)}
                                     >
@@ -225,6 +235,23 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
                     ))}
                 </div>
             )}
+
+            <AlertDialog open={!!imageToDelete} onOpenChange={(open) => !open && setImageToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción eliminará la imagen de forma permanente.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
