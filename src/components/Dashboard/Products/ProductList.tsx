@@ -148,10 +148,10 @@ export const ProductList = () => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
-                                <TableHead>SKU</TableHead>
                                 <TableHead>Categoría</TableHead>
                                 <TableHead>Marca</TableHead>
-                                <TableHead>Stock</TableHead>
+                                <TableHead className="text-center">Variantes</TableHead>
+                                <TableHead className="text-center">Stock Total</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
@@ -173,10 +173,16 @@ export const ProductList = () => {
                                 products.map((product) => (
                                     <TableRow key={product.id_producto}>
                                         <TableCell className="font-medium">{product.nombre}</TableCell>
-                                        <TableCell>{product.sku_base || '-'}</TableCell>
                                         <TableCell>{product.category_name || product.Categoria?.nombre || '-'}</TableCell>
                                         <TableCell>{product.brand_name || product.Marca?.nombre || '-'}</TableCell>
-                                        <TableCell>{product.total_stock ?? 0}</TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge variant="outline" className="font-mono">
+                                                {product.variants_count ?? 0}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-center font-bold">
+                                            {product.total_stock ?? 0}
+                                        </TableCell>
                                         <TableCell>
                                             {product.activo ? (
                                                 <Badge className="bg-green-500 hover:bg-green-600">Activo</Badge>
@@ -187,12 +193,13 @@ export const ProductList = () => {
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Button
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    title="Editar"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="flex items-center gap-1 h-8"
                                                     onClick={() => setSelectedProduct(product)}
                                                 >
-                                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                                    <Edit className="h-3.5 w-3.5" />
+                                                    Ver / Gestionar
                                                 </Button>
                                                 <Button
                                                     size="icon"

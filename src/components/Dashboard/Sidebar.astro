@@ -10,17 +10,17 @@ const isActive = (path: string) => {
         <ul class="space-y-1">
             <li>
                 <a href="/dashboard" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Overview
+                    Principal
                 </a>
             </li>
             <li>
                 <a href="/dashboard/users" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/users') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Users
+                    Usuarios
                 </a>
             </li>
             <li>
                 <a href="/dashboard/products" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/products') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Productos
+                    Inventario
                 </a>
             </li>
             <li>
@@ -35,7 +35,7 @@ const isActive = (path: string) => {
             </li>
             <li>
                 <a href="/dashboard/settings" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/settings') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Settings
+                    Configuración
                 </a>
             </li>
         </ul>

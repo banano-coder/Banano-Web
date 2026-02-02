@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import type { Product, Variant } from '@/types';
-import { Loader2, Plus, Trash, Edit } from 'lucide-react';
+import { Loader2, Plus, Trash, Edit, ArrowRightLeft, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea'; // For JSON/attributes if needed
 
@@ -34,6 +34,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
 
     // Create/Edit Dialog State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isCloneMode, setIsCloneMode] = useState(false);
     const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
     const [formData, setFormData] = useState({
         sku: '',
@@ -43,6 +44,39 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
         atributos: [] as { key: string; value: string }[]
     });
     const [saving, setSaving] = useState(false);
+    const [registeringStock, setRegisteringStock] = useState(false);
+    const [quickStock, setQuickStock] = useState({
+        cantidad: '',
+        tipo: 'entrada',
+        motivo: ''
+    });
+
+    const handleRegisterQuickStock = async () => {
+        if (!editingVariant || !quickStock.cantidad) return;
+        setRegisteringStock(true);
+        try {
+            await FetchData(API_ENDPOINTS.INVENTORY.MOVEMENTS, 'POST', {
+                body: {
+                    id_variante_producto: editingVariant.id_variante_producto,
+                    tipo: quickStock.tipo,
+                    cantidad: parseInt(quickStock.cantidad),
+                    motivo: quickStock.motivo || 'Ajuste rápido desde edición'
+                }
+            });
+            // Reset stock form
+            setQuickStock({ cantidad: '', tipo: 'entrada', motivo: '' });
+            // Refresh to see new stock
+            await fetchVariants();
+            // Important: we need to update editingVariant state too so the badge updates
+            // but since editingVariant is from parent/initial list, fetchVariants will trigger a re-render
+            // but we need to find the updated one
+            setIsDialogOpen(false); // Closing is safer or we'd need to sync editingVariant
+        } catch (error) {
+            console.error("Error registering quick stock", error);
+        } finally {
+            setRegisteringStock(false);
+        }
+    };
 
     const fetchVariants = async () => {
         if (!product?.id_producto) return;
@@ -62,15 +96,16 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
         fetchVariants();
     }, [product]);
 
-    const handleOpenDialog = (variant?: Variant) => {
+    const handleOpenDialog = (variant?: Variant, isClone = false) => {
+        setIsCloneMode(isClone);
         if (variant) {
-            setEditingVariant(variant);
+            setEditingVariant(isClone ? null : variant); // If clone, we are creating a NEW one, so editingVariant is null
             setFormData({
-                sku: variant.sku,
-                precio_lista: variant.precio_lista.toString(),
-                costo: variant.costo.toString(),
+                sku: isClone ? '[ GENERACIÓN AUTOMÁTICA ]' : (variant.sku || ''),
+                precio_lista: (variant.precio_lista ?? '').toString(),
+                costo: (variant.costo ?? '').toString(),
                 codigo_barras: variant.codigo_barras || '',
-                atributos: variant.atributos_json
+                atributos: variant.atributos_json && typeof variant.atributos_json === 'object'
                     ? Object.entries(variant.atributos_json).map(([key, value]) => ({ key, value: String(value) }))
                     : []
             });
@@ -87,7 +122,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
         setSaving(true);
         try {
             const payload = {
-                sku: formData.sku,
+                sku: formData.sku === '[ GENERACIÓN AUTOMÁTICA ]' ? undefined : formData.sku,
                 precio_lista: parseFloat(formData.precio_lista) || 0,
                 costo: parseFloat(formData.costo) || 0,
                 codigo_barras: formData.codigo_barras,
@@ -139,7 +174,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                             <TableHead>SKU</TableHead>
                             <TableHead>Precio</TableHead>
                             <TableHead>Costo</TableHead>
-                            <TableHead>Barras</TableHead>
+                            <TableHead>Stock</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
@@ -159,21 +194,29 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                     <TableCell className="font-medium">{variant.sku}</TableCell>
                                     <TableCell>${variant.precio_lista}</TableCell>
                                     <TableCell>${variant.costo}</TableCell>
-                                    <TableCell>{variant.codigo_barras || '-'}</TableCell>
+                                    <TableCell>
+                                        <span className={`font-bold ${variant.stock_actual <= 5 ? 'text-red-500' : ''}`}>
+                                            {variant.stock_actual ?? 0}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>
                                         <Badge variant={variant.activo ? 'default' : 'destructive'}>
                                             {variant.activo ? 'Activo' : 'Inactivo'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(variant)}>
+                                    <TableCell className="text-right space-x-1">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(variant)} title="Editar">
                                             <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(variant, true)} title="Duplicar" className="text-blue-500 hover:text-blue-600">
+                                            <Copy className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => handleToggleStatus(variant)}
                                             className={variant.activo ? "text-red-500 hover:text-red-600" : "text-green-500 hover:text-green-600"}
+                                            title={variant.activo ? "Desactivar" : "Activar"}
                                         >
                                             <Trash className="h-4 w-4" />
                                         </Button>
@@ -186,141 +229,204 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>{editingVariant ? 'Editar Variante' : 'Nueva Variante'}</DialogTitle>
+                        <DialogTitle>
+                            {editingVariant ? 'Editar Variante' : (isCloneMode ? 'Duplicar Variante' : 'Nueva Variante')}
+                        </DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleSave} className="space-y-4">
-                        {editingVariant && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="sku">SKU (Código de Referencia)</Label>
-                                <Input
-                                    id="sku"
-                                    value={formData.sku}
-                                    readOnly
-                                    className="bg-muted font-mono cursor-not-allowed opacity-80"
-                                />
-                                <p className="text-[10px] text-muted-foreground font-medium italic">
-                                    Código asignado por el sistema. No editable para mantener la secuencia.
-                                </p>
-                            </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label>Precio Lista</Label>
-                                <Input
-                                    type="number" step="0.01"
-                                    value={formData.precio_lista}
-                                    onChange={e => setFormData({ ...formData, precio_lista: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Costo Unitario</Label>
-                                <Input
-                                    type="number" step="0.01"
-                                    value={formData.costo}
-                                    onChange={e => setFormData({ ...formData, costo: e.target.value })}
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Código de Barras (Opcional)</Label>
-                            <Input
-                                value={formData.codigo_barras}
-                                onChange={e => setFormData({ ...formData, codigo_barras: e.target.value })}
-                            />
-                        </div>
-
-                        {/* Atributos Section */}
-                        <div className="grid gap-2 border-t pt-4">
-                            <Label className="flex justify-between items-center">
-                                Características / Atributos
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setFormData(prev => ({
-                                        ...prev,
-                                        atributos: [...prev.atributos, { key: '', value: '' }]
-                                    }))}
-                                >
-                                    <Plus className="h-3 w-3 mr-1" /> Agregar
-                                </Button>
-                            </Label>
-
-                            {formData.atributos.length === 0 && (
-                                <p className="text-xs text-muted-foreground italic">No hay atributos definidos (ej: Talla, Color).</p>
+                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                        <form onSubmit={handleSave} className="space-y-4">
+                            {editingVariant && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="sku">SKU (Código de Referencia)</Label>
+                                    <Input
+                                        id="sku"
+                                        value={formData.sku}
+                                        readOnly
+                                        className="bg-muted font-mono cursor-not-allowed opacity-80"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground font-medium italic">
+                                        Código asignado por el sistema. No editable para mantener la secuencia.
+                                    </p>
+                                </div>
                             )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label>Precio Lista</Label>
+                                    <Input
+                                        type="number" step="0.01"
+                                        value={formData.precio_lista}
+                                        onChange={e => setFormData({ ...formData, precio_lista: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Costo Unitario</Label>
+                                    <Input
+                                        type="number" step="0.01"
+                                        value={formData.costo}
+                                        onChange={e => setFormData({ ...formData, costo: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Código de Barras (Opcional)</Label>
+                                <Input
+                                    value={formData.codigo_barras}
+                                    onChange={e => setFormData({ ...formData, codigo_barras: e.target.value })}
+                                />
+                            </div>
 
-                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                                {formData.atributos.map((input, index) => (
-                                    <div key={index} className="flex gap-2 items-center">
-                                        <div className="w-[140px]">
-                                            <Select
-                                                value={PREDEFINED_ATTRIBUTES.includes(input.key) ? input.key : (input.key ? 'otro' : '')}
-                                                onValueChange={(val) => {
-                                                    const newAttrs = [...formData.atributos];
-                                                    if (val === 'otro') {
-                                                        newAttrs[index].key = ''; // Reset for manual input if we were to support it, but for now just switching logic
-                                                        // Actually, if 'otro' allow typing? The user just asked for a select.
-                                                        // Let's stick to the list for now to satisfy "change field for a select".
-                                                        // If they want custom, they might need a combobox.
-                                                        // I'll assume just the list + a way to switch to custom if needed, or just the list.
-                                                        // Let's implement the Select directly updating the key.
-                                                    } else {
+                            {/* Atributos Section */}
+                            <div className="grid gap-2 border-t pt-4">
+                                <Label className="flex justify-between items-center">
+                                    Características / Atributos
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setFormData(prev => ({
+                                            ...prev,
+                                            atributos: [...prev.atributos, { key: '', value: '' }]
+                                        }))}
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" /> Agregar
+                                    </Button>
+                                </Label>
+
+                                {formData.atributos.length === 0 && (
+                                    <p className="text-xs text-muted-foreground italic">No hay atributos definidos (ej: Talla, Color).</p>
+                                )}
+
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                    {formData.atributos.map((input, index) => (
+                                        <div key={index} className="flex gap-2 items-center">
+                                            <div className="w-[140px]">
+                                                <Select
+                                                    value={PREDEFINED_ATTRIBUTES.includes(input.key) ? input.key : (input.key ? 'otro' : '')}
+                                                    onValueChange={(val) => {
+                                                        const newAttrs = [...formData.atributos];
                                                         newAttrs[index].key = val;
-                                                    }
+                                                        setFormData({ ...formData, atributos: newAttrs });
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="h-8 text-xs">
+                                                        <SelectValue placeholder="Atributo" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {PREDEFINED_ATTRIBUTES.map(attr => (
+                                                            <SelectItem key={attr} value={attr}>{attr}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <Input
+                                                placeholder="Valor (ej: Rojo)"
+                                                value={input.value}
+                                                onChange={e => {
+                                                    const newAttrs = [...formData.atributos];
+                                                    newAttrs[index].value = e.target.value;
                                                     setFormData({ ...formData, atributos: newAttrs });
                                                 }}
+                                                className="h-8 text-xs flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const newAttrs = formData.atributos.filter((_, i) => i !== index);
+                                                    setFormData({ ...formData, atributos: newAttrs });
+                                                }}
+                                                className="h-8 w-8 text-destructive hover:text-red-600 p-0"
                                             >
-                                                <SelectTrigger className="h-8 text-xs">
-                                                    <SelectValue placeholder="Atributo" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {PREDEFINED_ATTRIBUTES.map(attr => (
-                                                        <SelectItem key={attr} value={attr}>{attr}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                                <Trash className="h-4 w-4" />
+                                            </Button>
                                         </div>
-
-                                        <Input
-                                            placeholder="Valor (ej: Rojo)"
-                                            value={input.value}
-                                            onChange={e => {
-                                                const newAttrs = [...formData.atributos];
-                                                newAttrs[index].value = e.target.value;
-                                                setFormData({ ...formData, atributos: newAttrs });
-                                            }}
-                                            className="h-8 text-xs flex-1"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                const newAttrs = formData.atributos.filter((_, i) => i !== index);
-                                                setFormData({ ...formData, atributos: newAttrs });
-                                            }}
-                                            className="h-8 w-8 text-destructive hover:text-red-600 p-0"
-                                        >
-                                            <Trash className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        <DialogFooter>
-                            <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={saving}>
-                                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Guardar
-                            </Button>
-                        </DialogFooter>
-                    </form>
+                            <div className="pt-2">
+                                <Button type="submit" disabled={saving} className="w-full">
+                                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {editingVariant ? 'Guardar Cambios' : 'Crear Variante'}
+                                </Button>
+                            </div>
+                        </form>
+
+                        {/* QUICK STOCK SECTION (Only for existing variants) */}
+                        {editingVariant && (
+                            <div className="border-t pt-4 space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
+                                        <ArrowRightLeft className="h-4 w-4" /> Gestión Rápida de Stock
+                                    </h4>
+                                    <Badge variant="outline" className="font-mono">
+                                        Actual: {editingVariant.stock_actual ?? 0}
+                                    </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label className="text-xs">Tipo</Label>
+                                        <Select
+                                            value={quickStock.tipo}
+                                            onValueChange={(val: any) => setQuickStock({ ...quickStock, tipo: val })}
+                                        >
+                                            <SelectTrigger className="h-8 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="entrada">Entrada (+)</SelectItem>
+                                                <SelectItem value="salida">Salida (-)</SelectItem>
+                                                <SelectItem value="ajuste">Ajuste (Manual)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label className="text-xs">Cantidad</Label>
+                                        <Input
+                                            type="number"
+                                            className="h-8 text-xs"
+                                            value={quickStock.cantidad}
+                                            onChange={e => setQuickStock({ ...quickStock, cantidad: e.target.value })}
+                                            placeholder="Ej: 10"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label className="text-xs">Motivo / Referencia</Label>
+                                    <Input
+                                        className="h-8 text-xs"
+                                        value={quickStock.motivo}
+                                        onChange={e => setQuickStock({ ...quickStock, motivo: e.target.value })}
+                                        placeholder="Ej: Ajuste inicial, Entrada pedido..."
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="w-full h-8 text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20"
+                                    disabled={registeringStock || !quickStock.cantidad}
+                                    onClick={handleRegisterQuickStock}
+                                >
+                                    {registeringStock ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Plus className="mr-2 h-3 w-3" />}
+                                    Registrar Stock
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter className="border-t pt-4">
+                        <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="text-xs">
+                            Cerrar
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

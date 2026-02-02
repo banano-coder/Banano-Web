@@ -109,7 +109,7 @@ export const CartDrawer: React.FC = () => {
             const itemsList = items.map(item => `   - ${item.name} (x${item.quantity}): ${currency}${formatPrice(item.price * item.quantity)}`).join('\n');
             const message = settings?.whatsapp?.mensaje_bienvenida
                 ? `${settings.whatsapp.mensaje_bienvenida}\n\n${itemsList}\n\n*Total: ${currency}${formatPrice(total)}*`
-                : `*Hola Banano Shop!* 🍌\n\nMi nombre es *${name}* e hice un pedido:\n\n${itemsList}\n\n*Total: ${currency}${formatPrice(total)}*\n\n¿Cómo procedo con el pago?`;
+                : `*Hola!* \n\nMi nombre es *${name}* e hice un pedido:\n\n${itemsList}\n\n*Total: ${currency}${formatPrice(total)}*\n\n¿Cómo procedo con el pago?`;
 
             const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
             window.open(url, '_blank');

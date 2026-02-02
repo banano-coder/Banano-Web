@@ -180,7 +180,7 @@ export const ProductDetailDialog: React.FC<ProductDetailDialogProps> = ({ produc
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
                 {loading ? (
-                    <div className="py-20 text-center">Cargando detalles... 🍌</div>
+                    <div className="py-20 text-center">Cargando detalles...</div>
                 ) : !product ? (
                     <div className="py-20 text-center">No se encontró el producto.</div>
                 ) : (

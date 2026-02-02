@@ -44,7 +44,16 @@ interface ProfileData {
 interface SettingsData {
     whatsapp?: { numero: string; mensaje_bienvenida: string };
     stock?: { umbral_minimo: number };
-    tienda?: { nombre: string; email_contacto: string; abierto: boolean };
+    tienda?: {
+        nombre: string;
+        email_contacto: string;
+        abierto: boolean;
+        telefono?: string;
+        direccion?: string;
+        mostrar_info?: boolean;
+        hero_titulo?: string;
+        hero_descripcion?: string;
+    };
     tema?: { default: string };
     catalogo?: {
         ocultar_sin_stock: boolean;
@@ -506,6 +515,30 @@ export const SettingsManager: React.FC = () => {
                                         className={`w-11 h-6 rounded-full transition-all cursor-pointer relative shadow-inner ${settings.tienda?.mostrar_info ? 'bg-primary' : 'bg-slate-300'}`}
                                     >
                                         <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${settings.tienda?.mostrar_info ? 'translate-x-5' : ''}`} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="col-span-full space-y-4 pt-4 border-t border-border/50">
+                                <h4 className="text-sm font-bold uppercase tracking-widest text-primary/70">Personalización de Bienvenida (Hero)</h4>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-foreground/80 font-semibold tracking-tight">Título de Tienda</Label>
+                                        <Input
+                                            className="bg-background/50 border-border text-foreground text-lg font-bold"
+                                            placeholder="Ej: Deliciosos Bananos Frescos"
+                                            value={settings.tienda?.hero_titulo || ''}
+                                            onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), hero_titulo: e.target.value } }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-foreground/80 font-semibold tracking-tight">Descripción</Label>
+                                        <textarea
+                                            className="w-full min-h-[100px] p-3 rounded-md bg-background/50 border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                            placeholder="Ej: La mejor selección de productos derivados del banano..."
+                                            value={settings.tienda?.hero_descripcion || ''}
+                                            onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), hero_descripcion: e.target.value } }))}
+                                        />
                                     </div>
                                 </div>
                             </div>

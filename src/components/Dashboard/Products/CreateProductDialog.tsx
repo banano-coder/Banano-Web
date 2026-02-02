@@ -55,7 +55,6 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
 
   // Form state
   const [nombre, setNombre] = useState('')
-  const [sku, setSku] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [brandId, setBrandId] = useState('')
@@ -142,7 +141,6 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
       await FetchData(API_ENDPOINTS.PRODUCTS.CREATE, 'POST', {
         body: {
           nombre,
-          sku_base: sku,
           descripcion,
           id_categoria: parseInt(categoryId),
           id_marca: parseInt(brandId),
@@ -155,7 +153,6 @@ export const CreateProductDialog: React.FC<CreateProductDialogProps> = ({
         setOpen(false)
         // Reset form
         setNombre('')
-        setSku('')
         setDescripcion('')
         setCategoryId('')
         setBrandId('')

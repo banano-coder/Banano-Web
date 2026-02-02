@@ -35,7 +35,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, set
       </CardHeader>
       <CardContent className="flex-grow">
         <p className="text-muted-foreground text-sm mb-4">{product.description}</p>
-        <p className="text-2xl font-bold">{currency}{formattedPrice}</p>
       </CardContent>
       <CardFooter>
         <Button

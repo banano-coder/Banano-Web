@@ -25,7 +25,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
     const [variants, setVariants] = useState<Variant[]>([]);
     const [stocks, setStocks] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(false);
-    
+
     // Movement Dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedVariantId, setSelectedVariantId] = useState<string>('');
@@ -40,21 +40,16 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
         if (!product?.id_producto) return;
         setLoading(true);
         try {
-            // 1. Get Variants
+            // Get Variants (now includes stock_actual)
             const vResponse = await FetchData<any>(API_ENDPOINTS.PRODUCTS.VARIANTS(product.id_producto));
             const vData: Variant[] = vResponse.data || [];
             setVariants(vData);
 
-            // 2. Get Stock for each variant
+            // Populate stocks map directly from variant data
             const stockMap: Record<number, number> = {};
-            await Promise.all(vData.map(async (v) => {
-                try {
-                    const sData = await FetchData<any>(API_ENDPOINTS.INVENTORY.STOCK(v.id_variante_producto));
-                    stockMap[v.id_variante_producto] = sData.stock || 0;
-                } catch (e) {
-                    stockMap[v.id_variante_producto] = 0;
-                }
-            }));
+            vData.forEach(v => {
+                stockMap[v.id_variante_producto] = v.stock_actual || 0;
+            });
             setStocks(stockMap);
 
         } catch (error) {
@@ -82,11 +77,11 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
             };
 
             await FetchData(API_ENDPOINTS.INVENTORY.MOVEMENTS, 'POST', { body: payload });
-            
+
             // Refresh
             setIsDialogOpen(false);
             fetchVariantsAndStock();
-            
+
             // Reset form
             setAmount('');
             setReason('');
@@ -128,8 +123,8 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                                 </div>
                                 <p className="text-xs text-muted-foreground mb-4">Unidades Disponibles</p>
                                 <div className="text-xs flex gap-2">
-                                   <Badge variant="outline">Cost: ${v.costo}</Badge>
-                                   <Badge variant="outline">Price: ${v.precio_lista}</Badge>
+                                    <Badge variant="outline">Cost: ${v.costo}</Badge>
+                                    <Badge variant="outline">Price: ${v.precio_lista}</Badge>
                                 </div>
                             </CardContent>
                         </Card>
@@ -158,7 +153,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                                 </SelectContent>
                             </Select>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label>Tipo Movimiento</Label>
@@ -175,35 +170,35 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                             </div>
                             <div className="grid gap-2">
                                 <Label>Cantidad</Label>
-                                <Input 
-                                    type="number" min="1" 
-                                    value={amount} onChange={e => setAmount(e.target.value)} 
-                                    required 
+                                <Input
+                                    type="number" min="1"
+                                    value={amount} onChange={e => setAmount(e.target.value)}
+                                    required
                                 />
                             </div>
                         </div>
 
                         <div className="grid gap-2">
                             <Label>Motivo / Descripción</Label>
-                            <Input 
-                                value={reason} onChange={e => setReason(e.target.value)} 
-                                placeholder="Ej: Compra proveedor, merma..." 
+                            <Input
+                                value={reason} onChange={e => setReason(e.target.value)}
+                                placeholder="Ej: Compra proveedor, merma..."
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label>Ref. Externa</Label>
-                                <Input 
-                                    value={refExt} onChange={e => setRefExt(e.target.value)} 
+                                <Input
+                                    value={refExt} onChange={e => setRefExt(e.target.value)}
                                     placeholder="Fac-123"
                                 />
                             </div>
                             <div className="grid gap-2">
                                 <Label>Costo Unitario (Opcional)</Label>
-                                <Input 
+                                <Input
                                     type="number" step="0.01"
-                                    value={costUnit} onChange={e => setCostUnit(e.target.value)} 
+                                    value={costUnit} onChange={e => setCostUnit(e.target.value)}
                                     placeholder="Auto"
                                 />
                             </div>

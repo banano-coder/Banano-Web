@@ -58,7 +58,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   // Form state
   const [nombre, setNombre] = useState('')
-  const [sku, setSku] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [brandId, setBrandId] = useState('')
@@ -68,7 +67,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       fetchDependencies()
       if (product) {
         setNombre(product.nombre)
-        setSku(product.sku_base || '')
         setDescripcion(product.descripcion || '')
 
         if (product.id_producto) {
@@ -144,7 +142,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       const data = await FetchData<any>(API_ENDPOINTS.PRODUCTS.DETAIL(id))
       if (data) {
         setNombre(data.nombre)
-        setSku(data.sku_base || '')
         setDescripcion(data.descripcion || '')
         setCategoryId(data.id_categoria?.toString() || '')
         setBrandId(data.id_marca?.toString() || '')
@@ -168,7 +165,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         {
           body: {
             nombre,
-            sku_base: sku,
             descripcion,
             id_categoria: parseInt(categoryId),
             id_marca: parseInt(brandId),

@@ -32,8 +32,8 @@ const title = tienda.nombre || "Banano Shop";
     <!-- Hero / Header Section -->
     <header class="container px-4 py-8 flex justify-between items-center border-b border-border">
       <div class="flex items-center space-x-2">
-         <span class="text-3xl">🍌</span>
-         <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent">{title}</h1>
+         <img src="/logo_original.png" class="h-10 w-auto" alt="Logo" />
+         <h1 class="text-2xl font-bold text-primary">{title}</h1>
       </div>
       
       <div class="flex items-center space-x-4">
@@ -50,11 +50,11 @@ const title = tienda.nombre || "Banano Shop";
     <div class="flex-1">
       <!-- Hero Banner -->
       <section class="py-12 md:py-20 text-center container px-4">
-        <h2 class="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
-          Deliciosos <span class="text-primary">Bananos</span> Frescos
+        <h2 class="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight text-primary">
+          {tienda.hero_titulo || "Deliciosos Bananos Frescos"}
         </h2>
         <p class="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
-          La mejor selección de productos derivados del banano, entregados directamente a tu puerta. Frescura garantizada y sabor inigualable.
+          {tienda.hero_descripcion || "La mejor selección de productos derivados del banano, entregados directamente a tu puerta. Frescura garantizada y sabor inigualable."}
         </p>
       </section>
 
@@ -70,12 +70,9 @@ const title = tienda.nombre || "Banano Shop";
             <div class="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
                 <div class="space-y-4 max-w-sm">
                     <div class="flex items-center justify-center md:justify-start gap-2">
-                        <span class="text-2xl">🍌</span>
+                        <img src="/logo_original.png" class="h-8 w-auto" alt="Logo" />
                         <h3 class="text-xl font-bold text-primary">{title}</h3>
                     </div>
-                    <p class="text-sm text-muted-foreground">
-                        Liderando el mercado de productos naturales y artesanales con la mejor calidad de exportación.
-                    </p>
                 </div>
 
                 {tienda.mostrar_info && (

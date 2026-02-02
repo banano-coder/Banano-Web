@@ -220,8 +220,8 @@ export const ProductGrid: React.FC = () => {
                   key={category.id}
                   onClick={() => setSelectedCategory(category)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${selectedCategory.id === category.id
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-transparent text-muted-foreground border-border hover:border-primary'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-transparent text-muted-foreground border-border hover:border-primary'
                     }`}
                 >
                   {category.name}
@@ -239,8 +239,8 @@ export const ProductGrid: React.FC = () => {
                   key={brand.id}
                   onClick={() => setSelectedBrand(brand)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${selectedBrand.id === brand.id
-                      ? 'bg-secondary text-secondary-foreground border-secondary'
-                      : 'bg-transparent text-muted-foreground border-border hover:border-secondary'
+                    ? 'bg-secondary text-secondary-foreground border-secondary'
+                    : 'bg-transparent text-muted-foreground border-border hover:border-secondary'
                     }`}
                 >
                   {brand.name}
@@ -254,7 +254,7 @@ export const ProductGrid: React.FC = () => {
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
         {loading || settingsLoading ? (
-          <div className="col-span-full text-center py-20 text-muted-foreground animate-pulse font-medium">Buscando bananos... 🍌</div>
+          <div className="col-span-full text-center py-20 text-muted-foreground animate-pulse font-medium">Buscando productos...</div>
         ) : storeClosed ? (
           <div className="col-span-full py-20 bg-card/40 border-2 border-dashed border-border rounded-3xl flex flex-col items-center justify-center text-center space-y-4 max-w-2xl mx-auto">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
@@ -279,7 +279,7 @@ export const ProductGrid: React.FC = () => {
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-muted-foreground">
-            <p className="text-xl">No encontramos productos. 🍌</p>
+            <p className="text-xl">No encontramos productos.</p>
           </div>
         )}
       </div>

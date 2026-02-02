@@ -1,17 +1,16 @@
 export interface Product {
     id_producto: number;
     nombre: string;
-    sku_base: string;
     descripcion: string;
     activo: boolean;
     precio: number;
-    // Flat fields from new query
     category_name?: string;
     brand_name?: string;
     total_stock?: number;
+    variants_count?: number;
     // Legacy nested objects (optional now)
-    Categoria?: { nombre: string }; 
-    Marca?: { nombre: string };     
+    Categoria?: { nombre: string };
+    Marca?: { nombre: string };
 }
 
 export interface ProductsApiResponse {
@@ -22,7 +21,7 @@ export interface ProductsApiResponse {
 }
 
 export interface Category {
-    id_categoria: number; 
+    id_categoria: number;
     nombre: string;
 }
 
@@ -40,6 +39,7 @@ export interface Variant {
     codigo_barras?: string;
     atributos_json?: any;
     activo: boolean;
+    stock_actual?: number;
 }
 
 export interface ProductImage {
