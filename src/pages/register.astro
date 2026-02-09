@@ -6,16 +6,16 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 ---
 
-<Layout title="Register">
-  <main class="flex items-center justify-center min-h-screen bg-background">
+<Layout title="Registrarse">
+  <main class="flex items-center justify-center min-h-screen bg-background text-foreground">
     <Card className="w-full max-w-md mx-4">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">Register</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">Registrarse</CardTitle>
       </CardHeader>
       <CardContent>
         <form id="register-form" class="space-y-4">
             <div class="space-y-2">
-                <Label htmlFor="nombre">Nombre</Label>
+                <Label htmlFor="nombre">Nombre Completos</Label>
                 <Input id="nombre" type="text" placeholder="Juan Pérez" required />
               </div>
           <div class="space-y-2">
@@ -23,15 +23,15 @@ import { Label } from "../components/ui/label";
             <Input id="email" type="email" placeholder="m@example.com" required />
           </div>
           <div class="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input id="password" type="password" required />
           </div>
-          <Button type="submit" className="w-full">Register</Button>
+          <Button type="submit" className="w-full">Registrarse</Button>
         </form>
         <div id="message" class="text-center mt-4 text-sm font-medium"></div>
         <div class="mt-4 text-center text-sm">
-          Already have an account?
-          <a href="/login" class="underline">Login</a>
+          ¿Ya tienes cuenta?
+          <a href="/login" class="underline">Iniciar Sesión</a>
         </div>
       </CardContent>
     </Card>
@@ -68,7 +68,7 @@ import { Label } from "../components/ui/label";
               body: { email, password, nombre } 
             });
 
-            messageElement.textContent = "Registration successful! Please login.";
+            messageElement.textContent = "¡Registro exitoso! Por favor inicia sesión.";
             messageElement.className = "text-center text-sm font-medium text-green-500";
 
             setTimeout(() => {
@@ -76,7 +76,7 @@ import { Label } from "../components/ui/label";
             }, 1500);
           } catch (error) {
             console.error("Registration failed:", error);
-            messageElement.textContent = (error as Error).message || "An error occurred. Please try again later.";
+            messageElement.textContent = (error as Error).message || "Ocurrió un error. Por favor intenta más tarde.";
             messageElement.className = "text-center text-sm font-medium text-red-500";
           }
         }

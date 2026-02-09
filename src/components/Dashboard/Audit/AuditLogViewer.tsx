@@ -147,31 +147,71 @@ export const AuditLogViewer: React.FC = () => {
 
         const boldActor = <span className="font-bold text-foreground brightness-110">{actorName}</span>;
 
+        const productName = log.target_producto_nombre || (log.target_label ? log.target_label.replace(/^Producto:\s*/i, '') : 'un producto');
+        const variantName = log.target_variante_sku || (log.target_label ? log.target_label.replace(/^Variante:\s*/i, '') : 'una variante');
+        const catName = log.target_label ? log.target_label.replace(/^Categoría:\s*/i, '') : 'una categoría';
+        const brandName = log.target_label ? log.target_label.replace(/^Marca:\s*/i, '') : 'una marca';
+        const userName = log.target_usuario_nombre || (log.target_label ? log.target_label.replace(/^Usuario:\s*/i, '') : 'un usuario');
+
         switch (action) {
             case 'PRODUCT_CREATE':
-                return <>{boldActor} creó el producto <span className="font-semibold">{log.target_producto_nombre || log.target_label || 'un producto'}</span></>;
+            case 'PRODUCT_CREATE_WITH_VARIANT':
+                return <>{boldActor} creó el producto <span className="font-semibold">{productName}</span></>;
             case 'PRODUCT_UPDATE':
-                return <>{boldActor} actualizó el producto <span className="font-semibold">{log.target_producto_nombre || log.target_label}</span></>;
+                return <>{boldActor} actualizó el producto <span className="font-semibold">{productName}</span></>;
+            case 'PRODUCT_SOFT_DELETE':
+            case 'PRODUCT_DISABLE':
+                return <>{boldActor} <span className="text-red-500">desactivó/eliminó</span> el producto <span className="font-semibold">{productName}</span></>;
             case 'VARIANT_CREATE':
-                return <>{boldActor} creó la variante <span className="font-semibold">{log.target_variante_sku || log.target_label}</span></>;
+                return <>{boldActor} creó la variante <span className="font-semibold">{variantName}</span></>;
             case 'VARIANT_UPDATE':
-                return <>{boldActor} actualizó la variante <span className="font-semibold">{log.target_variante_sku || log.target_label}</span></>;
+                return <>{boldActor} actualizó la variante <span className="font-semibold">{variantName}</span></>;
             case 'INV_ENTRADA':
-                return <>{boldActor} registró <span className="text-green-600 font-medium">entrada (+{payload.cantidad || ''})</span> para <span className="font-semibold">{log.target_variante_sku || log.target_label}</span></>;
+                return <>{boldActor} registró <span className="text-green-600 font-medium">entrada (+{payload.cantidad || ''})</span> para <span className="font-semibold">{variantName}</span></>;
             case 'INV_SALIDA':
-                return <>{boldActor} registró <span className="text-red-600 font-medium">salida (-{payload.cantidad || ''})</span> para <span className="font-semibold">{log.target_variante_sku || log.target_label}</span></>;
+                return <>{boldActor} registró <span className="text-red-600 font-medium">salida (-{payload.cantidad || ''})</span> para <span className="font-semibold">{variantName}</span></>;
+            case 'INV_AJUSTE':
+                return <>{boldActor} realizó un <span className="text-amber-600 font-medium">ajuste de stock</span> para <span className="font-semibold">{variantName}</span></>;
+            case 'VARIANT_PRICE_CHANGE':
+                return <>{boldActor} <span className="text-blue-600 font-medium">modificó precios</span> de la variante <span className="font-semibold">{variantName}</span></>;
+            case 'VARIANT_DISABLE':
+                return <>{boldActor} <span className="text-red-500 font-medium">desactivó</span> la variante <span className="font-semibold">{variantName}</span></>;
             case 'PEDIDO_CREAR':
                 return <>{boldActor} registró el <span className="font-semibold text-primary">Pedido #{log.target_pedido_id}</span></>;
             case 'PEDIDO_CAMBIAR_ESTADO':
                 return <>{boldActor} cambió el estado del <span className="font-semibold">Pedido #{log.target_pedido_id}</span> a <span className="font-bold underline">{payload.estado}</span></>;
             case 'USUARIO_UPDATE_PASSWORD':
-                return <>{boldActor} <span className="text-purple-600">cambió la contraseña</span> de <span className="font-medium">{log.target_usuario_nombre || log.target_label}</span></>;
+                return <>{boldActor} <span className="text-purple-600">cambió su propia contraseña</span></>;
             case 'USUARIO_UPDATE_PERFIL':
-                return <>{boldActor} actualizó el perfil de <span className="font-medium">{log.target_usuario_nombre || log.target_label}</span></>;
-            case 'DISABLE':
-                return <>{boldActor} <span className="text-red-500">desactivó</span> al usuario <span className="font-medium">{log.target_usuario_nombre || log.target_label}</span></>;
+                return <>{boldActor} actualizó su perfil</>;
+            case 'RESET_PASSWORD':
+                return <>{boldActor} <span className="text-rose-600 font-medium">reseteó la contraseña</span> de <span className="font-medium">{userName}</span></>;
+            case 'REPLACE_ROLES':
+                return <>{boldActor} <span className="text-indigo-600 font-medium">actualizó los roles</span> de <span className="font-medium">{userName}</span></>;
+            case 'CREATE_USER':
+                return <>{boldActor} <span className="text-green-600 font-medium">creó al usuario</span> <span className="font-medium">{userName}</span></>;
+            case 'CREATE_USER_SIGNUP':
+                return <>{boldActor} <span className="text-emerald-600 font-medium">se registró</span> en el sistema</>;
             case 'ENABLE':
-                return <>{boldActor} <span className="text-green-500">activó</span> al usuario <span className="font-medium">{log.target_usuario_nombre || log.target_label}</span></>;
+                return <>{boldActor} <span className="text-green-500">activó</span> al usuario <span className="font-medium">{userName}</span></>;
+            case 'DISABLE':
+                return <>{boldActor} <span className="text-red-500">desactivó</span> al usuario <span className="font-medium">{userName}</span></>;
+            case 'SOFT_DELETE_USER':
+                return <>{boldActor} <span className="text-red-600 font-bold">eliminó</span> al usuario <span className="font-medium">{userName}</span></>;
+            case 'CAT_CREATE':
+                return <>{boldActor} creó la categoría <span className="font-semibold">{catName}</span></>;
+            case 'CAT_UPDATE':
+                return <>{boldActor} actualizó la categoría <span className="font-semibold">{catName}</span></>;
+            case 'CAT_DISABLE':
+            case 'CAT_SOFT_DELETE':
+                return <>{boldActor} <span className="text-red-500">eliminó</span> la categoría <span className="font-semibold">{catName}</span></>;
+            case 'BRAND_CREATE':
+                return <>{boldActor} creó la marca <span className="font-semibold">{brandName}</span></>;
+            case 'BRAND_UPDATE':
+                return <>{boldActor} actualizó la marca <span className="font-semibold">{brandName}</span></>;
+            case 'BRAND_SOFT_DELETE':
+            case 'BRAND_DISABLE':
+                return <>{boldActor} <span className="text-red-500">eliminó</span> la marca <span className="font-semibold">{brandName}</span></>;
             default:
                 return <>
                     {boldActor} realizó la acción <span className="font-semibold">{log.action_label || log.action}</span>

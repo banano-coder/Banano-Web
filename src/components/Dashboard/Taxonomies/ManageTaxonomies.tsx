@@ -54,6 +54,7 @@ export const ManageTaxonomies = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeTab, setActiveTab] = useState('brands');
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // Dialog states
@@ -192,6 +193,17 @@ export const ManageTaxonomies = () => {
     const filteredBrands = brands.filter(b => b.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     const filteredCategories = categories.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
 
+    const handleOpenCreateDialog = () => {
+        setFormData({ nombre: '', id_padre: '' });
+        if (activeTab === 'brands') {
+            setEditingBrand(null);
+            setIsBrandDialogOpen(true);
+        } else {
+            setEditingCategory(null);
+            setIsCategoryDialogOpen(true);
+        }
+    };
+
     return (
         <div className="space-y-4">
             {message && (
@@ -208,19 +220,29 @@ export const ManageTaxonomies = () => {
                             <Tags className="h-5 w-5 text-primary" />
                             Listado General
                         </CardTitle>
-                        <div className="relative w-full max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar..."
-                                className="pl-9 bg-background/50 border-white/10"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                        <div className="flex items-center gap-3 w-full max-w-md">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar..."
+                                    className="pl-9 bg-background/50 border-white/10 w-full"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <Button
+                                size="sm"
+                                onClick={handleOpenCreateDialog}
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Nueva {activeTab === 'brands' ? 'Marca' : 'Categoría'}
+                            </Button>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Tabs defaultValue="brands" className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="w-full justify-start rounded-none border-b border-white/5 bg-transparent p-0 h-12">
                             <TabsTrigger value="brands" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-primary/5 px-6 h-full">
                                 Marcas
@@ -288,7 +310,6 @@ export const ManageTaxonomies = () => {
                                     <TableRow className="hover:bg-transparent border-white/5">
                                         <TableHead className="text-muted-foreground">ID</TableHead>
                                         <TableHead className="text-muted-foreground">Nombre</TableHead>
-                                        <TableHead className="text-muted-foreground">Padre</TableHead>
                                         <TableHead className="text-muted-foreground">Estado</TableHead>
                                         <TableHead className="text-right text-muted-foreground">Acciones</TableHead>
                                     </TableRow>
@@ -296,13 +317,13 @@ export const ManageTaxonomies = () => {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center">
+                                            <TableCell colSpan={4} className="h-32 text-center">
                                                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                                             </TableCell>
                                         </TableRow>
                                     ) : filteredCategories.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                                            <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                                                 No se encontraron categorías.
                                             </TableCell>
                                         </TableRow>
@@ -310,15 +331,6 @@ export const ManageTaxonomies = () => {
                                         <TableRow key={cat.id_categoria} className="hover:bg-white/5 border-white/5 transition-colors">
                                             <TableCell className="font-mono text-xs opacity-50">#{cat.id_categoria}</TableCell>
                                             <TableCell className="font-medium">{cat.nombre}</TableCell>
-                                            <TableCell>
-                                                {cat.id_padre ? (
-                                                    <Badge variant="outline" className="text-xs font-normal border-white/10">
-                                                        {categories.find(c => c.id_categoria === cat.id_padre)?.nombre || 'Desconocido'}
-                                                    </Badge>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground italic">Ninguno</span>
-                                                )}
-                                            </TableCell>
                                             <TableCell>
                                                 <Badge variant={cat.activo ? "default" : "secondary"} className={cat.activo ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : ""}>
                                                     {cat.activo ? "Activo" : "Inactivo"}
@@ -349,28 +361,35 @@ export const ManageTaxonomies = () => {
 
             {/* Brand Dialog */}
             <Dialog open={isBrandDialogOpen} onOpenChange={setIsBrandDialogOpen}>
-                <DialogContent className="bg-card border-white/10 text-white sm:max-w-[425px]">
+                <DialogContent className="bg-card border-border sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>{editingBrand ? 'Editar Marca' : 'Nueva Marca'}</DialogTitle>
+                        <DialogTitle className="text-foreground text-xl font-bold">
+                            {editingBrand ? 'Editar Marca' : 'Nueva Marca'}
+                        </DialogTitle>
                         <DialogDescription className="text-muted-foreground">
                             {editingBrand ? 'Modifica los detalles de la marca.' : 'Agrega una nueva marca para tus productos.'}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSaveBrand}>
-                        <div className="grid gap-4 py-4">
+                        <div className="grid gap-6 py-6">
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="name" className="text-right">Nombre</Label>
+                                <Label htmlFor="name" className="text-right font-semibold text-foreground">
+                                    Nombre
+                                </Label>
                                 <Input
                                     id="name"
-                                    className="col-span-3 bg-background/50 border-white/10"
+                                    className="col-span-3 bg-background border-border text-foreground focus:ring-primary"
                                     value={formData.nombre}
                                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                                     required
+                                    placeholder="Inserte nombre de marca"
                                 />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="submit">{editingBrand ? 'Guardar Cambios' : 'Crear Marca'}</Button>
+                            <Button type="submit" className="w-full sm:w-auto font-bold shadow-md">
+                                {editingBrand ? 'Guardar Cambios' : 'Crear Marca'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -378,45 +397,35 @@ export const ManageTaxonomies = () => {
 
             {/* Category Dialog */}
             <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-                <DialogContent className="bg-card border-white/10 text-white sm:max-w-[425px]">
+                <DialogContent className="bg-card border-border sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>{editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}</DialogTitle>
+                        <DialogTitle className="text-foreground text-xl font-bold">
+                            {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
+                        </DialogTitle>
                         <DialogDescription className="text-muted-foreground">
                             {editingCategory ? 'Modifica los detalles de la categoría.' : 'Agrega una nueva categoría para tus productos.'}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSaveCategory}>
-                        <div className="grid gap-4 py-4">
+                        <div className="grid gap-6 py-6">
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="catName" className="text-right">Nombre</Label>
+                                <Label htmlFor="catName" className="font-semibold text-foreground text-right">
+                                    Nombre
+                                </Label>
                                 <Input
                                     id="catName"
-                                    className="col-span-3 bg-background/50 border-white/10"
+                                    className="col-span-3 bg-background border-border text-foreground focus:ring-primary"
                                     value={formData.nombre}
                                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                                     required
+                                    placeholder="Inserte nombre de categoría"
                                 />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="catParent" className="text-right">Padre</Label>
-                                <select
-                                    id="catParent"
-                                    className="col-span-3 h-10 px-3 rounded-md bg-background/50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50 text-white text-sm"
-                                    value={formData.id_padre}
-                                    onChange={(e) => setFormData({ ...formData, id_padre: e.target.value })}
-                                >
-                                    <option value="">Ninguna (Nivel Superior)</option>
-                                    {categories
-                                        .filter(c => !editingCategory || c.id_categoria !== editingCategory.id_categoria)
-                                        .map(c => (
-                                            <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
-                                        ))
-                                    }
-                                </select>
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="submit">{editingCategory ? 'Guardar Cambios' : 'Crear Categoría'}</Button>
+                            <Button type="submit" className="w-full sm:w-auto font-bold shadow-md">
+                                {editingCategory ? 'Guardar Cambios' : 'Crear Categoría'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

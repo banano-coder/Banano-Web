@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, TrendingUp, AlertTriangle, Loader2, FileDown, Box, History, BarChart3 } from 'lucide-react';
+import { Download, FileText, AlertTriangle, Loader2, FileDown, Box, History } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -179,7 +179,7 @@ export const InventoryReports = () => {
                 <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                     <Box className="h-5 w-5 text-primary" /> Inventario Operativo
                 </h3>
-                <div className="grid gap-6 md:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-2">
                     {/* Stock Actual Card */}
                     <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg hover:border-primary/30 transition-all group">
                         <CardHeader>
@@ -244,37 +244,6 @@ export const InventoryReports = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Top Productos Card */}
-                    <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg hover:border-green-500/30 transition-all group">
-                        <CardHeader>
-                            <div className="p-3 w-fit rounded-xl bg-green-500/10 text-green-600 mb-2 group-hover:scale-110 transition-transform">
-                                <TrendingUp className="h-6 w-6" />
-                            </div>
-                            <CardTitle className="text-xl text-foreground">Top Productos</CardTitle>
-                            <CardDescription className="text-foreground/70 font-medium">
-                                Ranking de productos activos con mayor número de salidas de inventario.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <Button
-                                onClick={() => handleDownloadReport('top-sales', 'pdf')}
-                                disabled={loading !== null}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white shadow-green-500/20 shadow-lg"
-                            >
-                                {loading === 'top-sales-pdf' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Descargar PDF
-                            </Button>
-                            <Button
-                                onClick={() => handleDownloadReport('top-sales', 'csv')}
-                                disabled={loading !== null}
-                                variant="ghost"
-                                className="w-full text-green-400 hover:bg-green-500/10 hover:text-green-300 border border-green-500/20"
-                            >
-                                {loading === 'top-sales-csv' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                Descargar CSV
-                            </Button>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
 
@@ -284,37 +253,6 @@ export const InventoryReports = () => {
                     <History className="h-5 w-5 text-primary" /> Despachos y Movimientos
                 </h3>
                 <div className="grid gap-6 md:grid-cols-2">
-                    {/* KPIs de Despachos Card */}
-                    <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg hover:border-indigo-500/30 transition-all group">
-                        <CardHeader>
-                            <div className="p-3 w-fit rounded-xl bg-indigo-500/10 text-indigo-600 mb-2 group-hover:scale-110 transition-transform">
-                                <BarChart3 className="h-6 w-6" />
-                            </div>
-                            <CardTitle className="text-xl text-foreground">KPIs de Despachos</CardTitle>
-                            <CardDescription className="text-foreground/70 font-medium">
-                                Resumen del total de unidades que han salido y su valor estimado.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex gap-4">
-                            <Button
-                                onClick={() => handleDownloadReport('mov-kpis', 'pdf')}
-                                disabled={loading !== null}
-                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20 shadow-lg"
-                            >
-                                {loading === 'mov-kpis-pdf' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                PDF
-                            </Button>
-                            <Button
-                                onClick={() => handleDownloadReport('mov-kpis', 'csv')}
-                                disabled={loading !== null}
-                                variant="outline"
-                                className="flex-1 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/10"
-                            >
-                                {loading === 'mov-kpis-csv' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                CSV
-                            </Button>
-                        </CardContent>
-                    </Card>
 
                     {/* Historial de Salidas Card */}
                     <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg hover:border-purple-500/30 transition-all group">
