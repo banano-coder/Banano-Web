@@ -27,6 +27,7 @@ interface Order {
     cliente_nombre?: string;
     cliente_email?: string;
     cliente_telefono?: string;
+    cedula_cliente?: string;
     usuario?: {
         nombre: string;
         email: string;
@@ -332,7 +333,10 @@ const OrdersManagerContent: React.FC = () => {
                                             <td className="p-4 align-middle">
                                                 <div className="flex flex-col">
                                                     <span className="font-medium">{nombre}</span>
-                                                    {email && <span className="text-xs text-muted-foreground">{email}</span>}
+                                                    <div className="flex flex-col text-xs text-muted-foreground">
+                                                        {order.cedula_cliente && <span>CID: {order.cedula_cliente}</span>}
+                                                        {email && <span>{email}</span>}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="p-4 align-middle text-muted-foreground">
@@ -372,6 +376,7 @@ const OrdersManagerContent: React.FC = () => {
                                 <div>
                                     <p className="text-sm text-muted-foreground font-bold uppercase">Cliente</p>
                                     <p className="font-medium text-lg">{selectedOrder.usuario?.nombre || (selectedOrder as any).cliente_nombre || 'Desconocido'}</p>
+                                    <p className="text-sm font-bold text-primary mb-1">{selectedOrder.cedula_cliente ? `C.I. ${selectedOrder.cedula_cliente}` : 'Sin Cédula'}</p>
                                     <p className="text-sm text-muted-foreground">{selectedOrder.usuario?.email || (selectedOrder as any).cliente_email}</p>
                                     {(selectedOrder.usuario?.telefono || (selectedOrder as any).cliente_telefono) && (
                                         <p className="text-sm text-muted-foreground mt-1">{selectedOrder.usuario?.telefono || (selectedOrder as any).cliente_telefono}</p>

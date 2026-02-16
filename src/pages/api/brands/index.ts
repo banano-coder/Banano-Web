@@ -31,6 +31,7 @@ export const ALL: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify(data), { status: response.status, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
+        console.error(`Error proxying brands request:`, error);
         return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
     }
 };

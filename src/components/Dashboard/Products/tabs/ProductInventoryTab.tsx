@@ -197,7 +197,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                             <div className="grid gap-2">
                                 <Label>Costo Unitario (Opcional)</Label>
                                 <Input
-                                    type="number" step="0.01"
+                                    type="number" step="0.01" min="0"
                                     value={costUnit} onChange={e => setCostUnit(e.target.value)}
                                     placeholder="Auto"
                                 />

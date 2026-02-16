@@ -53,6 +53,12 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
 
     const handleRegisterQuickStock = async () => {
         if (!editingVariant || !quickStock.cantidad) return;
+        const cantNum = parseInt(quickStock.cantidad);
+        if (isNaN(cantNum) || cantNum <= 0) {
+            alert("La cantidad debe ser un número mayor a cero.");
+            return;
+        }
+
         setRegisteringStock(true);
         try {
             await FetchData(API_ENDPOINTS.INVENTORY.MOVEMENTS, 'POST', {
@@ -139,7 +145,8 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             }
             setIsDialogOpen(false);
             fetchVariants();
-        } catch (error) {
+        } catch (error: any) {
+            alert(error.message || "Error al guardar variante");
             console.error("Error saving variant", error);
         } finally {
             setSaving(false);
@@ -255,7 +262,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                 <div className="grid gap-2">
                                     <Label>Precio Lista</Label>
                                     <Input
-                                        type="number" step="0.01"
+                                        type="number" step="0.01" min="0"
                                         value={formData.precio_lista}
                                         onChange={e => setFormData({ ...formData, precio_lista: e.target.value })}
                                         required
@@ -264,7 +271,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                 <div className="grid gap-2">
                                     <Label>Costo Unitario</Label>
                                     <Input
-                                        type="number" step="0.01"
+                                        type="number" step="0.01" min="0"
                                         value={formData.costo}
                                         onChange={e => setFormData({ ...formData, costo: e.target.value })}
                                         required
@@ -391,6 +398,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                         <Label className="text-xs">Cantidad</Label>
                                         <Input
                                             type="number"
+                                            min="1"
                                             className="h-8 text-xs"
                                             value={quickStock.cantidad}
                                             onChange={e => setQuickStock({ ...quickStock, cantidad: e.target.value })}
