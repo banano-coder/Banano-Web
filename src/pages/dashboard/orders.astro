@@ -3,6 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/Dashboard/Header.astro";
 import Sidebar from "../../components/Dashboard/Sidebar.astro";
 import { OrdersManager } from "../../components/Dashboard/Orders/OrdersManager";
+import { AuthGuard } from "../../components/Dashboard/AuthGuard";
 
 // Protect route (check for token) - Middleware usually handles this, but good to ensure
 const token = Astro.cookies.get("token")?.value;
@@ -16,8 +17,10 @@ if (!token) {
     <Header />
     <div class="flex flex-1">
       <Sidebar />
-      <main class="flex-1 p-8 overflow-y-auto">
-        <OrdersManager client:only="react" />
+      <main class="flex-1 p-6 md:p-8">
+        <AuthGuard client:load allowedRoles={['admin', 'manager', 'vendedor']} panelName="Pedidos">
+          <OrdersManager client:only="react" />  
+        </AuthGuard>
       </main>
     </div>
   </div>
