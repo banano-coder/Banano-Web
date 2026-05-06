@@ -31,6 +31,19 @@ This project is a static-first web application built with Astro.js. It is design
 - **Data Validation**: Checkout requires Cédula, Name, Email, and Phone. Conflict resolution (409) is implemented for overlapping contact info.
 
 ## Planned Changes
+- **Bulk Product Creation**: Implement the UI for parsing Excel/CSV files and creating products in bulk.
+    - Create `BulkProductUpload.tsx` component.
+    - Integrate "Carga Masiva" tab in `ProductsManagement.tsx`.
+    - Implement file upload and mapping logic (Category names to IDs).
 - **Frontend Alignment**: Update `CartDrawer.tsx` to include Cédula field and mandatory contact info.
 - **Dashboard Orders**: Update `OrdersManager.tsx` to display `cedula_cliente` in listing and details.
+
+## Detailed Plan: Bulk Product Creation
+1. **API Integration**: Added `/api/bulk/parse-file` and `/api/bulk/create` to `api.ts`. Implemented Astro API proxy routes in `src/pages/api/bulk/` to forward requests to the external backend.
+2. **Component Creation**: Develop `BulkProductUpload.tsx` using Tailwind CSS and Radix UI (Lucide icons).
+    - **Stage 1: Upload**: File input with drag & drop support and **Download buttons** for both `.csv` and `.xlsx` templates.
+    - **Stage 2: Preview & Mapping**: Hierarchical table showing parent products and nested variants. Includes selectors to fully map file groups to both system **Categories and Brands**.
+    - **Stage 3: Confirmation**: Final submission to the backend.
+3. **Integration**: Add the new component as a tab in the Inventory management section.
+4. **Validation**: Ensure feedback for successful uploads and error handling for invalid files.
 

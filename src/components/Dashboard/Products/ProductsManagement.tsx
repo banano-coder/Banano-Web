@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductList } from './ProductList';
 import { ManageTaxonomies } from '../Taxonomies/ManageTaxonomies';
 import { InventoryReports } from '../Inventory/InventoryReports';
-import { Box, Tags, FileText } from 'lucide-react';
+import { Box, Tags, FileText, UploadCloud } from 'lucide-react';
+import { BulkProductUpload } from './BulkProductUpload';
 
 export const ProductsManagement = () => {
     return (
@@ -26,6 +27,9 @@ export const ProductsManagement = () => {
                     <TabsTrigger value="reports" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
                         <FileText className="h-4 w-4" /> Reportes
                     </TabsTrigger>
+                    <TabsTrigger value="bulk" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
+                        <UploadCloud className="h-4 w-4" /> Carga Masiva
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="inventory" className="mt-6">
@@ -38,6 +42,10 @@ export const ProductsManagement = () => {
 
                 <TabsContent value="reports" className="mt-6">
                     <InventoryReports />
+                </TabsContent>
+
+                <TabsContent value="bulk" className="mt-6">
+                    <BulkProductUpload />
                 </TabsContent>
             </Tabs>
         </div>

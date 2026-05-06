@@ -34,5 +34,9 @@ export const API_ENDPOINTS = {
   INVENTORY: {
     MOVEMENTS: `/api/inventario/movimientos`,
     STOCK: (id: string | number) => `/api/inventario/stock/${id}`
+  },
+  BULK: {
+    PARSE_FILE: `/api/bulk/parse-file`,
+    CREATE: `/api/bulk/create`
   }
-}
+};
