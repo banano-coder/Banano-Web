@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = async ({ params, cookies }) => {
+export const GET: APIRoute = async ({ params }) => {
     const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
     const { cedula } = params;
 
@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
     }
 
     try {
-        const response = await fetch(`${externalApiBase}/guest/client/${cedula}`, {
+        const response = await fetch(`${externalApiBase}/guest/cliente/${cedula}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });

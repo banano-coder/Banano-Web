@@ -11,6 +11,8 @@ export interface Product {
     // Legacy nested objects (optional now)
     Categoria?: { nombre: string };
     Marca?: { nombre: string };
+    sku_base?: string;
+    image?: string;
 }
 
 export interface ProductsApiResponse {

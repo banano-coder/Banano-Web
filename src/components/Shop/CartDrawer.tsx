@@ -48,7 +48,7 @@ export const CartDrawer: React.FC = () => {
         const timeout = setTimeout(async () => {
             setIsSearchingClient(true);
             try {
-                const res = await fetch(`/api/guest/client/${customerCedula}`);
+                const res = await fetch(`/api/guest/cliente/${customerCedula}`);
                 if (res.ok) {
                     const result = await res.json();
                     if (result.status === 'success' && result.data) {

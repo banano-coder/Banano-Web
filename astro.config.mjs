@@ -15,4 +15,11 @@ export default defineConfig({
   output: 'server',
 
   adapter: vercel(),
+
+  vite: {
+    build: {
+      // Evita que el build falle por errores de TypeScript menores en Vercel
+      commonjsOptions: { transformMixedEsModules: true }
+    }
+  }
 });

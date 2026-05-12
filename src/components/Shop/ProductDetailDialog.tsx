@@ -155,7 +155,7 @@ export const ProductDetailDialog: React.FC<ProductDetailDialogProps> = ({ produc
                 image: mainImage || (product as any).image || 'https://placehold.co/400',
                 price: Number(product.precio || firstVariant?.precio_lista),
                 maxStock: firstVariant ? Number((firstVariant as any).stock) : 999,
-                sku: firstVariant?.sku || product.sku_base,
+                sku: firstVariant?.sku || product?.sku_base || '',
             }, simpleQuantity);
         }
         onClose();
