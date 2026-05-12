@@ -5,7 +5,7 @@ import { defineConfig } from 'astro/config';
 
 import tailwind from "@astrojs/tailwind";
 
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 
 // https://astro.build/config
 export default defineConfig({
@@ -14,16 +14,5 @@ export default defineConfig({
 
   output: 'server',
 
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
-  },
-
-  adapter: node({
-    mode: 'standalone',
-  }),
+  adapter: vercel(),
 });
