@@ -7,8 +7,8 @@ export const API_ENDPOINTS = {
   ME: `/api/auth/me`,
   CATALOG: {
     PRODUCTS: `/api/catalog/products`,
-    CATEGORIES: `/api/categories`,
-    BRANDS: `/api/brands`
+    CATEGORIES: `/api/catalog/categories`,
+    BRANDS: `/api/catalog/brands`
   },
   USERS: {
     LIST: `/api/users`,
