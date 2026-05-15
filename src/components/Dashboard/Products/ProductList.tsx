@@ -77,8 +77,12 @@ export const ProductList = () => {
     };
 
     useEffect(() => {
-        fetchProducts();
-    }, []);
+        const timer = setTimeout(() => {
+            fetchProducts();
+        }, 400); // Pequeño retraso para no saturar el servidor al escribir
+
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const handleToggleStatus = async () => {
         if (!productToToggle) return;
