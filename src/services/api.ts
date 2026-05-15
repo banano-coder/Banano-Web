@@ -10,6 +10,14 @@ export const API_ENDPOINTS = {
     CATEGORIES: `/api/catalog/categories`,
     BRANDS: `/api/catalog/brands`
   },
+  CATEGORIES: {
+    LIST: `/api/categories`,
+    ITEM: (id: string | number) => `/api/categories/${id}`
+  },
+  BRANDS: {
+    LIST: `/api/brands`,
+    ITEM: (id: string | number) => `/api/brands/${id}`
+  },
   USERS: {
     LIST: `/api/users`,
     CREATE: `/api/users`,

@@ -77,8 +77,8 @@ export const ManageTaxonomies = () => {
         setLoading(true);
         try {
             const [brandsRes, categoriesRes] = await Promise.all([
-                fetch(API_ENDPOINTS.CATALOG.BRANDS),
-                fetch(API_ENDPOINTS.CATALOG.CATEGORIES)
+                fetch(API_ENDPOINTS.BRANDS.LIST),
+                fetch(API_ENDPOINTS.CATEGORIES.LIST)
             ]);
 
             if (brandsRes.ok) {
@@ -100,7 +100,7 @@ export const ManageTaxonomies = () => {
         e.preventDefault();
         try {
             const method = editingBrand ? 'PATCH' : 'POST';
-            const url = editingBrand ? `${API_ENDPOINTS.CATALOG.BRANDS}/${editingBrand.id_marca}` : API_ENDPOINTS.CATALOG.BRANDS;
+            const url = editingBrand ? API_ENDPOINTS.BRANDS.ITEM(editingBrand.id_marca) : API_ENDPOINTS.BRANDS.LIST;
 
             const response = await fetch(url, {
                 method,
@@ -124,7 +124,7 @@ export const ManageTaxonomies = () => {
         e.preventDefault();
         try {
             const method = editingCategory ? 'PATCH' : 'POST';
-            const url = editingCategory ? `${API_ENDPOINTS.CATALOG.CATEGORIES}/${editingCategory.id_categoria}` : API_ENDPOINTS.CATALOG.CATEGORIES;
+            const url = editingCategory ? API_ENDPOINTS.CATEGORIES.ITEM(editingCategory.id_categoria) : API_ENDPOINTS.CATEGORIES.LIST;
 
             const response = await fetch(url, {
                 method,
@@ -152,7 +152,7 @@ export const ManageTaxonomies = () => {
         if (!brandToToggle) return;
         setStatusLoading(true);
         try {
-            const response = await fetch(`${API_ENDPOINTS.CATALOG.BRANDS}/${brandToToggle.id_marca}`, {
+            const response = await fetch(API_ENDPOINTS.BRANDS.ITEM(brandToToggle.id_marca), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ activo: !brandToToggle.activo })
@@ -173,7 +173,7 @@ export const ManageTaxonomies = () => {
         if (!categoryToToggle) return;
         setStatusLoading(true);
         try {
-            const response = await fetch(`${API_ENDPOINTS.CATALOG.CATEGORIES}/${categoryToToggle.id_categoria}`, {
+            const response = await fetch(API_ENDPOINTS.CATEGORIES.ITEM(categoryToToggle.id_categoria), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ activo: !categoryToToggle.activo })

@@ -79,8 +79,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const fetchDependencies = async () => {
     setLoading(true)
     try {
-      const cats = await FetchData<Category[]>(API_ENDPOINTS.CATALOG.CATEGORIES)
-      const brs = await FetchData<Brand[]>(API_ENDPOINTS.CATALOG.BRANDS)
+      const cats = await FetchData<Category[]>(API_ENDPOINTS.CATEGORIES.LIST)
+      const brs = await FetchData<Brand[]>(API_ENDPOINTS.BRANDS.LIST)
       setCategories(Array.isArray(cats) ? cats : (cats as any).data || [])
       setBrands(Array.isArray(brs) ? brs : (brs as any).data || [])
     } catch (err) {
@@ -99,7 +99,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     if (!newCategoryName || newCategoryName.trim() === '') return;
     setLoading(true);
     try {
-      const res = await FetchData<any>(API_ENDPOINTS.CATALOG.CATEGORIES, 'POST', {
+      const res = await FetchData<any>(API_ENDPOINTS.CATEGORIES.LIST, 'POST', {
         body: { nombre: newCategoryName.trim() }
       });
       const catId = res.id_categoria || res.category?.id_categoria;
@@ -120,7 +120,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     if (!newBrandName || newBrandName.trim() === '') return;
     setLoading(true);
     try {
-      const res = await FetchData<any>(API_ENDPOINTS.CATALOG.BRANDS, 'POST', {
+      const res = await FetchData<any>(API_ENDPOINTS.BRANDS.LIST, 'POST', {
         body: { nombre: newBrandName.trim() }
       });
       const brId = res.id_marca || res.brand?.id_marca;

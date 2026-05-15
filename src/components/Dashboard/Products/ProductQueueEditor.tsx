@@ -36,8 +36,8 @@ export const ProductQueueEditor: React.FC<ProductQueueEditorProps> = ({ createdP
     const fetchTaxonomies = async () => {
         try {
             const [catsRes, brandsRes] = await Promise.all([
-                FetchData<Category[]>(API_ENDPOINTS.CATALOG.CATEGORIES),
-                FetchData<Brand[]>(API_ENDPOINTS.CATALOG.BRANDS)
+                FetchData<Category[]>(API_ENDPOINTS.CATEGORIES.LIST),
+                FetchData<Brand[]>(API_ENDPOINTS.BRANDS.LIST)
             ]);
             setCategories(Array.isArray(catsRes) ? catsRes : (catsRes as any).data || []);
             setBrands(Array.isArray(brandsRes) ? brandsRes : (brandsRes as any).data || []);
@@ -101,7 +101,7 @@ export const ProductQueueEditor: React.FC<ProductQueueEditorProps> = ({ createdP
         if (!newCategoryName || newCategoryName.trim() === '') return;
         setLoading(true);
         try {
-            const res = await FetchData<any>(API_ENDPOINTS.CATALOG.CATEGORIES, 'POST', {
+            const res = await FetchData<any>(API_ENDPOINTS.CATEGORIES.LIST, 'POST', {
                 body: { nombre: newCategoryName.trim() }
             });
             const catId = res.id_categoria || res.category?.id_categoria;
@@ -122,7 +122,7 @@ export const ProductQueueEditor: React.FC<ProductQueueEditorProps> = ({ createdP
         if (!newBrandName || newBrandName.trim() === '') return;
         setLoading(true);
         try {
-            const res = await FetchData<any>(API_ENDPOINTS.CATALOG.BRANDS, 'POST', {
+            const res = await FetchData<any>(API_ENDPOINTS.BRANDS.LIST, 'POST', {
                 body: { nombre: newBrandName.trim() }
             });
             const brId = res.id_marca || res.brand?.id_marca;
