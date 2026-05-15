@@ -252,7 +252,7 @@ export const ProductGrid: React.FC = () => {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
         {loading || settingsLoading ? (
           <div className="col-span-full text-center py-20 text-muted-foreground animate-pulse font-medium">Buscando productos...</div>
         ) : storeClosed ? (
