@@ -1,19 +1,31 @@
-<header class="flex items-center justify-between p-4 bg-card/80 backdrop-blur-sm border-b border-border">
-    <h1 class="text-2xl font-bold text-foreground">Panel Administrativo</h1>
-    <button id="logout-button" class="px-4 py-2 text-white bg-purple-600 rounded-md hover:bg-purple-700">Cerrar Sesión</button>
+<header class="flex items-center justify-between p-3 md:p-4 bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+        <button id="toggle-sidebar" class="md:hidden p-2 rounded-md hover:bg-secondary text-foreground transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x22="21" y2="12"></line><line x1="3" y1="6" x22="21" y2="6"></line><line x1="3" y1="18" x22="21" y2="18"></line></svg>
+        </button>
+        <h1 class="text-lg md:text-2xl font-bold text-foreground truncate">Panel Administrativo</h1>
+    </div>
+    <button id="logout-button" class="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 shadow-lg shadow-purple-500/20 font-bold transition-all active:scale-95">Cerrar Sesión</button>
 </header>
 
 <script>
     const logoutButton = document.getElementById('logout-button');
+    const toggleButton = document.getElementById('toggle-sidebar');
 
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
-            // Remove the auth token cookie
             document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            // Remove user data from localStorage
             localStorage.removeItem('user');
-            // Redirect to the login page
             window.location.href = '/login';
+        });
+    }
+
+    if (toggleButton) {
+        toggleButton.addEventListener('click', () => {
+             const sidebar = document.getElementById('dashboard-sidebar');
+             const overlay = document.getElementById('sidebar-overlay');
+             if (sidebar) sidebar.classList.toggle('-translate-x-full');
+             if (overlay) overlay.classList.toggle('hidden');
         });
     }
 </script>

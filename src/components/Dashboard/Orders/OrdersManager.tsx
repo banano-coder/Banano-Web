@@ -221,9 +221,9 @@ const OrdersManagerContent: React.FC = () => {
 
                 <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
                     <form onSubmit={handleSearchSubmit} className="space-y-4">
-                        <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex flex-col lg:flex-row gap-4">
                             {/* Order ID Filter */}
-                            <div className="w-full md:w-32 relative">
+                            <div className="w-full lg:w-24 relative">
                                 <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="text"
@@ -235,7 +235,7 @@ const OrdersManagerContent: React.FC = () => {
                             </div>
 
                             {/* Search Name/Email */}
-                            <div className="flex-1 relative">
+                            <div className="w-full lg:flex-1 relative">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="text"
@@ -246,7 +246,7 @@ const OrdersManagerContent: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="w-full md:w-48">
+                            <div className="w-full lg:w-48">
                                 <select
                                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                                     value={statusFilter}
@@ -260,17 +260,19 @@ const OrdersManagerContent: React.FC = () => {
                                 </select>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`h-10 px-4 rounded-md border text-sm font-medium transition-colors flex items-center gap-2 ${showFilters ? 'bg-secondary text-secondary-foreground' : 'bg-background hover:bg-accent'}`}
-                            >
-                                <Filter className="h-4 w-4" /> Filtros
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`h-10 px-4 flex-1 lg:flex-none rounded-md border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${showFilters ? 'bg-secondary text-secondary-foreground' : 'bg-background hover:bg-accent'}`}
+                                >
+                                    <Filter className="h-4 w-4" /> Filtros
+                                </button>
 
-                            <button type="submit" className="h-10 px-4 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors">
-                                Buscar
-                            </button>
+                                <button type="submit" className="h-10 px-6 flex-1 lg:flex-none bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors">
+                                    Buscar
+                                </button>
+                            </div>
                         </div>
 
                         {showFilters && (
@@ -372,11 +374,11 @@ const OrdersManagerContent: React.FC = () => {
                             <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-muted rounded-full"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="p-6 overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <p className="text-sm text-muted-foreground font-bold uppercase">Cliente</p>
-                                    <p className="font-medium text-lg">{selectedOrder.usuario?.nombre || (selectedOrder as any).cliente_nombre || 'Desconocido'}</p>
-                                    <p className="text-sm font-bold text-primary mb-1">{selectedOrder.cedula_cliente ? `C.I. ${selectedOrder.cedula_cliente}` : 'Sin Cédula'}</p>
+                                    <p className="text-sm text-muted-foreground font-bold uppercase mb-1">Cliente</p>
+                                    <p className="font-medium text-lg leading-tight">{selectedOrder.usuario?.nombre || (selectedOrder as any).cliente_nombre || 'Desconocido'}</p>
+                                    <p className="text-sm font-bold text-primary my-1">{selectedOrder.cedula_cliente ? `C.I. ${selectedOrder.cedula_cliente}` : 'Sin Cédula'}</p>
                                     <p className="text-sm text-muted-foreground">{selectedOrder.usuario?.email || (selectedOrder as any).cliente_email}</p>
                                     {(selectedOrder.usuario?.telefono || (selectedOrder as any).cliente_telefono) && (
                                         <p className="text-sm text-muted-foreground mt-1">{selectedOrder.usuario?.telefono || (selectedOrder as any).cliente_telefono}</p>
@@ -389,7 +391,7 @@ const OrdersManagerContent: React.FC = () => {
                                         {['nuevo', 'contactado', 'concretado', 'cancelado'].map(s => (
                                             <button
                                                 key={s}
-                                                className={`text-xs px-2 py-1.5 rounded-md border transition-colors ${selectedOrder.estado === s ? 'bg-primary text-primary-foreground border-primary opacity-50 cursor-default' : 'hover:bg-accent hover:border-primary/50'}`}
+                                                className={`text-[10px] md:text-xs px-2 py-1.5 rounded-md border transition-colors ${selectedOrder.estado === s ? 'bg-primary text-primary-foreground border-primary opacity-50 cursor-default' : 'hover:bg-accent hover:border-primary/50'}`}
                                                 onClick={() => updateStatus(Number(selectedOrder.id || selectedOrder.id_pedido), s)}
                                                 disabled={selectedOrder.estado === s}
                                             >{s.charAt(0).toUpperCase() + s.slice(1)}</button>
@@ -398,8 +400,8 @@ const OrdersManagerContent: React.FC = () => {
                                 </div>
                             </div>
                             <h4 className="font-bold mb-3 flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Productos</h4>
-                            <div className="border rounded-md overflow-hidden">
-                                <table className="w-full text-sm">
+                            <div className="border rounded-md overflow-x-auto">
+                                <table className="w-full text-sm min-w-[500px]">
                                     <thead className="bg-muted">
                                         <tr><th className="p-3 text-left font-medium">Producto</th><th className="p-3 text-center font-medium">Cant</th><th className="p-3 text-right font-medium">Precio Unit.</th><th className="p-3 text-right font-medium">Total</th></tr>
                                     </thead>

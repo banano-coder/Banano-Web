@@ -124,14 +124,14 @@ export const ProductList = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <div className="relative w-72">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="relative w-full md:w-72">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
                         placeholder="Buscar productos..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
+                        className="pl-9 w-full"
                     />
                 </div>
                 <CreateProductDialog onProductCreated={fetchProducts} />
@@ -147,8 +147,9 @@ export const ProductList = () => {
                         </div>
                     )}
                 </CardHeader>
-                <CardContent>
-                    <Table>
+                <CardContent className="p-0 md:p-6">
+                    <div className="overflow-x-auto">
+                        <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
@@ -232,6 +233,7 @@ export const ProductList = () => {
                             )}
                         </TableBody>
                     </Table>
+                    </div>
                 </CardContent>
             </Card>
 

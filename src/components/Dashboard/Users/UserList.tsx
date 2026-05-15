@@ -149,14 +149,14 @@ export const UserList = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <div className="relative w-72">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="relative w-full md:w-72">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
                         placeholder="Buscar usuarios..."
                         value={searchTerm}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                        className="pl-9"
+                        className="pl-9 w-full"
                     />
                 </div>
                 <CreateUserDialog onUserCreated={fetchUsers} />
@@ -175,8 +175,9 @@ export const UserList = () => {
                         </div>
                     )}
                 </CardHeader>
-                <CardContent>
-                    <Table>
+                <CardContent className="p-0 md:p-6">
+                    <div className="overflow-x-auto">
+                        <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
@@ -261,6 +262,7 @@ export const UserList = () => {
                             )}
                         </TableBody>
                     </Table>
+                    </div>
 
                     {/* Pagination */}
                     <div className="flex items-center justify-end space-x-2 py-4">
