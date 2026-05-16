@@ -3,6 +3,7 @@ export interface Product {
     nombre: string;
     descripcion: string;
     activo: boolean;
+    necesita_revision?: boolean;
     precio: number;
     category_name?: string;
     brand_name?: string;

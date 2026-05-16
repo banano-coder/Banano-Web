@@ -44,6 +44,31 @@ export const BulkProductUpload = () => {
 
 
 
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isResuming, setIsResuming] = useState(false);
+
+  useEffect(() => {
+    checkPending();
+  }, []);
+
+  const checkPending = async () => {
+    try {
+      const data = await FetchData<any>(API_ENDPOINTS.PRODUCTS.LIST + '/pending');
+      if (Array.isArray(data) && data.length > 0) {
+        setPendingCount(data.length);
+        setCreatedProducts(data);
+      } else {
+        setPendingCount(0);
+      }
+    } catch (e) {
+      console.error("Error checking pending products", e);
+    }
+  };
+
+  const handleResume = () => {
+    setStep('queue');
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -124,7 +149,23 @@ export const BulkProductUpload = () => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-foreground">Carga Masiva Jerárquica</h2>
-            <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+            
+            {pendingCount > 0 && (
+              <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl max-w-md mx-auto animate-pulse">
+                <p className="text-orange-400 font-semibold flex items-center justify-center gap-2">
+                   <AlertCircle className="h-4 w-4" /> Tienes {pendingCount} productos sin terminar de editar.
+                </p>
+                <Button 
+                   onClick={handleResume}
+                   className="mt-3 bg-orange-600 hover:bg-orange-700 text-white font-bold h-9 px-6 shadow-lg shadow-orange-900/20"
+                >
+                   Continuar Edición <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+                <p className="text-[10px] text-orange-400/50 mt-2 uppercase tracking-widest font-bold">O sube un nuevo archivo abajo</p>
+              </div>
+            )}
+
+            <p className="text-muted-foreground mt-4 max-w-md mx-auto">
               Sube tu inventario para procesar jerarquías. Si dejas la celda de nombre vacía, el sistema asumirá que es otra variante del producto anterior.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-4">

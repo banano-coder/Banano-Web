@@ -209,44 +209,46 @@ export const ProductGrid: React.FC = () => {
           </div>
         </div>
 
-        {/* Row 2: Categories & Brands */}
-        <div className="flex flex-col md:flex-row gap-4 justify-between">
+        {/* Row 2: Categories & Brands Dropdowns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Categories */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Categoría</span>
-            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Categoría</label>
+            <select
+              value={selectedCategory.id}
+              onChange={(e) => {
+                const cat = categories.find(c => c.id === e.target.value);
+                if (cat) setSelectedCategory(cat);
+              }}
+              className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+            >
               {categories.map(category => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${selectedCategory.id === category.id
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-transparent text-muted-foreground border-border hover:border-primary'
-                    }`}
-                >
+                <option key={category.id} value={category.id}>
                   {category.name}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Brands */}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Marca</span>
-            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Marca</label>
+            <select
+              value={selectedBrand.id}
+              onChange={(e) => {
+                const brand = brands.find(b => b.id === e.target.value);
+                if (brand) setSelectedBrand(brand);
+              }}
+              className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+            >
               {brands.map(brand => (
-                <button
-                  key={brand.id}
-                  onClick={() => setSelectedBrand(brand)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${selectedBrand.id === brand.id
-                    ? 'bg-secondary text-secondary-foreground border-secondary'
-                    : 'bg-transparent text-muted-foreground border-border hover:border-secondary'
-                    }`}
-                >
+                <option key={brand.id} value={brand.id}>
                   {brand.name}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
       </div>

@@ -190,7 +190,12 @@ export const ProductList = () => {
                                         </TableCell>
                                         <TableCell>
                                             {product.activo ? (
-                                                <Badge className="bg-green-500 hover:bg-green-600">Activo</Badge>
+                                                <div className="flex flex-col gap-1">
+                                                    <Badge className="bg-green-500 hover:bg-green-600 w-fit">Activo</Badge>
+                                                    {product.necesita_revision && (
+                                                        <Badge variant="outline" className="border-orange-500 text-orange-500 bg-orange-500/10 text-[10px] py-0">Borrador</Badge>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <Badge variant="destructive">Inactivo</Badge>
                                             )}

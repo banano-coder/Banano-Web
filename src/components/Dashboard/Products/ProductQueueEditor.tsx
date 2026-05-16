@@ -85,7 +85,8 @@ export const ProductQueueEditor: React.FC<ProductQueueEditorProps> = ({ createdP
                         descripcion: currentProduct.descripcion,
                         id_categoria: categoryId ? parseInt(categoryId) : null,
                         id_marca: brandId ? parseInt(brandId) : null,
-                        activo: currentProduct.activo
+                        activo: currentProduct.activo,
+                        necesita_revision: false
                     }
                 }
             );
