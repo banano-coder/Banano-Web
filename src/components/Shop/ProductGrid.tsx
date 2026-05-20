@@ -54,16 +54,16 @@ export const ProductGrid: React.FC = () => {
         const catsList = getList(catsData);
         if (catsList.length > 0) {
           setCategories([{ id: 'all', name: 'Todos' }, ...catsList.map((c: any) => ({
-            id: c.id_categoria || c.id || String(c),
-            name: c.nombre || c.name || String(c)
+            id: String(c.id_categoria || c.id),
+            name: c.nombre || c.name || 'Sin Categoría'
           }))]);
         }
 
         const brandsList = getList(brandsData);
         if (brandsList.length > 0) {
           setBrands([{ id: 'all', name: 'Todas' }, ...brandsList.map((b: any) => ({
-            id: b.id_marca || b.id || String(b),
-            name: b.nombre || b.name || String(b)
+            id: String(b.id_marca || b.id),
+            name: b.nombre || b.name || 'Sin Marca'
           }))]);
         }
 
@@ -118,12 +118,12 @@ export const ProductGrid: React.FC = () => {
           id: Number(p.id_producto),
           name: p.nombre,
           price: Number(p.min_price) || Number(p.precio) || 0,
-          image: p.imagen_principal || 'https://placehold.co/400x400/261633/FFF5F7?text=Banano+Product', // Placeholder
+          image: p.imagen_principal || 'https://placehold.co/400x1200/261633/FFF5F7?text=Banano+Product',
           description: p.descripcion || '',
-          category: p.categoria || 'General',
-          brand: p.marca || 'Generic',
-          categoryId: String(p.id_categoria), // Mapped from Proxy Injection
-          brandId: String(p.id_marca)         // Mapped from Proxy Injection
+          category: p.category_name || p.categoria_nombre || p.marca?.categoria?.nombre || p.categoria || 'General',
+          brand: p.brand_name || p.marca_nombre || p.marca?.nombre || p.brand?.name || p.marca || '',
+          categoryId: String(p.id_categoria),
+          brandId: String(p.id_marca)
         }));
 
         setProducts(mappedProducts);
@@ -144,14 +144,23 @@ export const ProductGrid: React.FC = () => {
 
   // Client-Side Filter for Categories, Brands
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    return products.map(p => {
+      // Lookup real brand name from the brands list if brand is generic
+      if (!p.brand || p.brand.toUpperCase() === 'GENERIC' || p.brand === '') {
+        const foundBrand = brands.find(b => b.id === p.brandId);
+        if (foundBrand && foundBrand.id !== 'all') {
+          return { ...p, brand: foundBrand.name };
+        }
+      }
+      return p;
+    }).filter(product => {
       const matchCategory = selectedCategory.id === 'all' || product.categoryId === selectedCategory.id;
       const matchBrand = selectedBrand.id === 'all' || product.brandId === selectedBrand.id;
       const matchPrice = product.price >= priceRange.min && product.price <= priceRange.max;
 
       return matchCategory && matchBrand && matchPrice;
     });
-  }, [products, selectedCategory, selectedBrand, priceRange]);
+  }, [products, selectedCategory, selectedBrand, priceRange, brands]);
 
 
   return (
