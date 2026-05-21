@@ -65,3 +65,13 @@ export interface InventoryMovement {
     usuario_nombre?: string;
     created_at: string;
 }
+
+export interface Almacen {
+  id_almacen: number;
+  nombre: string;
+  direccion: string | null;
+  telefono: string | null;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}

@@ -46,5 +46,9 @@ export const API_ENDPOINTS = {
   BULK: {
     PARSE_FILE: `/api/bulk/parse-file`,
     CREATE: `/api/bulk/create`
+  },
+  ALMACENES: {
+    LIST: `/api/almacenes`,
+    ITEM: (id: string | number) => `/api/almacenes/${id}`
   }
 };

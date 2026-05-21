@@ -26,7 +26,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Product } from '@/types';
+import type { Product, Category, Brand } from '@/types';
 
 export const ProductList = () => {
     // Scaffold state
@@ -40,6 +40,62 @@ export const ProductList = () => {
     const [productToDelete, setProductToDelete] = useState<Product | null>(null); // For permanent deletion
     const [statusLoading, setStatusLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    // Filters state
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedBrand, setSelectedBrand] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState('');
+
+    const fetchFilters = async () => {
+        try {
+            const catsRes = await FetchData<any>(API_ENDPOINTS.CATEGORIES.LIST);
+            const catsArray = catsRes?.data || catsRes;
+            if (Array.isArray(catsArray)) setCategories(catsArray);
+        } catch (e) {
+            console.error("Error loading categories for filters", e);
+        }
+        try {
+            const brsRes = await FetchData<any>(API_ENDPOINTS.BRANDS.LIST);
+            const brsArray = brsRes?.data || brsRes;
+            if (Array.isArray(brsArray)) setBrands(brsArray);
+        } catch (e) {
+            console.error("Error loading brands for filters", e);
+        }
+    };
+
+    useEffect(() => {
+        fetchFilters();
+    }, []);
+
+    const filteredProducts = products.filter((product) => {
+        const nameMatch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+        const catName = (product.category_name || product.Categoria?.nombre || '').toLowerCase();
+        const brandName = (product.brand_name || product.Marca?.nombre || '').toLowerCase();
+        const skuMatch = (product.sku_base || '').toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesSearch = nameMatch || catName.includes(searchTerm.toLowerCase()) || brandName.includes(searchTerm.toLowerCase()) || skuMatch;
+        
+        const matchesCategory = selectedCategory 
+            ? (product.category_name || product.Categoria?.nombre || '') === selectedCategory
+            : true;
+            
+        const matchesBrand = selectedBrand
+            ? (product.brand_name || product.Marca?.nombre || '') === selectedBrand
+            : true;
+
+        let matchesStatus = true;
+        if (selectedStatus === 'activo') {
+            matchesStatus = Boolean(product.activo) && !product.necesita_revision;
+        } else if (selectedStatus === 'inactivo') {
+            matchesStatus = !product.activo;
+        } else if (selectedStatus === 'borrador') {
+            matchesStatus = Boolean(product.necesita_revision);
+        }
+
+        return matchesSearch && matchesCategory && matchesBrand && matchesStatus;
+    });
 
     useEffect(() => {
         if (message) {
@@ -124,17 +180,78 @@ export const ProductList = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Buscar productos..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 w-full"
-                    />
+            <div className="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3 flex-1">
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Buscar productos..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9 w-full"
+                        />
+                    </div>
+                    
+                    {/* Category Filter */}
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="flex h-10 w-full sm:w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <option value="">Todas las Categorías</option>
+                        {categories.map((cat) => (
+                            <option key={cat.id_categoria} value={cat.nombre}>
+                                {cat.nombre}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Brand Filter */}
+                    <select
+                        value={selectedBrand}
+                        onChange={(e) => setSelectedBrand(e.target.value)}
+                        className="flex h-10 w-full sm:w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <option value="">Todas las Marcas</option>
+                        {brands.map((br) => (
+                            <option key={br.id_marca} value={br.nombre}>
+                                {br.nombre}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Status Filter */}
+                    <select
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                        className="flex h-10 w-full sm:w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <option value="">Todos los Estados</option>
+                        <option value="activo">Activos</option>
+                        <option value="inactivo">Inactivos</option>
+                        <option value="borrador">Borradores (Revisión)</option>
+                    </select>
+
+                    {/* Reset Button */}
+                    {(selectedCategory || selectedBrand || selectedStatus || searchTerm) && (
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setSelectedCategory('');
+                                setSelectedBrand('');
+                                setSelectedStatus('');
+                                setSearchTerm('');
+                            }}
+                            className="h-10 px-3 text-xs text-red-500 hover:text-red-700 hover:bg-red-50/50"
+                        >
+                            Limpiar Filtros
+                        </Button>
+                    )}
                 </div>
-                <CreateProductDialog onProductCreated={fetchProducts} />
+                <div className="flex-shrink-0">
+                    <CreateProductDialog onProductCreated={fetchProducts} />
+                </div>
             </div>
             <Card>
                 <CardHeader className="py-4 flex flex-row items-center justify-between space-y-0">
@@ -168,14 +285,14 @@ export const ProductList = () => {
                                         Cargando productos...
                                     </TableCell>
                                 </TableRow>
-                            ) : products.length === 0 ? (
+                            ) : filteredProducts.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
-                                        No se encontraron productos.
+                                        No se encontraron productos con los filtros aplicados.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                products.map((product) => (
+                                filteredProducts.map((product) => (
                                     <TableRow key={product.id_producto}>
                                         <TableCell className="font-medium">{product.nombre}</TableCell>
                                         <TableCell>{product.category_name || product.Categoria?.nombre || '-'}</TableCell>

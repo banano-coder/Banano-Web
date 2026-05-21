@@ -1,0 +1,231 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^\\/_image\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/almacenes\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/almacenes\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auditoria\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/login\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/me\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/register\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/signup\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/brands\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/brands\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/bulk\\/create\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/bulk\\/parse-file\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/catalog(?:\\/(.*?))?\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/categories\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/categories\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/guest\\/checkout\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/guest\\/cliente\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/inventario\\/movimientos\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/inventario\\/stock\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/pedidos\\/([^/]+?)\\/estado\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/pedidos\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/pedidos\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/products\\/([^/]+?)\\/images\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/products\\/([^/]+?)\\/images\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/products\\/([^/]+?)\\/variants\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/products\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/products\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/profile\\/password\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/profile\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/public(?:\\/(.*?))?\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reports\\/debug-stock\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reports\\/movimientos-detalle\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reports\\/movimientos-kpis\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reports\\/stock-actual\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reports\\/stock-bajo\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reports\\/top-salidas\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/settings\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/users\\/([^/]+?)\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/users\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/users\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/variants\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/almacenes\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/audit\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/money\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/orders\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/products\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/sales\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/settings\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/users\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/login\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/register\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/uploads(?:\\/(.*?))?\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/$",
+			"dest": "_render"
+		}
+	]
+}

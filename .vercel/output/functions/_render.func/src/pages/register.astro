@@ -1,0 +1,86 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+---
+
+<Layout title="Registrarse">
+  <main class="flex items-center justify-center min-h-screen bg-background text-foreground">
+    <Card className="w-full max-w-md mx-4">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold text-center">Registrarse</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form id="register-form" class="space-y-4">
+            <div class="space-y-2">
+                <Label htmlFor="nombre">Nombre Completos</Label>
+                <Input id="nombre" type="text" placeholder="Juan Pérez" required />
+              </div>
+          <div class="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" placeholder="m@example.com" required />
+          </div>
+          <div class="space-y-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <Input id="password" type="password" required />
+          </div>
+          <Button type="submit" className="w-full">Registrarse</Button>
+        </form>
+        <div id="message" class="text-center mt-4 text-sm font-medium"></div>
+        <div class="mt-4 text-center text-sm">
+          ¿Ya tienes cuenta?
+          <a href="/login" class="underline">Iniciar Sesión</a>
+        </div>
+      </CardContent>
+    </Card>
+  </main>
+</Layout>
+
+<script>
+  import { FetchData } from "../services/fetch";
+  import { API_ENDPOINTS } from "../services/api";
+
+  interface RegisterResponse {
+    message: string;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const registerForm = document.getElementById("register-form");
+    const messageElement = document.getElementById("message");
+
+    if (registerForm && messageElement) {
+        registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const nombreInput = document.getElementById("nombre") as HTMLInputElement;
+        const emailInput = document.getElementById("email") as HTMLInputElement;
+        const passwordInput = document.getElementById("password") as HTMLInputElement;
+
+        if (emailInput && passwordInput && nombreInput) {
+          const email = emailInput.value;
+          const password = passwordInput.value;
+          const nombre = nombreInput.value;
+
+          try {
+            const data = await FetchData<RegisterResponse>(API_ENDPOINTS.REGISTER, "POST", { 
+              body: { email, password, nombre } 
+            });
+
+            messageElement.textContent = "¡Registro exitoso! Por favor inicia sesión.";
+            messageElement.className = "text-center text-sm font-medium text-green-500";
+
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 1500);
+          } catch (error) {
+            console.error("Registration failed:", error);
+            messageElement.textContent = (error as Error).message || "Ocurrió un error. Por favor intenta más tarde.";
+            messageElement.className = "text-center text-sm font-medium text-red-500";
+          }
+        }
+      });
+    }
+  });
+</script>

@@ -1,0 +1,94 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+---
+
+<Layout title="Iniciar Sesión">
+  <main class="flex items-center justify-center min-h-screen bg-background text-foreground">
+    <div class="w-full max-w-md">
+      <div class="bg-card shadow-md rounded-lg p-8 border border-border">
+        <h1 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h1>
+        <form id="login-form" class="space-y-6">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input type="email" id="email" placeholder="m@example.com" required />
+          </div>
+          <div>
+            <Label htmlFor="password">Contraseña</Label>
+            <Input type="password" id="password" required />
+          </div>
+          <Button type="submit" className="w-full">Iniciar Sesión</Button>
+        </form>
+        <p id="error-message" class="text-red-500 mt-4 text-center"></p>
+				<p class="mt-4 text-center text-sm">
+					¿No tienes una cuenta? 
+					<a href="/register" class="underline">Regístrate</a>
+				</p>
+                <div class="mt-6 text-center border-t pt-4">
+                    <a href="/" class="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 font-medium">
+                        ← Ir al Catálogo
+                    </a>
+                </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    import { FetchData } from "@/services/fetch";
+    import {API_ENDPOINTS} from "@/services/api"
+
+    interface AuthResponse {
+      message: string;
+      token: string;
+      user: {
+        id_usuario: string;
+        nombre: string;
+        email: string;
+        roles: string[];
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById("login-form");
+      const errorMessage = document.getElementById("error-message");
+
+      if (form && errorMessage) {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          errorMessage.textContent = "";
+
+          const emailInput = document.getElementById("email") as HTMLInputElement;
+          const passwordInput = document.getElementById("password") as HTMLInputElement;
+
+          if (!emailInput.value || !passwordInput.value) {
+            errorMessage.textContent = "El correo y la contraseña son obligatorios.";
+            return;
+          }
+
+          const credentials = {
+            email: emailInput.value,
+            password: passwordInput.value,
+          };
+
+          try {
+            const data = await FetchData<AuthResponse>(API_ENDPOINTS.LOGIN, 'POST', {
+              body: credentials
+            });
+            if (data && data.token && data.user) {
+              document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict;`; 
+              localStorage.setItem('user', JSON.stringify(data.user));
+              window.location.href = "/dashboard";
+            } else {
+              errorMessage.textContent = "Error al iniciar sesión: Respuesta inválida del servidor.";
+            }
+          } catch (error) {
+             const message = (error as Error).message || "Ocurrió un error desconocido.";
+             errorMessage.textContent = `Error al iniciar sesión: ${message}`;
+          }
+        });
+      }
+    });
+  </script>
+</Layout>

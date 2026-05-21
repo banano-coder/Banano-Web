@@ -1,0 +1,31 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import Sidebar from '@/components/Dashboard/Sidebar.astro';
+import Header from '@/components/Dashboard/Header.astro';
+import Footer from '@/components/Dashboard/Footer.astro';
+import { AuditLogViewer } from '@/components/Dashboard/Audit/AuditLogViewer';
+import { AuthGuard } from '@/components/Dashboard/AuthGuard';
+
+// Protect the route
+const token = Astro.cookies.get('token')?.value;
+if (!token) {
+    return Astro.redirect('/login');
+}
+---
+
+<Layout title="Auditoría | Banano Shop">
+    <div class="flex flex-col min-h-screen bg-background">
+        <Header />
+        <div class="flex flex-1 overflow-hidden">
+            <Sidebar />
+            <main class="flex-1 overflow-y-auto p-4 md:p-8">
+                 <div class="max-w-5xl mx-auto">
+                    <AuthGuard client:load allowedRoles={['admin', 'manager']} panelName="Auditoría">
+                        <AuditLogViewer client:load />
+                    </AuthGuard>
+                 </div>
+            </main>
+        </div>
+        <Footer />
+    </div>
+</Layout>

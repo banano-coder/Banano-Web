@@ -5,19 +5,19 @@
 @layer base {
   :root {
     --background: 348 100% 98%; /* Warm White #FFF5F7 */
-    --foreground: 272 63% 10%; /* Very Dark Purple for text */
+    --foreground: 332 100% 12%; /* Very Dark Wine for text */
     --card: 0 0% 100%;
-    --card-foreground: 272 63% 10%;
+    --card-foreground: 332 100% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 272 63% 10%;
+    --popover-foreground: 332 100% 12%;
     --primary: 334 100% 65%; /* Banano Pink #FF4F9A */
     --primary-foreground: 0 0% 100%;
     --secondary: 272 63% 46%; /* Intense Purple #7B2CBF */
     --secondary-foreground: 0 0% 100%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 332 30% 96%;
+    --muted-foreground: 332 30% 45%;
     --accent: 48 100% 52%; /* Vibrant Yellow #FFD60A */
-    --accent-foreground: 272 63% 10%;
+    --accent-foreground: 332 100% 12%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 272 30% 90%;

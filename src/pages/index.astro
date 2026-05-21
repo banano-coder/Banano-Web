@@ -21,6 +21,9 @@ try {
 
 const tienda = settings.tienda || {};
 const title = tienda.nombre || "Banano Shop";
+const heroTitle = tienda.hero_titulo || "BANANO SEXSHOP";
+const [heroTitleFirst, ...heroTitleRest] = heroTitle.split(" ");
+const heroTitleRemaining = heroTitleRest.join(" ");
 ---
 
 <Layout title={title}>
@@ -30,19 +33,19 @@ const title = tienda.nombre || "Banano Shop";
 
   <main class="flex flex-col min-h-screen bg-background text-foreground bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
     
-    <!-- Fuchsia Top Wrapper -->
-    <div class="bg-[#df0067] text-white relative pb-32">
+    <!-- Light Pink Top Wrapper -->
+    <div class="bg-[#ffcce6] text-[#df0067] relative pb-32">
       <!-- Header Section -->
-      <header class="container px-4 py-8 flex justify-between items-center border-b border-white/20">
+      <header class="container px-4 py-8 flex justify-between items-center border-b border-[#df0067]/10">
         <div class="flex items-center space-x-2">
-           <img src="/logo_original.png" class="h-10 w-auto brightness-0 invert" alt="Logo" />
-           <h1 class="text-3xl font-normal text-white font-gliker tracking-tight">{title}</h1>
+           <img src="/logo_original.png" class="h-10 w-auto" alt="Logo" />
+           <h1 class="text-3xl font-normal text-[#df0067] font-gliker tracking-tight">{title}</h1>
         </div>
         
         <div class="flex items-center space-x-4">
           <a
             href="/login"
-            class="px-6 py-2 border-2 border-white/30 text-white hover:bg-white hover:text-[#df0067] transition-all rounded-full font-bold text-sm tracking-wide"
+            class="px-6 py-2 border-2 border-[#df0067] text-[#df0067] hover:bg-[#df0067] hover:text-white transition-all rounded-full font-bold text-sm tracking-wide"
           >
             <LogIn className="mr-2 h-4 w-4 inline-block" /> Iniciar Sesión
           </a>
@@ -51,11 +54,19 @@ const title = tienda.nombre || "Banano Shop";
 
       <div class="flex-1">
         <!-- Hero Banner -->
-        <section class="py-20 md:py-36 text-center container px-4 relative z-10">
-          <h2 class="text-7xl md:text-9xl font-normal mb-8 tracking-tighter text-white font-gliker drop-shadow-2xl">
-            {tienda.hero_titulo || "Banano Shop"}
+        <section class="py-12 md:py-24 text-center container px-4 relative z-10">
+          <h2 class="font-normal mb-8 text-[#df0067] drop-shadow-sm flex flex-col items-center justify-center gap-0">
+            <img 
+              src="/logo_original.png" 
+              class="h-32 w-auto md:h-48 object-contain drop-shadow-[0_10px_20px_rgba(223,0,103,0.3)] animate-float hover:rotate-6 hover:scale-105 transition-transform duration-300 select-none mb-4" 
+              alt="Banana Logo" 
+            />
+            <span class="text-7xl md:text-[9rem] leading-none tracking-tighter font-gliker uppercase">{heroTitleFirst}</span>
+            {heroTitleRemaining && (
+              <span class="text-3xl md:text-5xl font-sans font-medium tracking-[0.2em] mt-2 uppercase">{heroTitleRemaining}</span>
+            )}
           </h2>
-          <p class="text-white/90 text-xl md:text-2xl max-w-2xl mx-auto mb-12 font-medium">
+          <p class="text-[#df0067]/90 text-xl md:text-2xl max-w-2xl mx-auto mb-12 font-medium">
             {tienda.hero_descripcion || "La mejor selección de productos íntimos."}
           </p>
         </section>
@@ -116,3 +127,17 @@ const title = tienda.nombre || "Banano Shop";
     </footer>
   </main>
 </Layout>
+
+<style>
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-8px) rotate(2deg);
+    }
+  }
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+</style>
