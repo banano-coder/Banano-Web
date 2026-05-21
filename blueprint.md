@@ -24,6 +24,14 @@ This project is a static-first web application built with Astro.js. It is design
 ## Recent Changes
 - **Route Consolidation**: Resolved warnings about duplicate API routes for `/api/brands` and `/api/categories`.
 - **Cédula-Based Client System**: Transitioned from internal client IDs to a system-wide identification based on "Cédula" (ID number). This ensures unique identification and contact data validation.
+- **Mobile Responsive POS (Sales Module)**:
+    - Implemented mobile-first layout with bottom tab navigation (Catálogo / Carrito / Total).
+    - Product grid adapts from 2 columns on mobile to 5 on large screens with reduced card sizes.
+    - Sidebar (cart + sale form) switches to full-width view on mobile via tab toggle.
+    - Added `removeFromCart` and `updateQuantity` helper functions for cart management.
+    - Floating badge on cart icon shows item count, quick-total button shows subtotal.
+    - All touch targets increased to minimum 44px for mobile usability.
+    - Extracted `SidebarContent` as shared component for desktop sidebar and mobile cart view.
 
 ## Current Architecture: Clients & Orders
 - **Client Identification**: Clients are identified and upserted based on their `cliente_cedula` (Unique).
