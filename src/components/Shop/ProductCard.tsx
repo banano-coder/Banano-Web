@@ -42,11 +42,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, set
       </div>
 
       {/* Información del Producto */}
-      <div className="p-6 flex flex-col flex-grow text-center">
-        <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-[0.15em] mb-1">
+      <div className="p-4 md:p-6 flex flex-col flex-grow text-center">
+        <h3 className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-[0.15em] mb-1">
           {product.brand || ''}
         </h3>
-        <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-3 line-clamp-1">
+        <h2 className="text-base md:text-lg font-bold text-foreground mb-3 line-clamp-2 leading-tight">
           {product.name}
         </h2>
         
