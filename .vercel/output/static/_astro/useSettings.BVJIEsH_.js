@@ -1,0 +1,1 @@
+import{r as s}from"./index.DWKhlr8t.js";const f=()=>{const[n,r]=s.useState(null),[o,a]=s.useState(!0),e=async()=>{try{const t=await fetch("/api/public/settings");if(t.ok){const i=await t.json();r(i)}}catch(t){console.error("Error fetching public settings:",t)}finally{a(!1)}};return s.useEffect(()=>{e()},[]),{settings:n,loading:o,refreshSettings:e}};export{f as u};

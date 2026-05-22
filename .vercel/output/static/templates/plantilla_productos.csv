@@ -1,0 +1,4 @@
+codigo,nombre,descripcion,costo,precio_lista,stock,categoria_nombre,marca_nombre
+REF001,Perfume de Ejemplo,50ml,25.50,45.00,100,LUBRICANTES,GENERICA
+,,30ml,15.00,30.00,50,LUBRICANTES,GENERICA
+,Limpiador Express,Multiusos,8.00,15.00,200,LIMPIEZA,GENERICA

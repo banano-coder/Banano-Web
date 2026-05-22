@@ -1,0 +1,23 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Dashboard/Header.astro";
+import Sidebar from "../../components/Dashboard/Sidebar.astro";
+import Footer from "../../components/Dashboard/Footer.astro";
+import { ProductsManagement } from "../../components/Dashboard/Products/ProductsManagement";
+import { AuthGuard } from "../../components/Dashboard/AuthGuard";
+---
+
+<Layout title="Inventario - Panel Administrativo">
+  <div class="flex flex-col min-h-screen bg-background bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
+    <Header />
+    <div class="flex flex-1">
+      <Sidebar />
+      <main class="flex-1 p-6 md:p-8">
+        <AuthGuard client:load allowedRoles={['admin', 'manager', 'vendedor', 'viewer']} panelName="Inventario">
+          <ProductsManagement client:load />  
+        </AuthGuard>
+      </main>
+    </div>
+    <Footer />
+  </div>
+</Layout>
