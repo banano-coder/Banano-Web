@@ -98,7 +98,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     );
 };
 
-const OrdersManagerContent: React.FC = () => {
+const OrdersManagerContent: React.FC<{ hideHeader?: boolean }> = ({ hideHeader = false }) => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -254,12 +254,14 @@ const OrdersManagerContent: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-4">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h2 className="text-3xl font-bold tracking-tight text-primary">Gestión de Pedidos</h2>
-                        <p className="text-muted-foreground">Administra y da seguimiento a los pedidos de clientes.</p>
+                {!hideHeader && (
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 className="text-3xl font-bold tracking-tight text-primary">Gestión de Pedidos</h2>
+                            <p className="text-muted-foreground">Administra y da seguimiento a los pedidos de clientes.</p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4">
                     <form onSubmit={handleSearchSubmit} className="space-y-4">
@@ -528,4 +530,4 @@ const OrdersManagerContent: React.FC = () => {
     );
 };
 
-export const OrdersManager: React.FC = () => { return <ErrorBoundary><OrdersManagerContent /></ErrorBoundary>; };
+export const OrdersManager: React.FC<{ hideHeader?: boolean }> = ({ hideHeader }) => { return <ErrorBoundary><OrdersManagerContent hideHeader={hideHeader} /></ErrorBoundary>; };

@@ -8,6 +8,8 @@ interface StockAlert {
     stock: number;
     min_stock?: number;
     variant?: string;
+    id_almacen?: number;
+    almacen_nombre?: string;
 }
 
 export const StockAlerts: React.FC = () => {
@@ -92,9 +94,14 @@ export const StockAlerts: React.FC = () => {
                                 <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
                                     <div className="flex flex-col gap-1 overflow-hidden">
                                         <span className="font-medium truncate" title={item.title}>{item.title}</span>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                             <span className="font-mono bg-background px-1.5 py-0.5 rounded border">{item.sku}</span>
                                             {item.variant && <span>• {item.variant}</span>}
+                                            {item.almacen_nombre && (
+                                                <span className="inline-flex items-center rounded-md bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-400 ring-1 ring-inset ring-red-500/20">
+                                                    {item.almacen_nombre}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">

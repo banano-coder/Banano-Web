@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     User, Store, Palette, Bell, Save,
     Loader2, Lock, Shield, Smartphone,
-    Mail, Type, CheckCircle2, AlertCircle
+    Mail, Type, CheckCircle2, AlertCircle,
+    Plus, Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,8 @@ interface SettingsData {
         abierto: boolean;
         telefono?: string;
         direccion?: string;
+        direccion_secundaria?: string;
+        direcciones?: string[];
         mostrar_info?: boolean;
         hero_titulo?: string;
         hero_descripcion?: string;
@@ -72,6 +75,55 @@ export const SettingsManager: React.FC = () => {
 
     // Password change state
     const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+
+    const currentDirecciones = settings.tienda?.direcciones || [
+        settings.tienda?.direccion || '',
+        ...(settings.tienda?.direccion_secundaria ? [settings.tienda.direccion_secundaria] : [])
+    ].filter(Boolean);
+
+    const safeDirecciones = currentDirecciones.length > 0 ? currentDirecciones : [''];
+
+    const handleAddressChange = (index: number, val: string) => {
+        const updated = [...safeDirecciones];
+        updated[index] = val;
+        setSettings(s => ({
+            ...s,
+            tienda: {
+                ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }),
+                direcciones: updated,
+                direccion: updated[0] || '',
+                direccion_secundaria: updated[1] || ''
+            }
+        }));
+    };
+
+    const handleAddAddress = () => {
+        const updated = [...safeDirecciones, ''];
+        setSettings(s => ({
+            ...s,
+            tienda: {
+                ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }),
+                direcciones: updated
+            }
+        }));
+    };
+
+    const handleRemoveAddress = (index: number) => {
+        if (safeDirecciones.length <= 1) {
+            handleAddressChange(0, '');
+            return;
+        }
+        const updated = safeDirecciones.filter((_, i) => i !== index);
+        setSettings(s => ({
+            ...s,
+            tienda: {
+                ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }),
+                direcciones: updated,
+                direccion: updated[0] || '',
+                direccion_secundaria: updated[1] || ''
+            }
+        }));
+    };
 
     useEffect(() => {
         fetchData();
@@ -492,14 +544,46 @@ export const SettingsManager: React.FC = () => {
                                     onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), telefono: e.target.value } }))}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-foreground/80 font-semibold tracking-tight">Dirección Física</Label>
-                                <Input
-                                    className="bg-background/50 border-border text-foreground"
-                                    placeholder="Ej: Calle 123 #45-67, Ciudad"
-                                    value={settings.tienda?.direccion || ''}
-                                    onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), direccion: e.target.value } }))}
-                                />
+                            <div className="col-span-full space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <Label className="text-foreground/80 font-semibold tracking-tight">Direcciones de Sucursales / Tienda</Label>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleAddAddress}
+                                        className="h-8 border-primary/30 text-primary hover:bg-primary/10 gap-1.5 font-bold"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" /> Agregar Dirección
+                                    </Button>
+                                </div>
+                                <div className="space-y-3">
+                                    {safeDirecciones.map((dir, idx) => (
+                                        <div key={idx} className="flex gap-2 items-end">
+                                            <div className="flex-1 space-y-1">
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80">
+                                                    {idx === 0 ? 'Dirección Principal' : `Dirección Sucursal ${idx}`}
+                                                </span>
+                                                <Input
+                                                    className="bg-background/50 border-border text-foreground"
+                                                    placeholder={idx === 0 ? "Ej: Calle 123 #45-67, Ciudad" : "Ej: Avenida Siempre Viva 742, Ciudad"}
+                                                    value={dir}
+                                                    onChange={e => handleAddressChange(idx, e.target.value)}
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleRemoveAddress(idx)}
+                                                className="h-10 w-10 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg flex-shrink-0"
+                                                disabled={safeDirecciones.length <= 1 && !dir}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                             <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-background/30 transition-all hover:bg-background/40">
                                 <div className="space-y-0.5">

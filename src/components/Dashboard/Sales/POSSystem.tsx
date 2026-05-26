@@ -49,6 +49,34 @@ export const POSSystem = () => {
     // Metadata for brand mapping
     const [brands, setBrands] = useState<any[]>([]);
 
+    // Current user and warehouses list
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+
+    // Cargar información de usuario actual y almacenes
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const parsed = JSON.parse(storedUser);
+                setCurrentUser(parsed);
+            } catch (e) {
+                console.error("Error parsing user in POS:", e);
+            }
+        }
+
+        const fetchWarehouses = async () => {
+            try {
+                const res = await FetchData<any[]>(`${API_ENDPOINTS.ALMACENES.LIST}?activo=true`, 'GET');
+                const list = Array.isArray(res) ? res : (res as any).data || [];
+                setWarehouses(list);
+            } catch (e) {
+                console.error("Error fetching warehouses for POS header:", e);
+            }
+        };
+        fetchWarehouses();
+    }, []);
+
     useEffect(() => {
         const fetchBrands = async () => {
             try {
@@ -121,6 +149,7 @@ export const POSSystem = () => {
                 if (json.status === 'success' && json.data) {
                     setCustomerData(prev => ({
                         ...prev,
+                        cedula: json.data.cedula || prev.cedula,
                         nombre: json.data.nombre || prev.nombre,
                         email: json.data.email || prev.email,
                         telefono: json.data.telefono || prev.telefono
@@ -253,7 +282,8 @@ export const POSSystem = () => {
                     displayBrand: brandName || adminMatch?.brand_name || 'Particular',
                     displayPrice: Number(p.min_price) || Number(p.precio) || 0,
                     displayImage: p.imagen_principal || p.image || adminMatch?.image || 'https://placehold.co/400x400/261633/FFF?text=Banano',
-                    displayStock: adminMatch?.total_stock !== undefined ? adminMatch.total_stock : (p.stock || 0)
+                    displayStock: adminMatch?.total_stock !== undefined ? adminMatch.total_stock : (p.stock || 0),
+                    default_variant_id: adminMatch?.default_variant_id || p.default_variant_id || p.id_producto
                 };
             });
             
@@ -271,16 +301,17 @@ export const POSSystem = () => {
     }, [searchTerm, brands]);
 
     const addToCart = (product: any) => {
-        const existing = cart.find(item => item.id === product.id_producto);
+        const variantId = product.default_variant_id || product.id_producto;
+        const existing = cart.find(item => item.id === variantId);
         if (existing) {
             setCart(cart.map(item => 
-                item.id === product.id_producto 
+                item.id === variantId 
                 ? { ...item, cantidad: item.cantidad + 1 }
                 : item
             ));
         } else {
             setCart([...cart, {
-                id: product.id_producto,
+                id: variantId,
                 nombre: product.nombre,
                 precio: product.displayPrice,
                 cantidad: 1,
@@ -304,7 +335,7 @@ export const POSSystem = () => {
     };
 
     /* ─────────────────────────────── Sidebar Content (shared between mobile & desktop) ─────────────────────────────── */
-    const SidebarContent = () => (
+    const renderSidebarContent = () => (
         <>
             {/* Carrito */}
             <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex flex-col max-h-[45%] lg:max-h-[40%]">
@@ -369,7 +400,21 @@ export const POSSystem = () => {
                                 className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
                                 placeholder="V12345678" 
                                 value={customerData.cedula}
-                                onChange={(e) => setCustomerData({ ...customerData, cedula: e.target.value })}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCustomerData(prev => {
+                                        if (val.trim() === '') {
+                                            return {
+                                                ...prev,
+                                                cedula: '',
+                                                nombre: '',
+                                                email: '',
+                                                telefono: ''
+                                            };
+                                        }
+                                        return { ...prev, cedula: val };
+                                    });
+                                }}
                                 onBlur={handleCedulaBlur}
                             />
                         </div>
@@ -504,39 +549,35 @@ export const POSSystem = () => {
             </Card>
         </>
     );
+    const userWarehouse = warehouses.find(w => w.id_almacen === currentUser?.id_almacen);
+    const warehouseName = userWarehouse ? userWarehouse.nombre : (currentUser?.id_almacen ? `Almacén #${currentUser.id_almacen}` : 'Todas (Admin/Central)');
 
     return (
         <div className="flex flex-col h-[calc(100vh-240px)] bg-transparent overflow-hidden">
             {/* Header Superior */}
-            <div className="flex items-center justify-between p-3 lg:p-4 bg-card/40 border border-border/80 backdrop-blur-md rounded-xl mb-4">
-                {/* Mobile: compact title in header */}
-                <div className="flex items-center gap-2 lg:hidden">
-                    <Button variant="outline" size="icon" className="rounded-full border-border text-foreground hover:bg-muted h-8 w-8" onClick={() => window.location.href = '/dashboard'}>
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <h1 className="text-lg font-extrabold text-foreground">Venta POS</h1>
+            <div className="flex flex-wrap items-center gap-3 p-3 lg:p-4 bg-card/45 border border-border backdrop-blur-md rounded-xl mb-4 shadow-sm text-xs md:text-sm text-foreground">
+                <h1 className="font-extrabold text-base lg:text-lg border-r border-border pr-3 mr-1">Venta POS</h1>
+                
+                {currentUser && (
+                    <div className="flex items-center gap-1.5 bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 font-medium">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                        <span>Cajero: <strong className="text-primary">{currentUser.nombre}</strong></span>
+                    </div>
+                )}
+                
+                <div className="flex items-center gap-1.5 bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/15 font-medium">
+                    <Package className="h-3.5 w-3.5 text-accent-foreground" />
+                    <span>Sucursal: <strong className="text-accent-foreground">{warehouseName}</strong></span>
                 </div>
-                <Button 
-                    variant="ghost" 
-                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold px-4 lg:px-8 rounded-xl text-xs lg:text-sm h-9 lg:h-10 ml-auto transition-colors"
-                    onClick={() => window.location.href = '/dashboard'}
-                >
-                    SALIR
-                </Button>
             </div>
 
             <div className="flex flex-1 gap-0 lg:gap-6 pb-0 lg:pb-6 overflow-hidden">
                 {/* ═══════════════════════ Contenido Principal (Catálogo) ═══════════════════════ */}
                 <div className={`flex-1 flex flex-col gap-3 lg:gap-6 overflow-hidden ${mobileView === 'cart' ? 'hidden lg:flex' : 'flex'}`}>
                     {/* Desktop-only title row */}
-                    <div className="hidden lg:flex items-center gap-4">
-                        <Button variant="outline" size="icon" className="rounded-full border-border text-foreground hover:bg-muted" onClick={() => window.location.href = '/dashboard'}>
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                        <div>
-                            <h1 className="text-3xl font-extrabold text-foreground drop-shadow-sm">Registrar Venta</h1>
-                            <p className="text-sm text-muted-foreground font-medium font-inter">Selecciona variantes del catálogo.</p>
-                        </div>
+                    <div className="hidden lg:block">
+                        <h1 className="text-3xl font-extrabold text-foreground drop-shadow-sm">Registrar Venta</h1>
+                        <p className="text-sm text-muted-foreground font-medium font-inter">Selecciona variantes del catálogo.</p>
                     </div>
 
                     {/* Search bar - responsive */}
@@ -610,7 +651,7 @@ export const POSSystem = () => {
                 {/* ═══════════════════════ Barra Lateral / Mobile Cart View ═══════════════════════ */}
                 {/* Desktop sidebar */}
                 <div className="hidden lg:flex w-[400px] flex-col gap-4 overflow-hidden">
-                    <SidebarContent />
+                    {renderSidebarContent()}
                 </div>
 
                 {/* Mobile cart/form view */}
@@ -622,7 +663,7 @@ export const POSSystem = () => {
                         <h2 className="text-base font-bold text-foreground">Carrito & Venta</h2>
                     </div>
                     <div className="flex-1 flex flex-col gap-3 overflow-y-auto pb-4">
-                        <SidebarContent />
+                        {renderSidebarContent()}
                     </div>
                 </div>
             </div>

@@ -22,10 +22,10 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     try {
         const url = new URL(request.url);
-        const threshold = url.searchParams.get('threshold') || '10';
+        const searchParams = url.searchParams.toString();
 
         // Forward request to external backend
-        const response = await fetch(`${externalApiBase}/reports/alertas/stock-bajo?threshold=${threshold}`, {
+        const response = await fetch(`${externalApiBase}/reports/alertas/stock-bajo?${searchParams}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'

@@ -3,8 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductList } from './ProductList';
 import { ManageTaxonomies } from '../Taxonomies/ManageTaxonomies';
 import { InventoryReports } from '../Inventory/InventoryReports';
-import { Box, Tags, FileText, UploadCloud } from 'lucide-react';
+import { Box, Tags, FileText, UploadCloud, Barcode } from 'lucide-react';
 import { BulkProductUpload } from './BulkProductUpload';
+import { LabelGenerator } from './LabelGenerator';
 
 import { API_ENDPOINTS } from '@/services/api';
 
@@ -53,6 +54,9 @@ export const ProductsManagement = () => {
                             </span>
                         )}
                     </TabsTrigger>
+                    <TabsTrigger value="labels" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
+                        <Barcode className="h-4 w-4" /> Generar Etiquetas
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="inventory" className="mt-6">
@@ -69,6 +73,10 @@ export const ProductsManagement = () => {
 
                 <TabsContent value="bulk" className="mt-6">
                     <BulkProductUpload />
+                </TabsContent>
+
+                <TabsContent value="labels" className="mt-6">
+                    <LabelGenerator />
                 </TabsContent>
             </Tabs>
         </div>

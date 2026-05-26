@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = async ({ cookies }) => {
+export const GET: APIRoute = async ({ request, cookies }) => {
     const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
     const token = cookies.get('token')?.value;
 
@@ -13,7 +13,9 @@ export const GET: APIRoute = async ({ cookies }) => {
     }
 
     try {
-        const response = await fetch(`${externalApiBase}/reports/inventario/stock-actual`, {
+        const url = new URL(request.url);
+        const searchParams = url.searchParams.toString();
+        const response = await fetch(`${externalApiBase}/reports/inventario/stock-actual?${searchParams}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'

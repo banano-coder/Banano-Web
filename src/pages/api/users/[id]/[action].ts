@@ -15,7 +15,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   }
 
   // Validate allowed actions
-  const allowedActions = ['roles', 'status', 'password'];
+  const allowedActions = ['roles', 'status', 'password', 'warehouse'];
   if (!action || !allowedActions.includes(action)) {
       return new Response(JSON.stringify({ message: 'Invalid action' }), { status: 400 });
   }

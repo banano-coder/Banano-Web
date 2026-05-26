@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { POSSystem } from './POSSystem';
 import { ShoppingCart, LayoutGrid, History } from 'lucide-react';
+import { OrdersManager } from '../Orders/OrdersManager';
 
 export const SalesManagement: React.FC = () => {
     return (
@@ -28,12 +29,7 @@ export const SalesManagement: React.FC = () => {
                 </TabsContent>
 
                 <TabsContent value="history">
-                    <div className="h-[400px] flex items-center justify-center border-2 border-dashed rounded-xl bg-card/20">
-                        <div className="text-center space-y-3">
-                            <History className="h-12 w-12 text-muted-foreground/30 mx-auto" />
-                            <p className="text-muted-foreground font-medium">El historial de ventas se cargará automáticamente al finalizar transacciones.</p>
-                        </div>
-                    </div>
+                    <OrdersManager hideHeader />
                 </TabsContent>
             </Tabs>
         </div>

@@ -23,6 +23,7 @@ const title = tienda.nombre || "Banano Shop";
 const heroTitle = tienda.hero_titulo || "BANANO SEXSHOP";
 const [heroTitleFirst, ...heroTitleRest] = heroTitle.split(" ");
 const heroTitleRemaining = heroTitleRest.join(" ");
+const activeDirecciones = (tienda.direcciones || []).filter((d: any) => typeof d === 'string' && d.trim() !== '');
 ---
 
 <Layout title={title}>
@@ -93,17 +94,44 @@ const heroTitleRemaining = heroTitleRest.join(" ");
                 </div>
 
                 {tienda.mostrar_info && (
-                    <div class="flex flex-col md:flex-row gap-8 items-center md:items-start">
-                        {tienda.direccion && (
-                            <div class="flex flex-col items-center md:items-start gap-1 max-w-xs">
-                                <div class="flex items-center gap-2 text-primary font-bold uppercase tracking-tight text-[10px]">
-                                    <MapPin className="h-3 w-3" />
-                                    Dirección
+                    <div class="flex flex-col md:flex-row gap-8 items-center md:items-start flex-wrap justify-center md:justify-start">
+                        {activeDirecciones.length > 0 ? (
+                            activeDirecciones.map((dir: string, idx: number) => (
+                                <div class="flex flex-col items-center md:items-start gap-1 max-w-xs" key={idx}>
+                                    <div class="flex items-center gap-2 text-primary font-bold uppercase tracking-tight text-[10px]">
+                                        <MapPin className="h-3 w-3" />
+                                        {activeDirecciones.length > 1 ? (idx === 0 ? 'Dirección Principal' : 'Dirección Sucursal') : 'Dirección'}
+                                    </div>
+                                    <p class="text-xs text-foreground bg-primary/5 p-2 rounded-lg border border-primary/10 shadow-sm text-center md:text-left">
+                                        {dir}
+                                    </p>
                                 </div>
-                                <p class="text-xs text-foreground bg-primary/5 p-2 rounded-lg border border-primary/10 shadow-sm text-center md:text-left">
-                                    {tienda.direccion}
-                                </p>
-                            </div>
+                            ))
+                        ) : (
+                            <>
+                                {tienda.direccion && (
+                                    <div class="flex flex-col items-center md:items-start gap-1 max-w-xs">
+                                        <div class="flex items-center gap-2 text-primary font-bold uppercase tracking-tight text-[10px]">
+                                            <MapPin className="h-3 w-3" />
+                                            {tienda.direccion_secundaria ? 'Dirección Principal' : 'Dirección'}
+                                        </div>
+                                        <p class="text-xs text-foreground bg-primary/5 p-2 rounded-lg border border-primary/10 shadow-sm text-center md:text-left">
+                                            {tienda.direccion}
+                                        </p>
+                                    </div>
+                                )}
+                                {tienda.direccion_secundaria && (
+                                    <div class="flex flex-col items-center md:items-start gap-1 max-w-xs">
+                                        <div class="flex items-center gap-2 text-primary font-bold uppercase tracking-tight text-[10px]">
+                                            <MapPin className="h-3 w-3" />
+                                            Dirección Secundaria
+                                        </div>
+                                        <p class="text-xs text-foreground bg-primary/5 p-2 rounded-lg border border-primary/10 shadow-sm text-center md:text-left">
+                                            {tienda.direccion_secundaria}
+                                        </p>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {(tienda.telefono || tienda.email_contacto) && (

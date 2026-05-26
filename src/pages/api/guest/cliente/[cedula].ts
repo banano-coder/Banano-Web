@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ params }) => {
     }
 
     try {
-        const response = await fetch(`${externalApiBase}/guest/cliente/${cedula}`, {
+        const response = await fetch(`${externalApiBase}/guest/client/${cedula}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
