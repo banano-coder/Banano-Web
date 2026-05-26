@@ -489,7 +489,7 @@ export const SettingsManager: React.FC = () => {
                                     className="bg-background/50 border-border text-foreground"
                                     placeholder="Ej: 300 123 4567"
                                     value={settings.tienda?.telefono || ''}
-                                    onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), telefono: e.target.value } }))}
+                                    onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), telefono: e.target.value } }))}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -498,7 +498,7 @@ export const SettingsManager: React.FC = () => {
                                     className="bg-background/50 border-border text-foreground"
                                     placeholder="Ej: Calle 123 #45-67, Ciudad"
                                     value={settings.tienda?.direccion || ''}
-                                    onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), direccion: e.target.value } }))}
+                                    onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), direccion: e.target.value } }))}
                                 />
                             </div>
                             <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-background/30 transition-all hover:bg-background/40">
@@ -511,7 +511,7 @@ export const SettingsManager: React.FC = () => {
                                         {settings.tienda?.mostrar_info ? 'Activado' : 'Desactivado'}
                                     </span>
                                     <div
-                                        onClick={() => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), mostrar_info: !s.tienda?.mostrar_info } }))}
+                                        onClick={() => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), mostrar_info: !s.tienda?.mostrar_info } }))}
                                         className={`w-11 h-6 rounded-full transition-all cursor-pointer relative shadow-inner ${settings.tienda?.mostrar_info ? 'bg-primary' : 'bg-slate-300'}`}
                                     >
                                         <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${settings.tienda?.mostrar_info ? 'translate-x-5' : ''}`} />
@@ -528,7 +528,7 @@ export const SettingsManager: React.FC = () => {
                                             className="bg-background/50 border-border text-foreground text-lg font-bold"
                                             placeholder="Ej: Deliciosos Bananos Frescos"
                                             value={settings.tienda?.hero_titulo || ''}
-                                            onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), hero_titulo: e.target.value } }))}
+                                            onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), hero_titulo: e.target.value } }))}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -537,7 +537,7 @@ export const SettingsManager: React.FC = () => {
                                             className="w-full min-h-[100px] p-3 rounded-md bg-background/50 border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                                             placeholder="Ej: La mejor selección de productos derivados del banano..."
                                             value={settings.tienda?.hero_descripcion || ''}
-                                            onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', abierto: true }), hero_descripcion: e.target.value } }))}
+                                            onChange={e => setSettings(s => ({ ...s, tienda: { ...(s.tienda || { nombre: '', email_contacto: '', abierto: true }), hero_descripcion: e.target.value } }))}
                                         />
                                     </div>
                                 </div>

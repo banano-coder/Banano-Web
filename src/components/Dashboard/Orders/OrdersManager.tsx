@@ -17,6 +17,12 @@ interface OrderItem {
     subtotal: number;
 }
 
+interface Warehouse {
+    id_almacen: number;
+    nombre: string;
+    activo: boolean;
+}
+
 interface Order {
     id?: number;
     id_pedido: number;
@@ -34,7 +40,19 @@ interface Order {
         telefono?: string;
     };
     items?: OrderItem[];
+    // Nuevos campos
+    id_almacen?: number;
+    almacen_nombre?: string;
+    id_cuenta?: number;
+    cuenta_nombre?: string;
+    id_usuario?: number;
+    vendedor_nombre?: string;
+    moneda_pago?: string;
+    tasa_cambio?: number;
+    monto_pago_real?: number;
+    origen?: string;
 }
+
 
 // Simple Error Boundary
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
@@ -96,7 +114,26 @@ const OrdersManagerContent: React.FC = () => {
     const [dateTo, setDateTo] = useState('');
     const [minAmount, setMinAmount] = useState('');
     const [maxAmount, setMaxAmount] = useState('');
+    const [warehouseFilter, setWarehouseFilter] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+
+    // Warehouses list state
+    const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            try {
+                const res = await fetch('/api/almacenes?activo=true');
+                if (res.ok) {
+                    const data = await res.json();
+                    setWarehouses(data.data || []);
+                }
+            } catch (err) {
+                console.error("Error al cargar almacenes:", err);
+            }
+        };
+        fetchWarehouses();
+    }, []);
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -115,6 +152,7 @@ const OrdersManagerContent: React.FC = () => {
             if (dateTo) params.append('to', dateTo);
             if (minAmount) params.append('min_amount', minAmount);
             if (maxAmount) params.append('max_amount', maxAmount);
+            if (warehouseFilter) params.append('id_almacen', warehouseFilter);
 
             const res = await fetch(`/api/pedidos?${params.toString()}`);
             const contentType = res.headers.get("content-type");
@@ -145,6 +183,9 @@ const OrdersManagerContent: React.FC = () => {
                 if (statusFilter) {
                     list = list.filter((o: Order) => o.estado === statusFilter);
                 }
+                if (warehouseFilter) {
+                    list = list.filter((o: Order) => String(o.id_almacen) === warehouseFilter);
+                }
 
                 setOrders(list);
             } else {
@@ -156,7 +197,7 @@ const OrdersManagerContent: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, orderIdFilter, search, statusFilter, dateFrom, dateTo, minAmount, maxAmount]);
+    }, [page, limit, orderIdFilter, search, statusFilter, dateFrom, dateTo, minAmount, maxAmount, warehouseFilter]);
 
     // Auto-fetch when filters change (with small delay for text inputs could be added, but here reactive is fine)
     useEffect(() => {
@@ -180,6 +221,7 @@ const OrdersManagerContent: React.FC = () => {
         setDateTo('');
         setMinAmount('');
         setMaxAmount('');
+        setWarehouseFilter('');
         setPage(1);
     };
 
@@ -260,6 +302,21 @@ const OrdersManagerContent: React.FC = () => {
                                 </select>
                             </div>
 
+                            <div className="w-full lg:w-48">
+                                <select
+                                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                    value={warehouseFilter}
+                                    onChange={(e) => { setWarehouseFilter(e.target.value); setPage(1); }}
+                                >
+                                    <option value="">Todas las Sucursales</option>
+                                    {warehouses.map((w) => (
+                                        <option key={w.id_almacen} value={w.id_almacen}>
+                                            {w.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div className="flex gap-2">
                                 <button
                                     type="button"
@@ -309,6 +366,7 @@ const OrdersManagerContent: React.FC = () => {
                             <tr className="border-b">
                                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground">ID</th>
                                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Cliente</th>
+                                <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Sucursal</th>
                                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Fecha</th>
                                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Estado</th>
                                 <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Total</th>
@@ -317,11 +375,11 @@ const OrdersManagerContent: React.FC = () => {
                         </thead>
                         <tbody className="[&_tr:last-child]:border-0">
                             {loading ? (
-                                <tr><td colSpan={6} className="h-24 text-center text-muted-foreground"><div className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Cargando pedidos...</div></td></tr>
+                                <tr><td colSpan={7} className="h-24 text-center text-muted-foreground"><div className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Cargando pedidos...</div></td></tr>
                             ) : errorMsg ? (
-                                <tr><td colSpan={6} className="h-24 text-center text-destructive font-medium">Error: {errorMsg}</td></tr>
+                                <tr><td colSpan={7} className="h-24 text-center text-destructive font-medium">Error: {errorMsg}</td></tr>
                             ) : orders.length === 0 ? (
-                                <tr><td colSpan={6} className="h-24 text-center text-muted-foreground">No se encontraron pedidos.</td></tr>
+                                <tr><td colSpan={7} className="h-24 text-center text-muted-foreground">No se encontraron pedidos.</td></tr>
                             ) : (
                                 orders.map((order) => {
                                     const displayId = order.id || order.id_pedido || '?';
@@ -340,6 +398,11 @@ const OrdersManagerContent: React.FC = () => {
                                                         {email && <span>{email}</span>}
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-inset ring-muted-foreground/10">
+                                                    {order.almacen_nombre || 'Principal'}
+                                                </span>
                                             </td>
                                             <td className="p-4 align-middle text-muted-foreground">
                                                 {order.created_at ? format(new Date(order.created_at), "d 'de' MMM, yyyy", { locale: es }) : '-'}
@@ -383,6 +446,16 @@ const OrdersManagerContent: React.FC = () => {
                                     {(selectedOrder.usuario?.telefono || (selectedOrder as any).cliente_telefono) && (
                                         <p className="text-sm text-muted-foreground mt-1">{selectedOrder.usuario?.telefono || (selectedOrder as any).cliente_telefono}</p>
                                     )}
+
+                                    {/* Sucursal y Cajero */}
+                                    <div className="mt-4 pt-4 border-t border-border/60">
+                                        <p className="text-sm text-muted-foreground font-bold uppercase mb-1">Sucursal y Venta</p>
+                                        <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Sucursal:</span> {selectedOrder.almacen_nombre || 'Almacén Principal'}</p>
+                                        {selectedOrder.vendedor_nombre && (
+                                            <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Vendedor:</span> {selectedOrder.vendedor_nombre}</p>
+                                        )}
+                                        <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Origen:</span> {selectedOrder.origen || 'Tienda'}</p>
+                                    </div>
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground font-bold uppercase mb-2">Estado</p>
@@ -397,6 +470,32 @@ const OrdersManagerContent: React.FC = () => {
                                             >{s.charAt(0).toUpperCase() + s.slice(1)}</button>
                                         ))}
                                     </div>
+
+                                    {/* Detalles del pago (Caja y Divisas) */}
+                                    {(selectedOrder.cuenta_nombre || (selectedOrder.moneda_pago && selectedOrder.moneda_pago !== 'USD')) && (
+                                        <div className="mt-4 pt-4 border-t border-border/60">
+                                            <p className="text-sm text-muted-foreground font-bold uppercase mb-1">Detalles de Caja y Pago</p>
+                                            {selectedOrder.cuenta_nombre && (
+                                                <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Caja Destino:</span> {selectedOrder.cuenta_nombre}</p>
+                                            )}
+                                            {selectedOrder.moneda_pago && (
+                                                <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Moneda Pago:</span> {selectedOrder.moneda_pago}</p>
+                                            )}
+                                            {selectedOrder.tasa_cambio && Number(selectedOrder.tasa_cambio) !== 1 && (
+                                                <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Tasa de Cambio:</span> {Number(selectedOrder.tasa_cambio).toFixed(4)}</p>
+                                            )}
+                                            {selectedOrder.monto_pago_real && (
+                                                <p className="text-sm text-foreground mt-1">
+                                                    <span className="font-semibold text-muted-foreground">Monto Real Cobrado:</span>{' '}
+                                                    <span className="font-bold text-primary">
+                                                        {selectedOrder.moneda_pago === 'USD' ? '$' : ''}
+                                                        {Number(selectedOrder.monto_pago_real).toLocaleString('es-CO', { minimumFractionDigits: 2 })}{' '}
+                                                        {selectedOrder.moneda_pago}
+                                                    </span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <h4 className="font-bold mb-3 flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Productos</h4>

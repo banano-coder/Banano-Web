@@ -67,6 +67,8 @@ export const ManageTaxonomies = () => {
     // Confirmation states
     const [brandToToggle, setBrandToToggle] = useState<Brand | null>(null);
     const [categoryToToggle, setCategoryToToggle] = useState<Category | null>(null);
+    const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
     const [statusLoading, setStatusLoading] = useState(false);
 
     useEffect(() => {
@@ -190,6 +192,52 @@ export const ManageTaxonomies = () => {
         }
     };
 
+    const handleDeleteBrand = async () => {
+        if (!brandToDelete) return;
+        setStatusLoading(true);
+        try {
+            const response = await fetch(API_ENDPOINTS.BRANDS.ITEM(brandToDelete.id_marca), {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                setMessage({ type: 'success', text: `Marca "${brandToDelete.nombre}" eliminada correctamente.` });
+                fetchData();
+            } else {
+                setMessage({ type: 'error', text: data.message || 'Error al eliminar la marca.' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Error al eliminar la marca.' });
+        } finally {
+            setStatusLoading(false);
+            setBrandToDelete(null);
+        }
+    };
+
+    const handleDeleteCategory = async () => {
+        if (!categoryToDelete) return;
+        setStatusLoading(true);
+        try {
+            const response = await fetch(API_ENDPOINTS.CATEGORIES.ITEM(categoryToDelete.id_categoria), {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                setMessage({ type: 'success', text: `Categoría "${categoryToDelete.nombre}" eliminada correctamente.` });
+                fetchData();
+            } else {
+                setMessage({ type: 'error', text: data.message || 'Error al eliminar la categoría.' });
+            }
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Error al eliminar la categoría.' });
+        } finally {
+            setStatusLoading(false);
+            setCategoryToDelete(null);
+        }
+    };
+
     const filteredBrands = brands.filter(b => b.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     const filteredCategories = categories.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -296,6 +344,12 @@ export const ManageTaxonomies = () => {
                                                         onClick={() => setBrandToToggle(brand)}>
                                                         {brand.activo ? <Ban className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                                                     </Button>
+                                                    <Button variant="ghost" size="icon"
+                                                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                                        title="Eliminar"
+                                                        onClick={() => setBrandToDelete(brand)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -347,6 +401,12 @@ export const ManageTaxonomies = () => {
                                                         title={cat.activo ? "Desactivar" : "Activar"}
                                                         onClick={() => setCategoryToToggle(cat)}>
                                                         {cat.activo ? <Ban className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon"
+                                                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                                        title="Eliminar"
+                                                        onClick={() => setCategoryToDelete(cat)}>
+                                                        <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
                                             </TableCell>
@@ -478,6 +538,58 @@ export const ManageTaxonomies = () => {
                         >
                             {statusLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                             {categoryToToggle?.activo ? 'Desactivar' : 'Activar'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Brand Deletion Confirmation Dialog */}
+            <AlertDialog open={!!brandToDelete} onOpenChange={() => !statusLoading && setBrandToDelete(null)}>
+                <AlertDialogContent className="bg-card border-white/10 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                            ¿Estás seguro de que deseas eliminar la marca <strong>{brandToDelete?.nombre}</strong>? Esta acción no se puede deshacer y fallará si la marca está asociada a productos activos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={statusLoading}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteBrand();
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={statusLoading}
+                        >
+                            {statusLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Category Deletion Confirmation Dialog */}
+            <AlertDialog open={!!categoryToDelete} onOpenChange={() => !statusLoading && setCategoryToDelete(null)}>
+                <AlertDialogContent className="bg-card border-white/10 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                            ¿Estás seguro de que deseas eliminar la categoría <strong>{categoryToDelete?.nombre}</strong>? Esta acción no se puede deshacer y fallará si la categoría está asociada a productos activos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={statusLoading}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteCategory();
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={statusLoading}
+                        >
+                            {statusLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Eliminar
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

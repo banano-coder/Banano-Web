@@ -14,11 +14,13 @@ import { Label } from "@/components/ui/label";
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 
+import type { Almacen } from '@/types';
+
 interface EditRoleDialogProps {
     open: boolean;
     onClose: () => void;
     onUserUpdated: () => void;
-    user: { id_usuario: string; nombre: string; roles: string[] } | null;
+    user: { id_usuario: string; nombre: string; roles: string[]; id_almacen?: number | null } | null;
 }
 
 const AVAILABLE_ROLES = [
@@ -30,14 +32,44 @@ const AVAILABLE_ROLES = [
 
 export const EditRoleDialog: React.FC<EditRoleDialogProps> = ({ open, onClose, onUserUpdated, user }) => {
     const [selectedRole, setSelectedRole] = useState<string>('');
+    const [selectedWarehouse, setSelectedWarehouse] = useState<string>('none');
+    const [warehouses, setWarehouses] = useState<Almacen[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (user && user.roles && user.roles.length > 0) {
-            setSelectedRole(user.roles[0]);
-        } else {
-            setSelectedRole('viewer');
+        const fetchWarehouses = async () => {
+            try {
+                const response = await FetchData<{ data: Almacen[] } | Almacen[]>(`${API_ENDPOINTS.ALMACENES.LIST}?activo=true`);
+                let list: Almacen[] = [];
+                if (response && 'data' in response && Array.isArray(response.data)) {
+                    list = response.data;
+                } else if (Array.isArray(response)) {
+                    list = response;
+                }
+                setWarehouses(list);
+            } catch (err) {
+                console.error("Error fetching warehouses in EditRoleDialog", err);
+            }
+        };
+        if (open) {
+            fetchWarehouses();
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (user) {
+            if (user.roles && user.roles.length > 0) {
+                setSelectedRole(user.roles[0]);
+            } else {
+                setSelectedRole('viewer');
+            }
+
+            if (user.id_almacen != null) {
+                setSelectedWarehouse(user.id_almacen.toString());
+            } else {
+                setSelectedWarehouse('none');
+            }
         }
     }, [user]);
 
@@ -49,14 +81,22 @@ export const EditRoleDialog: React.FC<EditRoleDialogProps> = ({ open, onClose, o
         setError('');
 
         try {
-            // Send as array to maintain API compatibility, but with single element
-            await FetchData(API_ENDPOINTS.USERS.UPDATE(user.id_usuario, 'roles'), 'PATCH', {
-                body: { roles: [selectedRole] }
-            });
+            const warehouseVal = selectedWarehouse === 'none' ? null : parseInt(selectedWarehouse, 10);
+
+            // Parallel updates: Roles and Warehouse
+            await Promise.all([
+                FetchData(API_ENDPOINTS.USERS.UPDATE(user.id_usuario, 'roles'), 'PATCH', {
+                    body: { roles: [selectedRole] }
+                }),
+                FetchData(`/api/users/${user.id_usuario}/warehouse`, 'PATCH', {
+                    body: { id_almacen: warehouseVal }
+                })
+            ]);
+
             onUserUpdated();
             onClose();
         } catch (err: any) {
-            setError(err.message || 'Error actualizando roles');
+            setError(err.message || 'Error actualizando roles o sucursal');
         } finally {
             setLoading(false);
         }
@@ -83,6 +123,23 @@ export const EditRoleDialog: React.FC<EditRoleDialogProps> = ({ open, onClose, o
                                     {AVAILABLE_ROLES.map((role) => (
                                         <SelectItem key={role.id} value={role.id}>
                                             {role.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                             <Label htmlFor="warehouse-select">Sucursal / Almacén de Trabajo</Label>
+                             <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
+                                <SelectTrigger id="warehouse-select" className="w-full">
+                                    <SelectValue placeholder="Seleccione una sucursal" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Todas (Admin/Central)</SelectItem>
+                                    {warehouses.map((w) => (
+                                        <SelectItem key={w.id_almacen} value={w.id_almacen.toString()}>
+                                            {w.nombre}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

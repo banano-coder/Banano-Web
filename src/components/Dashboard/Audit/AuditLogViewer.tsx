@@ -152,6 +152,7 @@ export const AuditLogViewer: React.FC = () => {
         const catName = log.target_label ? log.target_label.replace(/^Categoría:\s*/i, '') : 'una categoría';
         const brandName = log.target_label ? log.target_label.replace(/^Marca:\s*/i, '') : 'una marca';
         const userName = log.target_usuario_nombre || (log.target_label ? log.target_label.replace(/^Usuario:\s*/i, '') : 'un usuario');
+        const warehouseName = log.target_label ? log.target_label.replace(/^Almacén:\s*/i, '') : 'un almacén';
 
         switch (action) {
             case 'PRODUCT_CREATE':
@@ -212,6 +213,12 @@ export const AuditLogViewer: React.FC = () => {
             case 'BRAND_SOFT_DELETE':
             case 'BRAND_DISABLE':
                 return <>{boldActor} <span className="text-red-500">eliminó</span> la marca <span className="font-semibold">{brandName}</span></>;
+            case 'ALMACEN_CREATE':
+                return <>{boldActor} creó el almacén <span className="font-semibold">{warehouseName}</span></>;
+            case 'ALMACEN_UPDATE':
+                return <>{boldActor} actualizó el almacén <span className="font-semibold">{warehouseName}</span></>;
+            case 'ALMACEN_SOFT_DELETE':
+                return <>{boldActor} <span className="text-red-500">eliminó</span> el almacén <span className="font-semibold">{warehouseName}</span></>;
             default:
                 return <>
                     {boldActor} realizó la acción <span className="font-semibold">{log.action_label || log.action}</span>

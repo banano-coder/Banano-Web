@@ -1,11 +1,10 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { ProductGrid } from "@/components/Shop/ProductGrid";
 import { CartWidget } from "@/components/Shop/CartWidget";
 import { CartDrawer } from "@/components/Shop/CartDrawer";
 import { LogIn, MapPin } from 'lucide-react';
+import { FloatingHomeButton } from "@/components/Common/FloatingHomeButton";
 
 const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
 let settings: any = {};
@@ -30,6 +29,7 @@ const heroTitleRemaining = heroTitleRest.join(" ");
   <!-- Interactive Elements (Islands) -->
   <CartWidget client:load />
   <CartDrawer client:load />
+  <FloatingHomeButton client:load />
 
   <main class="flex flex-col min-h-screen bg-background text-foreground bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
     
@@ -37,10 +37,10 @@ const heroTitleRemaining = heroTitleRest.join(" ");
     <div class="bg-[#ffcce6] text-[#df0067] relative pb-32">
       <!-- Header Section -->
       <header class="container px-4 py-8 flex justify-between items-center border-b border-[#df0067]/10">
-        <div class="flex items-center space-x-2">
+        <a href="/" class="flex items-center space-x-2 hover:opacity-90 transition-opacity">
            <img src="/logo_original.png" class="h-10 w-auto" alt="Logo" />
-           <h1 class="text-3xl font-normal text-[#df0067] font-gliker tracking-tight">{title}</h1>
-        </div>
+            <h1 class="text-3xl font-extrabold text-[#df0067] tracking-tight">{title}</h1>
+        </a>
         
         <div class="flex items-center space-x-4">
           <a
@@ -88,7 +88,7 @@ const heroTitleRemaining = heroTitleRest.join(" ");
                 <div class="space-y-4 max-w-sm">
                     <div class="flex items-center justify-center md:justify-start gap-2">
                         <img src="/logo_original.png" class="h-8 w-auto" alt="Logo" />
-                        <h3 class="text-2xl font-normal text-primary font-gliker">{title}</h3>
+                        <h3 class="text-2xl font-bold text-primary">{title}</h3>
                     </div>
                 </div>
 

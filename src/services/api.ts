@@ -50,5 +50,14 @@ export const API_ENDPOINTS = {
   ALMACENES: {
     LIST: `/api/almacenes`,
     ITEM: (id: string | number) => `/api/almacenes/${id}`
+  },
+  MONEY: {
+    CUENTAS: `/api/money/cuentas`,
+    CUENTA: (id: string | number) => `/api/money/cuentas/${id}`,
+    MOVIMIENTOS: `/api/money/movimientos`,
+    RESUMEN: `/api/money/resumen`
+  },
+  POS: {
+    CHECKOUT: `/api/pos/checkout`
   }
 };

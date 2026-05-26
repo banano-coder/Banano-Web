@@ -44,9 +44,11 @@ export const ProductList = () => {
     // Filters state
     const [categories, setCategories] = useState<Category[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
+    const [warehouses, setWarehouses] = useState<any[]>([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedBrand, setSelectedBrand] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
+    const [selectedWarehouse, setSelectedWarehouse] = useState('');
 
     const fetchFilters = async () => {
         try {
@@ -63,39 +65,18 @@ export const ProductList = () => {
         } catch (e) {
             console.error("Error loading brands for filters", e);
         }
+        try {
+            const almsRes = await FetchData<any>(API_ENDPOINTS.ALMACENES.LIST + '?activo=true');
+            const almsArray = almsRes?.data || almsRes;
+            if (Array.isArray(almsArray)) setWarehouses(almsArray);
+        } catch (e) {
+            console.error("Error loading warehouses for filters", e);
+        }
     };
 
     useEffect(() => {
         fetchFilters();
     }, []);
-
-    const filteredProducts = products.filter((product) => {
-        const nameMatch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-        const catName = (product.category_name || product.Categoria?.nombre || '').toLowerCase();
-        const brandName = (product.brand_name || product.Marca?.nombre || '').toLowerCase();
-        const skuMatch = (product.sku_base || '').toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesSearch = nameMatch || catName.includes(searchTerm.toLowerCase()) || brandName.includes(searchTerm.toLowerCase()) || skuMatch;
-        
-        const matchesCategory = selectedCategory 
-            ? (product.category_name || product.Categoria?.nombre || '') === selectedCategory
-            : true;
-            
-        const matchesBrand = selectedBrand
-            ? (product.brand_name || product.Marca?.nombre || '') === selectedBrand
-            : true;
-
-        let matchesStatus = true;
-        if (selectedStatus === 'activo') {
-            matchesStatus = Boolean(product.activo) && !product.necesita_revision;
-        } else if (selectedStatus === 'inactivo') {
-            matchesStatus = !product.activo;
-        } else if (selectedStatus === 'borrador') {
-            matchesStatus = Boolean(product.necesita_revision);
-        }
-
-        return matchesSearch && matchesCategory && matchesBrand && matchesStatus;
-    });
 
     useEffect(() => {
         if (message) {
@@ -107,24 +88,25 @@ export const ProductList = () => {
     const fetchProducts = async () => {
         setLoading(true);
         try {
-            // Logic similar to UserList
             const queryParams = new URLSearchParams();
-            // queryParams.append('page', page.toString()); // If API supports it
+            queryParams.append('page', page.toString());
             if (searchTerm) queryParams.append('search', searchTerm);
+            if (selectedCategory) queryParams.append('id_categoria', selectedCategory);
+            if (selectedBrand) queryParams.append('id_marca', selectedBrand);
+            if (selectedStatus) queryParams.append('status', selectedStatus);
+            if (selectedWarehouse) queryParams.append('id_almacen', selectedWarehouse);
             queryParams.append('_t', Date.now().toString());
 
             const url = `${API_ENDPOINTS.PRODUCTS.LIST}?${queryParams.toString()}`;
-            const data = await FetchData<Product[]>(url); // API GET /products returns array directly or paginated object? 
-            // "lista todos los productos ordenados por fecha_creacion desc." implying array?
-            // UserList had specific structure. I'll assume array for now based on "lista todos".
+            const data = await FetchData<any>(url);
 
-            if (Array.isArray(data)) {
-                setProducts(data);
-                setTotalPages(1); // No pagination mentioned?
+            const list = Array.isArray(data) ? data : data.data || [];
+            setProducts(list);
+            if (data && !Array.isArray(data)) {
+                setTotalPages(Math.ceil(data.total / data.limit) || 1);
             } else {
-                setProducts([]);
+                setTotalPages(1);
             }
-
         } catch (error) {
             console.error('Failed to fetch products', error);
         } finally {
@@ -132,13 +114,20 @@ export const ProductList = () => {
         }
     };
 
+    // Debounce search and reset page on filter changes
     useEffect(() => {
         const timer = setTimeout(() => {
+            setPage(1);
             fetchProducts();
-        }, 400); // Pequeño retraso para no saturar el servidor al escribir
+        }, 400);
 
         return () => clearTimeout(timer);
-    }, [searchTerm]);
+    }, [searchTerm, selectedCategory, selectedBrand, selectedStatus, selectedWarehouse]);
+
+    // Fetch on page change
+    useEffect(() => {
+        fetchProducts();
+    }, [page]);
 
     const handleToggleStatus = async () => {
         if (!productToToggle) return;
@@ -201,7 +190,7 @@ export const ProductList = () => {
                     >
                         <option value="">Todas las Categorías</option>
                         {categories.map((cat) => (
-                            <option key={cat.id_categoria} value={cat.nombre}>
+                            <option key={cat.id_categoria} value={cat.id_categoria.toString()}>
                                 {cat.nombre}
                             </option>
                         ))}
@@ -215,7 +204,7 @@ export const ProductList = () => {
                     >
                         <option value="">Todas las Marcas</option>
                         {brands.map((br) => (
-                            <option key={br.id_marca} value={br.nombre}>
+                            <option key={br.id_marca} value={br.id_marca.toString()}>
                                 {br.nombre}
                             </option>
                         ))}
@@ -233,14 +222,29 @@ export const ProductList = () => {
                         <option value="borrador">Borradores (Revisión)</option>
                     </select>
 
+                    {/* Warehouse Filter */}
+                    <select
+                        value={selectedWarehouse}
+                        onChange={(e) => setSelectedWarehouse(e.target.value)}
+                        className="flex h-10 w-full sm:w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <option value="">Todas las Sucursales (Consolidado)</option>
+                        {warehouses.map((w) => (
+                            <option key={w.id_almacen} value={w.id_almacen.toString()}>
+                                {w.nombre}
+                            </option>
+                        ))}
+                    </select>
+
                     {/* Reset Button */}
-                    {(selectedCategory || selectedBrand || selectedStatus || searchTerm) && (
+                    {(selectedCategory || selectedBrand || selectedStatus || selectedWarehouse || searchTerm) && (
                         <Button
                             variant="ghost"
                             onClick={() => {
                                 setSelectedCategory('');
                                 setSelectedBrand('');
                                 setSelectedStatus('');
+                                setSelectedWarehouse('');
                                 setSearchTerm('');
                             }}
                             className="h-10 px-3 text-xs text-red-500 hover:text-red-700 hover:bg-red-50/50"
@@ -285,14 +289,14 @@ export const ProductList = () => {
                                         Cargando productos...
                                     </TableCell>
                                 </TableRow>
-                            ) : filteredProducts.length === 0 ? (
+                            ) : products.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                         No se encontraron productos con los filtros aplicados.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredProducts.map((product) => (
+                                products.map((product) => (
                                     <TableRow key={product.id_producto}>
                                         <TableCell className="font-medium">{product.nombre}</TableCell>
                                         <TableCell>{product.category_name || product.Categoria?.nombre || '-'}</TableCell>
@@ -355,6 +359,31 @@ export const ProductList = () => {
                             )}
                         </TableBody>
                     </Table>
+                    </div>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-end space-x-2 py-4 px-6 border-t border-white/5">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1 || loading}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Anterior
+                        </Button>
+                        <div className="text-sm text-muted-foreground">
+                            Página {page} de {totalPages || 1}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page >= totalPages || loading}
+                        >
+                            Siguiente
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
                     </div>
                 </CardContent>
             </Card>

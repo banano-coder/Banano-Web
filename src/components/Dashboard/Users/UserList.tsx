@@ -34,6 +34,8 @@ interface User {
     email: string;
     roles: string[];
     activo: boolean;
+    id_almacen?: number | null;
+    almacen_nombre?: string | null;
 }
 
 interface UsersApiResponse {
@@ -183,20 +185,21 @@ export const UserList = () => {
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Rol</TableHead>
+                                <TableHead>Sucursal / Almacén</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loading ? (
+                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                         Cargando usuarios...
                                     </TableCell>
                                 </TableRow>
                             ) : users.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                         No se encontraron usuarios.
                                     </TableCell>
                                 </TableRow>
@@ -205,10 +208,17 @@ export const UserList = () => {
                                     <TableRow key={user.id_usuario}>
                                         <TableCell className="font-medium">{user.nombre}</TableCell>
                                         <TableCell>{user.email}</TableCell>
-                                        <TableCell>
+                                         <TableCell>
                                             <Badge variant="outline" className="capitalize">
                                                 {user.roles && user.roles.length > 0 ? user.roles.join(', ') : 'viewer'}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.almacen_nombre || (
+                                                <span className="text-muted-foreground text-xs italic">
+                                                    Todas (Admin/Central)
+                                                </span>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {user.activo ? (

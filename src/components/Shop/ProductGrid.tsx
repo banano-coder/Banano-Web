@@ -2,12 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Input } from "@/components/ui/input";
 import { ProductCard } from './ProductCard';
 import { ProductDetailDialog } from './ProductDetailDialog';
-import { Search } from 'lucide-react';
+import { Search, Store, SlidersHorizontal } from 'lucide-react';
 import type { Product } from './CartConfig';
 import { API_ENDPOINTS } from '@/services/api';
 import { FetchData } from '@/services/fetch';
 import { useSettings } from '@/hooks/useSettings';
-import { Store } from 'lucide-react';
 
 export const ProductGrid: React.FC = () => {
   const { settings, loading: settingsLoading } = useSettings();
@@ -25,6 +24,7 @@ export const ProductGrid: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState({ id: 'all', name: 'Todas' });
   const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
   const [orderBy, setOrderBy] = useState('default');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Categories & Brands from API
   const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
@@ -166,12 +166,12 @@ export const ProductGrid: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Filters Container */}
-      <div className="flex flex-col gap-6 max-w-6xl mx-auto bg-card/50 p-6 rounded-xl border border-border">
+      <div className="flex flex-col gap-4 max-w-6xl mx-auto bg-card/50 p-6 rounded-xl border border-border">
 
-        {/* Row 1: Search & Price & Sort */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
+        {/* Row 1: Search & Toggle Filters Button */}
+        <div className="flex gap-2 items-center w-full">
           {/* Search Bar */}
-          <div className="relative w-full md:flex-1">
+          <div className="relative flex-grow">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               type="text"
@@ -181,83 +181,100 @@ export const ProductGrid: React.FC = () => {
               className="pl-10 bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-accent w-full"
             />
           </div>
-
-          {/* Price Range */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="text-sm text-muted-foreground whitespace-nowrap">Precio:</span>
-            <Input
-              type="number"
-              placeholder="Min"
-              value={priceRange.min}
-              onChange={(e) => setPriceRange(prev => ({ ...prev, min: Number(e.target.value) }))}
-              className="w-20 bg-background border-input text-foreground"
-            />
-            <span className="text-muted-foreground">-</span>
-            <Input
-              type="number"
-              placeholder="Max"
-              value={priceRange.max}
-              onChange={(e) => setPriceRange(prev => ({ ...prev, max: Number(e.target.value) }))}
-              className="w-20 bg-background border-input text-foreground"
-            />
-          </div>
-
-          {/* Order By */}
-          <div className="w-full md:w-auto">
-            <select
-              value={orderBy}
-              onChange={(e) => setOrderBy(e.target.value)}
-              className="w-full md:w-48 bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="default">Ordenar por...</option>
-              <option value="price-asc">Precio: Menor a Mayor</option>
-              <option value="price-desc">Precio: Mayor a Menor</option>
-              <option value="name-asc">Nombre: A-Z</option>
-              <option value="name-desc">Nombre: Z-A</option>
-            </select>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className={`md:hidden flex items-center gap-2 px-4 py-2 h-10 rounded-md border text-sm font-semibold transition-all ${
+              showMobileFilters
+                ? 'bg-[#df0067]/10 border-[#df0067] text-[#df0067]'
+                : 'bg-background border-input text-foreground hover:bg-muted'
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Filtros</span>
+          </button>
         </div>
 
-        {/* Row 2: Categories & Brands Dropdowns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Categories */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Categoría</label>
-            <select
-              value={selectedCategory.id}
-              onChange={(e) => {
-                const cat = categories.find(c => c.id === e.target.value);
-                if (cat) setSelectedCategory(cat);
-              }}
-              className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer"
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
-            >
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+        {/* Collapsible / Responsive Filters Section */}
+        <div className={`${showMobileFilters ? 'flex' : 'hidden'} md:flex flex-col gap-4`}>
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            {/* Price Range */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Precio:</span>
+              <Input
+                type="number"
+                placeholder="Min"
+                value={priceRange.min}
+                onChange={(e) => setPriceRange(prev => ({ ...prev, min: Number(e.target.value) }))}
+                className="w-24 bg-background border-input text-foreground"
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input
+                type="number"
+                placeholder="Max"
+                value={priceRange.max}
+                onChange={(e) => setPriceRange(prev => ({ ...prev, max: Number(e.target.value) }))}
+                className="w-24 bg-background border-input text-foreground"
+              />
+            </div>
+
+            {/* Order By */}
+            <div className="w-full sm:w-48 sm:ml-auto">
+              <select
+                value={orderBy}
+                onChange={(e) => setOrderBy(e.target.value)}
+                className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="default">Ordenar por...</option>
+                <option value="price-asc">Precio: Menor a Mayor</option>
+                <option value="price-desc">Precio: Mayor a Menor</option>
+                <option value="name-asc">Nombre: A-Z</option>
+                <option value="name-desc">Nombre: Z-A</option>
+              </select>
+            </div>
           </div>
 
-          {/* Brands */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Marca</label>
-            <select
-              value={selectedBrand.id}
-              onChange={(e) => {
-                const brand = brands.find(b => b.id === e.target.value);
-                if (brand) setSelectedBrand(brand);
-              }}
-              className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer"
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
-            >
-              {brands.map(brand => (
-                <option key={brand.id} value={brand.id}>
-                  {brand.name}
-                </option>
-              ))}
-            </select>
+          {/* Row 2: Categories & Brands Dropdowns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Categories */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Categoría</label>
+              <select
+                value={selectedCategory.id}
+                onChange={(e) => {
+                  const cat = categories.find(c => c.id === e.target.value);
+                  if (cat) setSelectedCategory(cat);
+                }}
+                className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer"
+                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+              >
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Brands */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Marca</label>
+              <select
+                value={selectedBrand.id}
+                onChange={(e) => {
+                  const brand = brands.find(b => b.id === e.target.value);
+                  if (brand) setSelectedBrand(brand);
+                }}
+                className="w-full bg-background border border-input text-foreground rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer"
+                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%236b7280\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+              >
+                {brands.map(brand => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>

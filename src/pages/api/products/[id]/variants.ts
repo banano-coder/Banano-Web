@@ -14,7 +14,9 @@ const proxy: APIRoute = async ({ request, params }) => {
 
   try {
     const { id } = params;
-    const targetUrl = `${externalApiBase}/products/${id}/variants`;
+    const url = new URL(request.url);
+    const searchParams = url.search;
+    const targetUrl = `${externalApiBase}/products/${id}/variants${searchParams}`;
 
     const body = request.method !== 'GET' ? await request.text() : undefined;
 

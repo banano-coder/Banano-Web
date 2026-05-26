@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
-import type { Product, Variant } from '@/types';
-import { Loader2, ArrowRightLeft, History } from 'lucide-react';
+import type { Product, Variant, Almacen } from '@/types';
+import { Loader2, ArrowRightLeft, History, Warehouse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -26,6 +26,13 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
     const [stocks, setStocks] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(false);
 
+    // Warehouses State
+    const [warehouses, setWarehouses] = useState<Almacen[]>([]);
+    const [selectedWarehouseFilter, setSelectedWarehouseFilter] = useState<string>('consolidado');
+    const [selectedWarehouseMove, setSelectedWarehouseMove] = useState<string>('');
+    const [dialogStocks, setDialogStocks] = useState<Record<number, number>>({});
+    const [dialogStocksLoading, setDialogStocksLoading] = useState(false);
+
     // Movement Dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedVariantId, setSelectedVariantId] = useState<string>('');
@@ -40,8 +47,9 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
         if (!product?.id_producto) return;
         setLoading(true);
         try {
-            // Get Variants (now includes stock_actual)
-            const vResponse = await FetchData<any>(API_ENDPOINTS.PRODUCTS.VARIANTS(product.id_producto));
+            // Get Variants (potentially filtered by warehouse)
+            const queryParam = selectedWarehouseFilter !== 'consolidado' ? `?id_almacen=${selectedWarehouseFilter}` : '';
+            const vResponse = await FetchData<any>(`${API_ENDPOINTS.PRODUCTS.VARIANTS(product.id_producto)}${queryParam}`);
             const vData: Variant[] = vResponse.data || [];
             setVariants(vData);
 
@@ -59,9 +67,70 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
         }
     };
 
+    const fetchWarehouses = async () => {
+        try {
+            const response = await FetchData<{ data: Almacen[] } | Almacen[]>(`${API_ENDPOINTS.ALMACENES.LIST}?activo=true`);
+            let list: Almacen[] = [];
+            if (response && 'data' in response && Array.isArray(response.data)) {
+                list = response.data;
+            } else if (Array.isArray(response)) {
+                list = response;
+            }
+            setWarehouses(list);
+            if (list.length > 0) {
+                setSelectedWarehouseMove(list[0].id_almacen.toString());
+            } else {
+                setSelectedWarehouseMove('1');
+            }
+        } catch (error) {
+            console.error("Error fetching warehouses", error);
+        }
+    };
+
+    const fetchDialogStocks = async (warehouseId: string) => {
+        if (!product?.id_producto || !warehouseId) return;
+        setDialogStocksLoading(true);
+        try {
+            const queryParam = warehouseId !== 'consolidado' ? `?id_almacen=${warehouseId}` : '';
+            const response = await FetchData<any>(`${API_ENDPOINTS.PRODUCTS.VARIANTS(product.id_producto)}${queryParam}`);
+            const data: Variant[] = response.data || [];
+            const stockMap: Record<number, number> = {};
+            data.forEach(v => {
+                stockMap[v.id_variante_producto] = v.stock_actual || 0;
+            });
+            setDialogStocks(stockMap);
+        } catch (error) {
+            console.error("Error fetching dialog stocks", error);
+        } finally {
+            setDialogStocksLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchWarehouses();
+    }, []);
+
     useEffect(() => {
         fetchVariantsAndStock();
-    }, [product]);
+    }, [product, selectedWarehouseFilter]);
+
+    useEffect(() => {
+        if (isDialogOpen && selectedWarehouseMove) {
+            fetchDialogStocks(selectedWarehouseMove);
+        }
+    }, [isDialogOpen, selectedWarehouseMove, product]);
+
+    useEffect(() => {
+        if (isDialogOpen) {
+            if (selectedWarehouseFilter !== 'consolidado') {
+                setSelectedWarehouseMove(selectedWarehouseFilter);
+            } else if (warehouses.length > 0) {
+                setSelectedWarehouseMove(warehouses[0].id_almacen.toString());
+            } else {
+                setSelectedWarehouseMove('1');
+            }
+        }
+    }, [isDialogOpen, warehouses]);
 
     const handleMovement = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,6 +138,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
         try {
             const payload = {
                 id_variante_producto: parseInt(selectedVariantId),
+                id_almacen: parseInt(selectedWarehouseMove),
                 tipo: moveType,
                 cantidad: parseInt(amount),
                 motivo: reason,
@@ -81,6 +151,9 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
             // Refresh
             setIsDialogOpen(false);
             fetchVariantsAndStock();
+            if (selectedWarehouseMove) {
+                fetchDialogStocks(selectedWarehouseMove);
+            }
 
             // Reset form
             setAmount('');
@@ -96,12 +169,43 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
     };
 
     return (
-        <div className="space-y-6 pt-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Control de Inventario</h3>
-                <Button onClick={() => setIsDialogOpen(true)} disabled={variants.length === 0}>
-                    <ArrowRightLeft className="mr-2 h-4 w-4" /> Registrar Movimiento
-                </Button>
+        <div className="space-y-6 pt-2">
+            {/* Header section with Warehouse selector */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pb-4 border-b border-border">
+                <div>
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                        <Warehouse className="h-5 w-5 text-primary" />
+                        Control de Inventario
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Visualiza los niveles de stock y registra movimientos de inventario.
+                    </p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+                            Ver stock en:
+                        </span>
+                        <Select value={selectedWarehouseFilter} onValueChange={setSelectedWarehouseFilter}>
+                            <SelectTrigger className="w-[200px] h-9 text-xs">
+                                <SelectValue placeholder="Selecciona almacén" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="consolidado">Todos (Consolidado)</SelectItem>
+                                {warehouses.map(w => (
+                                    <SelectItem key={w.id_almacen} value={w.id_almacen.toString()}>
+                                        {w.nombre}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button onClick={() => setIsDialogOpen(true)} disabled={variants.length === 0} size="sm">
+                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Registrar Movimiento
+                    </Button>
+                </div>
             </div>
 
             {variants.length === 0 ? (
@@ -133,21 +237,40 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
             )}
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[480px]">
                     <DialogHeader>
-                        <DialogTitle>Registrar Movimiento de Stock</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ArrowRightLeft className="h-5 w-5 text-primary" />
+                            Registrar Movimiento de Stock
+                        </DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleMovement} className="space-y-4">
                         <div className="grid gap-2">
-                            <Label>Variante</Label>
+                            <Label htmlFor="move-almacen" className="font-semibold text-sm">Almacén de Destino/Origen <span className="text-red-500">*</span></Label>
+                            <Select value={selectedWarehouseMove} onValueChange={setSelectedWarehouseMove} required>
+                                <SelectTrigger id="move-almacen">
+                                    <SelectValue placeholder="Selecciona almacén" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {warehouses.map(w => (
+                                        <SelectItem key={w.id_almacen} value={w.id_almacen.toString()}>
+                                            {w.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="move-variant" className="font-semibold text-sm">Variante <span className="text-red-500">*</span></Label>
                             <Select value={selectedVariantId} onValueChange={setSelectedVariantId} required>
-                                <SelectTrigger>
+                                <SelectTrigger id="move-variant">
                                     <SelectValue placeholder="Selecciona variante" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {variants.map(v => (
                                         <SelectItem key={v.id_variante_producto} value={v.id_variante_producto.toString()}>
-                                            {v.sku} (Actual: {stocks[v.id_variante_producto]})
+                                            {v.sku} (Actual: {dialogStocksLoading ? '...' : (dialogStocks[v.id_variante_producto] ?? 0)})
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -156,7 +279,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>Tipo Movimiento</Label>
+                                <Label className="font-semibold text-sm">Tipo Movimiento</Label>
                                 <Select value={moveType} onValueChange={setMoveType}>
                                     <SelectTrigger>
                                         <SelectValue />
@@ -169,7 +292,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                                 </Select>
                             </div>
                             <div className="grid gap-2">
-                                <Label>Cantidad</Label>
+                                <Label className="font-semibold text-sm">Cantidad <span className="text-red-500">*</span></Label>
                                 <Input
                                     type="number" min="1"
                                     value={amount} onChange={e => setAmount(e.target.value)}
@@ -179,7 +302,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Motivo / Descripción</Label>
+                            <Label className="font-semibold text-sm">Motivo / Descripción</Label>
                             <Input
                                 value={reason} onChange={e => setReason(e.target.value)}
                                 placeholder="Ej: Compra proveedor, merma..."
@@ -188,14 +311,14 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>Ref. Externa</Label>
+                                <Label className="font-semibold text-sm">Ref. Externa</Label>
                                 <Input
                                     value={refExt} onChange={e => setRefExt(e.target.value)}
                                     placeholder="Fac-123"
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label>Costo Unitario (Opcional)</Label>
+                                <Label className="font-semibold text-sm">Costo Unitario (Opcional)</Label>
                                 <Input
                                     type="number" step="0.01" min="0"
                                     value={costUnit} onChange={e => setCostUnit(e.target.value)}
@@ -204,7 +327,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="pt-4">
                             <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                             <Button type="submit" disabled={submitting}>
                                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -135,10 +135,10 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
 
     return (
         <div className="space-y-6 pt-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div className="flex items-center gap-2 w-full lg:w-auto">
                     <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full lg:w-[180px]">
                             <SelectValue placeholder="Filtrar por..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -156,23 +156,25 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
                     </Button>
                 </div>
 
-                <div className="flex items-center gap-2 bg-muted/50 p-2 rounded-lg">
-                    <span className="text-xs font-medium mr-2">Subir a:</span>
-                    <Select value={uploadVariantId} onValueChange={setUploadVariantId}>
-                        <SelectTrigger className="w-[140px] h-8 text-xs">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="generic">General</SelectItem>
-                            {variants.map(v => (
-                                <SelectItem key={v.id_variante_producto} value={v.id_variante_producto.toString()}>
-                                    {v.sku}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-2 rounded-lg w-full lg:w-auto">
+                    <div className="flex items-center gap-2 flex-1 min-w-[160px]">
+                        <span className="text-xs font-medium whitespace-nowrap">Subir a:</span>
+                        <Select value={uploadVariantId} onValueChange={setUploadVariantId}>
+                            <SelectTrigger className="w-full h-8 text-xs bg-background/50 border-white/5">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="generic">General</SelectItem>
+                                {variants.map(v => (
+                                    <SelectItem key={v.id_variante_producto} value={v.id_variante_producto.toString()}>
+                                        {v.sku}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                    <div className="relative">
+                    <div className="relative flex-shrink-0">
                         <input
                             type="file"
                             accept="image/*"
