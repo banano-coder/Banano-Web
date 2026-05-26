@@ -16,7 +16,7 @@ export const CartWidget: React.FC = () => {
   if (totalItems === 0) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+    <div className="fixed bottom-[110px] right-[28px] z-[9990] animate-bounce">
       <Button 
         onClick={handleClick}
         className="rounded-full w-16 h-16 bg-primary text-primary-foreground shadow-2xl hover:bg-primary/90 relative"

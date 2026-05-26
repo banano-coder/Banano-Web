@@ -36,18 +36,18 @@ const heroTitleRemaining = heroTitleRest.join(" ");
     <!-- Light Pink Top Wrapper -->
     <div class="bg-[#ffcce6] text-[#df0067] relative pb-32">
       <!-- Header Section -->
-      <header class="container px-4 py-8 flex justify-between items-center border-b border-[#df0067]/10">
-        <a href="/" class="flex items-center space-x-2 hover:opacity-90 transition-opacity">
-           <img src="/logo_original.png" class="h-10 w-auto" alt="Logo" />
-            <h1 class="text-3xl font-extrabold text-[#df0067] tracking-tight">{title}</h1>
+      <header class="container px-4 py-2.5 sm:py-4 flex justify-between items-center border-b border-[#df0067]/10">
+        <a href="/" class="flex items-center space-x-1.5 hover:opacity-90 transition-opacity">
+           <img src="/logo_original.png" class="h-6 sm:h-8 md:h-10 w-auto" alt="Logo" />
+            <h1 class="text-base sm:text-xl md:text-2xl font-extrabold text-[#df0067] tracking-tight whitespace-nowrap">{title}</h1>
         </a>
         
         <div class="flex items-center space-x-4">
           <a
             href="/login"
-            class="px-6 py-2 border-2 border-[#df0067] text-[#df0067] hover:bg-[#df0067] hover:text-white transition-all rounded-full font-bold text-sm tracking-wide"
+            class="px-2.5 py-1 sm:px-4 sm:py-1.5 border sm:border-2 border-[#df0067] text-[#df0067] hover:bg-[#df0067] hover:text-white transition-all rounded-full font-bold text-[10px] sm:text-xs md:text-sm tracking-wide whitespace-nowrap flex items-center gap-1"
           >
-            <LogIn className="mr-2 h-4 w-4 inline-block" /> Iniciar Sesión
+            <LogIn className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" /> Iniciar Sesión
           </a>
         </div>
       </header>
@@ -120,7 +120,7 @@ const heroTitleRemaining = heroTitleRest.join(" ");
             </div>
             <div class="mt-12 pt-8 border-t border-border text-center">
                 <p class="text-[10px] text-muted-foreground font-medium uppercase tracking-[0.2em]">
-                    &copy; {new Date().getFullYear()} {title}. PROYECTO DE GRADO - Todos los derechos reservados.
+                    &copy; {new Date().getFullYear()} {title} - Todos los derechos reservados.
                 </p>
             </div>
         </div>

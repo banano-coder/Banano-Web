@@ -177,6 +177,11 @@ This project is a static-first web application built with Astro.js. It is design
 4. **POS Interface Integration**: Update `POSSystem.tsx` to retrieve active financial accounts, render a Target Account dropdown, read its currency, allow Cashiers to input exchange rates for VES/COP, display the converted total in real-time, and call the checkout endpoint upon clicking "Confirmar Venta".
 5. **Money Dashboard module**: Redesign `MoneyManagement.tsx` to let users view, create financial accounts, monitor balance cards per currency, and list/filter cash flow transactions or record manual adjustments.
 
+## Detailed Plan: Header and Sticky Search Bar Optimization
+1. **Header Refinement**: In `src/pages/index.astro`, reduce header vertical padding to `py-2.5 sm:py-4`. Set logo image height to `h-6 sm:h-8 md:h-10` and title font size to `text-base sm:text-xl md:text-2xl`. Shrink "Iniciar Sesión" text size to `text-[10px] sm:text-xs md:text-sm`, padding to `px-2.5 py-1 sm:px-4 sm:py-1.5`, and gap to `gap-1 sm:gap-1.5`. Use `whitespace-nowrap` to guarantee single-line fit on mobile screen widths.
+2. **Sticky Filters**: In `src/components/Shop/ProductGrid.tsx`, add `sticky top-2 sm:top-4 z-30 bg-card/90 backdrop-blur-md shadow-md` class list to the main filters container. Ensure the scrolling catalog cards slide beneath it cleanly.
+3. **Verification**: Run build and inspect responsive scaling.
+
 
 
 

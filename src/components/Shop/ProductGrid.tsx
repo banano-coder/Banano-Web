@@ -166,7 +166,7 @@ export const ProductGrid: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Filters Container */}
-      <div className="flex flex-col gap-4 max-w-6xl mx-auto bg-card/50 p-6 rounded-xl border border-border">
+      <div className="sticky top-2 sm:top-4 z-30 flex flex-col gap-4 max-w-6xl mx-auto bg-card/90 backdrop-blur-md p-4 sm:p-6 rounded-xl border border-border shadow-md">
 
         {/* Row 1: Search & Toggle Filters Button */}
         <div className="flex gap-2 items-center w-full">
