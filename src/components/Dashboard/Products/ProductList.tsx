@@ -177,7 +177,7 @@ export const ProductList = () => {
                         <Input
                             placeholder="Buscar productos..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => setSearchTerm(e.target.value.replace(/'/g, '-'))}
                             className="pl-9 w-full"
                         />
                     </div>

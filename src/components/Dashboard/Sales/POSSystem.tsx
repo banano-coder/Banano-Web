@@ -868,7 +868,7 @@ export const POSSystem = () => {
                                 placeholder="Buscar producto..." 
                                 className="pl-10 lg:pl-11 h-10 lg:h-12 bg-background border-border text-foreground placeholder:text-muted-foreground/60 text-sm focus-visible:ring-primary"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => setSearchTerm(e.target.value.replace(/'/g, '-'))}
                             />
                         </div>
                         <div className="flex items-center space-x-2">

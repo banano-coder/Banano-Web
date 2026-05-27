@@ -61,6 +61,42 @@ export const LabelGenerator: React.FC = () => {
     const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
     const [scale, setScale] = useState<number>(1.0);
 
+    // Load settings from localStorage on mount
+    useEffect(() => {
+        const savedWidth = localStorage.getItem('label_print_width');
+        const savedHeight = localStorage.getItem('label_print_height');
+        const savedCurrency = localStorage.getItem('label_print_currency');
+        const savedOrientation = localStorage.getItem('label_print_orientation');
+        const savedScale = localStorage.getItem('label_print_scale');
+
+        if (savedWidth) setLabelWidth(parseInt(savedWidth, 10));
+        if (savedHeight) setLabelHeight(parseInt(savedHeight, 10));
+        if (savedCurrency) setCurrencySign(savedCurrency);
+        if (savedOrientation) setOrientation(savedOrientation as 'horizontal' | 'vertical');
+        if (savedScale) setScale(parseFloat(savedScale));
+    }, []);
+
+    // Save settings to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem('label_print_width', labelWidth.toString());
+    }, [labelWidth]);
+
+    useEffect(() => {
+        localStorage.setItem('label_print_height', labelHeight.toString());
+    }, [labelHeight]);
+
+    useEffect(() => {
+        localStorage.setItem('label_print_currency', currencySign);
+    }, [currencySign]);
+
+    useEffect(() => {
+        localStorage.setItem('label_print_orientation', orientation);
+    }, [orientation]);
+
+    useEffect(() => {
+        localStorage.setItem('label_print_scale', scale.toString());
+    }, [scale]);
+
     // Load initial products
     const loadProducts = async () => {
         setLoadingProducts(true);
@@ -279,17 +315,17 @@ export const LabelGenerator: React.FC = () => {
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            gap: 0.8mm;
-                            height: 5.5mm;
+                            gap: 1.2mm;
+                            height: 6.5mm;
                             margin-bottom: 1.5mm;
                         }
                         .shop-logo {
-                            height: 5.5mm;
+                            height: 6.5mm;
                             width: auto;
                             object-fit: contain;
                         }
                         .shop-name {
-                            font-size: 7px;
+                            font-size: 10.5px;
                             font-weight: 900;
                             letter-spacing: 0.2px;
                         }
@@ -305,39 +341,38 @@ export const LabelGenerator: React.FC = () => {
                             height: 100%;
                         }
                         .barcode-text {
-                            font-size: 6px;
+                            font-size: 8px;
                             font-weight: bold;
-                            letter-spacing: 1.2px;
-                            margin-top: 0.5mm;
+                            letter-spacing: 1.5px;
+                            margin-top: 0.8mm;
                             margin-bottom: 1.2mm;
                         }
                         .product-title {
-                            font-size: 6.5px;
-                            font-weight: bold;
+                            font-size: 10px;
+                            font-weight: 900;
                             text-transform: uppercase;
                             white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
                             width: 100%;
-                            margin-bottom: 1.5mm;
-                            line-height: 1.2;
+                            margin-bottom: 2mm;
+                            line-height: 1.3;
                         }
                         .price-display {
                             display: flex;
                             align-items: center;
-                            justify-content: center;
-                            gap: 1.5mm;
-                            width: 85%;
+                            justify-content: space-between;
+                            width: 90%;
                             border-top: 0.2mm dashed #ccc;
-                            padding-top: 1mm;
+                            padding-top: 0.8mm;
                         }
                         .price-label {
-                            font-size: 5px;
+                            font-size: 8px;
                             color: #666;
                             font-weight: bold;
                         }
                         .price-amount {
-                            font-size: 11px;
+                            font-size: 16px;
                             font-weight: 900;
                             color: black;
                         }
@@ -394,7 +429,7 @@ export const LabelGenerator: React.FC = () => {
                                     placeholder="Nombre, marca o categoría del producto..."
                                     className="pl-10 bg-background border-border text-foreground"
                                     value={productSearch}
-                                    onChange={(e) => setProductSearch(e.target.value)}
+                                    onChange={(e) => setProductSearch(e.target.value.replace(/'/g, '-'))}
                                 />
                             </div>
                         </div>
@@ -703,13 +738,13 @@ export const LabelGenerator: React.FC = () => {
                                                 {previewItem.barcode}
                                             </div>
                                             {/* Product Title */}
-                                            <div className="text-[9px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
+                                            <div className="text-[9.5px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
                                                 {titleFull}
                                             </div>
                                             {/* Prices block */}
-                                            <div className="w-[85%] mt-1.5 border-t border-dashed border-gray-300 pt-1 flex justify-center items-center gap-2 font-bold">
-                                                <span className="text-[7px] font-bold text-gray-500">PRECIO:</span>
-                                                <span className="text-[13px] font-black text-black leading-none">
+                                            <div className="w-[90%] mt-1.5 border-t border-dashed border-gray-300 pt-1 flex justify-between items-center px-1 font-bold">
+                                                <span className="text-[8px] font-bold text-gray-500">PRECIO:</span>
+                                                <span className="text-[15px] font-black text-black leading-none">
                                                     {currencySign}{previewItem.price.toFixed(2)}
                                                 </span>
                                             </div>
