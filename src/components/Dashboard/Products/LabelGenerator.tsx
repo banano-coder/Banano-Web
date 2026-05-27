@@ -181,6 +181,10 @@ export const LabelGenerator: React.FC = () => {
             return;
         }
 
+        const physicalOrientation = labelWidth >= labelHeight ? 'landscape' : 'portrait';
+        const autoScale = Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight);
+        const effectiveScale = orientation === 'horizontal' ? scale : scale * autoScale;
+
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
             setError("No se pudo abrir la ventana de impresión. Por favor habilite las ventanas emergentes (popups).");
@@ -224,7 +228,7 @@ export const LabelGenerator: React.FC = () => {
                     <title>Imprimir Etiquetas</title>
                     <style>
                         @page {
-                            size: ${orientation === 'horizontal' ? `${labelWidth}mm ${labelHeight}mm` : `${labelHeight}mm ${labelWidth}mm`};
+                            size: ${labelWidth}mm ${labelHeight}mm ${physicalOrientation};
                             margin: 0;
                         }
                         body {
@@ -235,8 +239,8 @@ export const LabelGenerator: React.FC = () => {
                             -webkit-print-color-adjust: exact;
                         }
                         .label-page {
-                            width: ${orientation === 'horizontal' ? labelWidth : labelHeight}mm;
-                            height: ${orientation === 'horizontal' ? labelHeight : labelWidth}mm;
+                            width: ${labelWidth}mm;
+                            height: ${labelHeight}mm;
                             box-sizing: border-box;
                             background: white;
                             color: black;
@@ -261,13 +265,13 @@ export const LabelGenerator: React.FC = () => {
                         
                         /* VERTICAL LAYOUT (ROTATED STACKED) */
                         .label-page.vertical .label-wrapper {
-                            transform: translate(-50%, -50%) rotate(-90deg) scale(${scale});
+                            transform: translate(-50%, -50%) rotate(-90deg) scale(${effectiveScale});
                             transform-origin: center center;
                         }
                         
                         /* HORIZONTAL LAYOUT */
                         .label-page.horizontal .label-wrapper {
-                            transform: translate(-50%, -50%) scale(${scale});
+                            transform: translate(-50%, -50%) scale(${effectiveScale});
                             transform-origin: center center;
                         }
                         
@@ -659,8 +663,8 @@ export const LabelGenerator: React.FC = () => {
                                     <div 
                                         className="border border-border/70 rounded bg-white text-black shadow-lg relative overflow-hidden select-none"
                                         style={{ 
-                                            width: orientation === 'horizontal' ? `${labelWidth * 5}px` : `${labelHeight * 5}px`, // Swapped for screen preview
-                                            height: orientation === 'horizontal' ? `${labelHeight * 5}px` : `${labelWidth * 5}px`, 
+                                            width: `${labelWidth * 5}px`, // Always match physical dimensions
+                                            height: `${labelHeight * 5}px`, 
                                             fontFamily: 'Arial, sans-serif'
                                         }}
                                     >
@@ -673,7 +677,7 @@ export const LabelGenerator: React.FC = () => {
                                                 height: `${labelHeight * 5}px`,
                                                 transform: orientation === 'horizontal' 
                                                     ? `translate(-50%, -50%) scale(${scale})` 
-                                                    : `translate(-50%, -50%) rotate(-90deg) scale(${scale})`,
+                                                    : `translate(-50%, -50%) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
                                                 transformOrigin: 'center center',
                                                 display: 'flex',
                                                 flexDirection: 'column',
