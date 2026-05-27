@@ -181,9 +181,9 @@ export const LabelGenerator: React.FC = () => {
             return;
         }
 
-        const physicalOrientation = labelWidth >= labelHeight ? 'landscape' : 'portrait';
         const autoScale = Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight);
         const effectiveScale = orientation === 'horizontal' ? scale : scale * autoScale;
+        const printRotation = orientation === 'horizontal' ? '-90deg' : '0deg';
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
@@ -228,7 +228,7 @@ export const LabelGenerator: React.FC = () => {
                     <title>Imprimir Etiquetas</title>
                     <style>
                         @page {
-                            size: ${labelWidth}mm ${labelHeight}mm ${physicalOrientation};
+                            size: ${labelHeight}mm ${labelWidth}mm portrait;
                             margin: 0;
                         }
                         body {
@@ -239,8 +239,8 @@ export const LabelGenerator: React.FC = () => {
                             -webkit-print-color-adjust: exact;
                         }
                         .label-page {
-                            width: ${labelWidth}mm;
-                            height: ${labelHeight}mm;
+                            width: ${labelHeight}mm;
+                            height: ${labelWidth}mm;
                             box-sizing: border-box;
                             background: white;
                             color: black;
@@ -260,18 +260,18 @@ export const LabelGenerator: React.FC = () => {
                             align-items: center;
                             justify-content: center;
                             text-align: center;
-                            padding: 1mm 1.5mm;
+                            padding: 1.2mm 1.5mm;
                         }
                         
                         /* VERTICAL LAYOUT (ROTATED STACKED) */
                         .label-page.vertical .label-wrapper {
-                            transform: translate(-50%, -50%) rotate(-90deg) scale(${effectiveScale});
+                            transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
                             transform-origin: center center;
                         }
                         
                         /* HORIZONTAL LAYOUT */
                         .label-page.horizontal .label-wrapper {
-                            transform: translate(-50%, -50%) scale(${effectiveScale});
+                            transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
                             transform-origin: center center;
                         }
                         
@@ -280,16 +280,16 @@ export const LabelGenerator: React.FC = () => {
                             align-items: center;
                             justify-content: center;
                             gap: 0.8mm;
-                            height: 3.5mm;
-                            margin-bottom: 1.2mm;
+                            height: 5.5mm;
+                            margin-bottom: 1.5mm;
                         }
                         .shop-logo {
-                            height: 3.5mm;
+                            height: 5.5mm;
                             width: auto;
                             object-fit: contain;
                         }
                         .shop-name {
-                            font-size: 5px;
+                            font-size: 7px;
                             font-weight: 900;
                             letter-spacing: 0.2px;
                         }
@@ -684,32 +684,32 @@ export const LabelGenerator: React.FC = () => {
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 boxSizing: 'border-box',
-                                                padding: '5px 7.5px'
+                                                padding: '6px 8px'
                                             }}
                                         >
                                             {/* Header */}
-                                            <div className="flex items-center justify-center gap-1 w-full h-[12%] shrink-0 mb-1">
-                                                <img src="/logo_original.png" alt="Logo" className="h-[90%] w-auto object-contain" />
-                                                <span className="text-[7px] font-black tracking-wider text-black leading-none">
+                                            <div className="flex items-center justify-center gap-1.5 w-full h-[18%] shrink-0 mb-1.5">
+                                                <img src="/logo_original.png" alt="Logo" className="h-full w-auto object-contain" />
+                                                <span className="text-[10px] font-black tracking-wider text-black leading-none">
                                                     BANANO
                                                 </span>
                                             </div>
                                             {/* Barcode svg */}
-                                            <div className="w-full h-[32%] flex justify-center items-center shrink-0">
-                                                <Barcode value={previewItem.barcode} height={26} width={130} />
+                                            <div className="w-full h-[30%] flex justify-center items-center shrink-0">
+                                                <Barcode value={previewItem.barcode} height={32} width={130} />
                                             </div>
                                             {/* Barcode Value */}
-                                            <div className="text-[7px] font-bold text-center font-mono mt-0.5 mb-1 leading-none tracking-wider">
+                                            <div className="text-[7.5px] font-bold text-center font-mono mt-0.5 mb-1 leading-none tracking-wider">
                                                 {previewItem.barcode}
                                             </div>
                                             {/* Product Title */}
-                                            <div className="text-[8px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
+                                            <div className="text-[9px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
                                                 {titleFull}
                                             </div>
                                             {/* Prices block */}
                                             <div className="w-[85%] mt-1.5 border-t border-dashed border-gray-300 pt-1 flex justify-center items-center gap-2 font-bold">
-                                                <span className="text-[6px] font-bold text-gray-500">PRECIO:</span>
-                                                <span className="text-[11px] font-black text-black leading-none">
+                                                <span className="text-[7px] font-bold text-gray-500">PRECIO:</span>
+                                                <span className="text-[13px] font-black text-black leading-none">
                                                     {currencySign}{previewItem.price.toFixed(2)}
                                                 </span>
                                             </div>
