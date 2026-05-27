@@ -54,29 +54,29 @@ export const LabelGenerator: React.FC = () => {
     const [selectedLabels, setSelectedLabels] = useState<SelectedLabel[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    // Configuration Settings
-    const [labelWidth, setLabelWidth] = useState<number>(50); // mm
-    const [labelHeight, setLabelHeight] = useState<number>(30); // mm
-    const [currencySign, setCurrencySign] = useState<string>('$');
-    const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
-    const [scale, setScale] = useState<number>(1.0);
+    // Configuration Settings — lazy initializers read directly from localStorage on first render
+    // This prevents mount lifecycle race conditions from overwriting saved settings.
+    const [labelWidth, setLabelWidth] = useState<number>(() => {
+        const saved = localStorage.getItem('label_print_width');
+        return saved ? parseInt(saved, 10) : 50;
+    });
+    const [labelHeight, setLabelHeight] = useState<number>(() => {
+        const saved = localStorage.getItem('label_print_height');
+        return saved ? parseInt(saved, 10) : 30;
+    });
+    const [currencySign, setCurrencySign] = useState<string>(() => {
+        return localStorage.getItem('label_print_currency') || '$';
+    });
+    const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>(() => {
+        const saved = localStorage.getItem('label_print_orientation');
+        return (saved === 'vertical' ? 'vertical' : 'horizontal') as 'horizontal' | 'vertical';
+    });
+    const [scale, setScale] = useState<number>(() => {
+        const saved = localStorage.getItem('label_print_scale');
+        return saved ? parseFloat(saved) : 1.0;
+    });
 
-    // Load settings from localStorage on mount
-    useEffect(() => {
-        const savedWidth = localStorage.getItem('label_print_width');
-        const savedHeight = localStorage.getItem('label_print_height');
-        const savedCurrency = localStorage.getItem('label_print_currency');
-        const savedOrientation = localStorage.getItem('label_print_orientation');
-        const savedScale = localStorage.getItem('label_print_scale');
-
-        if (savedWidth) setLabelWidth(parseInt(savedWidth, 10));
-        if (savedHeight) setLabelHeight(parseInt(savedHeight, 10));
-        if (savedCurrency) setCurrencySign(savedCurrency);
-        if (savedOrientation) setOrientation(savedOrientation as 'horizontal' | 'vertical');
-        if (savedScale) setScale(parseFloat(savedScale));
-    }, []);
-
-    // Save settings to localStorage when they change
+    // Persist settings to localStorage whenever they change
     useEffect(() => {
         localStorage.setItem('label_print_width', labelWidth.toString());
     }, [labelWidth]);
@@ -315,23 +315,23 @@ export const LabelGenerator: React.FC = () => {
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            gap: 1.2mm;
-                            height: 6.5mm;
-                            margin-bottom: 1.5mm;
+                            gap: 1.5mm;
+                            height: 8.5mm;
+                            margin-bottom: 1mm;
                         }
                         .shop-logo {
-                            height: 6.5mm;
+                            height: 8.5mm;
                             width: auto;
                             object-fit: contain;
                         }
                         .shop-name {
-                            font-size: 10.5px;
+                            font-size: 16px;
                             font-weight: 900;
-                            letter-spacing: 0.2px;
+                            letter-spacing: 0.5px;
                         }
                         .barcode-container {
                             width: 100%;
-                            height: 9mm;
+                            height: 8mm;
                             display: flex;
                             justify-content: center;
                             align-items: center;
@@ -341,40 +341,44 @@ export const LabelGenerator: React.FC = () => {
                             height: 100%;
                         }
                         .barcode-text {
-                            font-size: 8px;
+                            font-size: 11px;
                             font-weight: bold;
                             letter-spacing: 1.5px;
-                            margin-top: 0.8mm;
-                            margin-bottom: 1.2mm;
+                            margin-top: 0.5mm;
+                            margin-bottom: 1mm;
                         }
                         .product-title {
-                            font-size: 10px;
+                            font-size: 14px;
                             font-weight: 900;
                             text-transform: uppercase;
                             white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
                             width: 100%;
-                            margin-bottom: 2mm;
-                            line-height: 1.3;
+                            margin-bottom: 1.5mm;
+                            line-height: 1.2;
                         }
                         .price-display {
                             display: flex;
                             align-items: center;
                             justify-content: space-between;
-                            width: 90%;
-                            border-top: 0.2mm dashed #ccc;
-                            padding-top: 0.8mm;
+                            width: 100%;
+                            box-sizing: border-box;
+                            padding: 0 2mm;
+                            border-top: 0.3mm dashed #aaa;
+                            padding-top: 1mm;
                         }
                         .price-label {
-                            font-size: 8px;
-                            color: #666;
+                            font-size: 12px;
+                            color: #555;
                             font-weight: bold;
+                            text-transform: uppercase;
                         }
                         .price-amount {
-                            font-size: 16px;
+                            font-size: 22px;
                             font-weight: 900;
                             color: black;
+                            line-height: 1;
                         }
                     </style>
                 </head>
@@ -723,28 +727,28 @@ export const LabelGenerator: React.FC = () => {
                                             }}
                                         >
                                             {/* Header */}
-                                            <div className="flex items-center justify-center gap-1.5 w-full h-[18%] shrink-0 mb-1.5">
+                                            <div className="flex items-center justify-center gap-2 w-full h-[20%] shrink-0 mb-1">
                                                 <img src="/logo_original.png" alt="Logo" className="h-full w-auto object-contain" />
-                                                <span className="text-[10px] font-black tracking-wider text-black leading-none">
+                                                <span className="text-[16px] font-black tracking-wide text-black leading-none">
                                                     BANANO
                                                 </span>
                                             </div>
                                             {/* Barcode svg */}
-                                            <div className="w-full h-[30%] flex justify-center items-center shrink-0">
+                                            <div className="w-full h-[28%] flex justify-center items-center shrink-0">
                                                 <Barcode value={previewItem.barcode} height={32} width={130} />
                                             </div>
                                             {/* Barcode Value */}
-                                            <div className="text-[7.5px] font-bold text-center font-mono mt-0.5 mb-1 leading-none tracking-wider">
+                                            <div className="text-[10px] font-bold text-center font-mono mt-0.5 mb-0.5 leading-none tracking-wider">
                                                 {previewItem.barcode}
                                             </div>
                                             {/* Product Title */}
-                                            <div className="text-[9.5px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
+                                            <div className="text-[13px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
                                                 {titleFull}
                                             </div>
                                             {/* Prices block */}
-                                            <div className="w-[90%] mt-1.5 border-t border-dashed border-gray-300 pt-1 flex justify-between items-center px-1 font-bold">
-                                                <span className="text-[8px] font-bold text-gray-500">PRECIO:</span>
-                                                <span className="text-[15px] font-black text-black leading-none">
+                                            <div className="w-full mt-1 border-t border-dashed border-gray-300 pt-1 flex justify-between items-center px-2 font-bold box-border">
+                                                <span className="text-[11px] font-bold text-gray-600 uppercase">PRECIO:</span>
+                                                <span className="text-[20px] font-black text-black leading-none">
                                                     {currencySign}{previewItem.price.toFixed(2)}
                                                 </span>
                                             </div>

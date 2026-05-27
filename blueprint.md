@@ -490,4 +490,7 @@ This project is a static-first web application built with Astro.js. It is design
 3. **Keep IVA completely removed**: Ensure only final list price is displayed, with no tax base or IVA percentage references.
 4. **Compile and Verify**: Run `npm run build` to confirm compiling results are clean.
 
-
+## Detailed Plan: Enlarge Label Details, Split Price, and Persist Settings
+1. **Enlarge Label Typography**: Update sizes in CSS inside `handlePrint` and live preview. Increase logo and shop name heights, SKU code size, and product title fonts. Adjust barcode SVG height to prevent page height overflow.
+2. **Align Price Row (Left/Right)**: Convert price row into a full-width container (`width: 100%`) using flex layout with `justify-content: space-between` and horizontal padding. This ensures "PRECIO:" sits on the far left and the amount on the far right.
+3. **Robust Settings Storage**: Refactor `useState` inside `LabelGenerator.tsx` to load values immediately from `localStorage` using lazy initializers (function state initializers). This prevents lifecycle race conditions from resetting user settings.
