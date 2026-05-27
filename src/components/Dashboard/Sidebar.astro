@@ -46,6 +46,11 @@ const isActive = (path: string) => {
                 </a>
             </li>
             <li>
+                <a href="/dashboard/reports" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/reports') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
+                    Reportes
+                </a>
+            </li>
+            <li>
                 <a href="/dashboard/orders" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/orders') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
                     Pedidos
                 </a>

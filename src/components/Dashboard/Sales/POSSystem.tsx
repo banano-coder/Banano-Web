@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
     Search, ShoppingCart, User, Phone, Mail, Hash, 
-    ArrowLeft, ArrowRight, Plus, Minus, CheckCircle, Package, Info, Loader2, LayoutGrid, X
+    ArrowLeft, ArrowRight, Plus, Minus, CheckCircle, Package, Info, Loader2, LayoutGrid, X, DollarSign, AlertTriangle
 } from 'lucide-react';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
@@ -19,6 +19,22 @@ export const POSSystem = () => {
     const [loading, setLoading] = useState(true);
     const [cart, setCart] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => setSuccess(null), 7000);
+            return () => clearTimeout(timer);
+        }
+    }, [success]);
+
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(null), 7000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
 
     // Mobile view state: 'catalog' | 'cart'
     const [mobileView, setMobileView] = useState<'catalog' | 'cart'>('catalog');
@@ -29,22 +45,24 @@ export const POSSystem = () => {
         nombre: '',
         email: '',
         telefono: '',
-        metodo: 'Efectivo',
-        referencia: '',
         observacion: ''
     });
 
     // Cuentas y Multidivisa
     const [cuentas, setCuentas] = useState<any[]>([]);
-    const [selectedCuentaId, setSelectedCuentaId] = useState<string>('');
-    const [tasaCambio, setTasaCambio] = useState<string>('1.00');
-    const [montoPagoReal, setMontoPagoReal] = useState<string>('');
+    const [pagos, setPagos] = useState<any[]>([
+        {
+            id_cuenta: '',
+            metodo: 'Efectivo',
+            referencia: '',
+            monto_usd: '',
+            monto_real: '',
+            tasa_cambio: '1.00'
+        }
+    ]);
 
     const subtotal = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
     const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
-
-    const activeAcc = cuentas.find(c => String(c.id_cuenta) === selectedCuentaId);
-    const isUSD = !activeAcc || activeAcc.moneda === 'USD';
 
     // Metadata for brand mapping
     const [brands, setBrands] = useState<any[]>([]);
@@ -102,7 +120,18 @@ export const POSSystem = () => {
                 setCuentas(list);
                 if (list.length > 0) {
                     const defaultAcc = list.find((c: any) => c.moneda === 'USD') || list[0];
-                    setSelectedCuentaId(String(defaultAcc.id_cuenta));
+                    let rate = '1.00';
+                    if (defaultAcc.moneda === 'COP') rate = '4000';
+                    else if (defaultAcc.moneda === 'VES') rate = '36';
+                    
+                    setPagos([{
+                        id_cuenta: String(defaultAcc.id_cuenta),
+                        metodo: 'Efectivo',
+                        referencia: '',
+                        monto_usd: subtotal > 0 ? subtotal.toFixed(2) : '',
+                        monto_real: subtotal > 0 ? (subtotal * parseFloat(rate)).toFixed(2) : '',
+                        tasa_cambio: rate
+                    }]);
                 }
             } catch (e) {
                 console.error("Error fetching accounts for POS:", e);
@@ -111,32 +140,108 @@ export const POSSystem = () => {
         fetchCuentas();
     }, []);
 
-    // Auto-tasa al cambiar cuenta o total
+    // Sincronizar monto cuando cambia el subtotal (si solo hay 1 fila de pago)
     useEffect(() => {
-        if (!selectedCuentaId || cuentas.length === 0) return;
-        const acc = cuentas.find(c => String(c.id_cuenta) === selectedCuentaId);
-        if (acc) {
-            if (acc.moneda === 'USD') {
-                setTasaCambio('1.00');
-                setMontoPagoReal(subtotal.toFixed(2));
-            } else if (acc.moneda === 'COP') {
-                setTasaCambio('4000');
-                setMontoPagoReal((subtotal * 4000).toFixed(2));
-            } else if (acc.moneda === 'VES') {
-                setTasaCambio('36');
-                setMontoPagoReal((subtotal * 36).toFixed(2));
+        setPagos(prev => {
+            if (prev.length === 1) {
+                const row = prev[0];
+                const rate = parseFloat(row.tasa_cambio || '1');
+                return [{
+                    ...row,
+                    monto_usd: subtotal > 0 ? subtotal.toFixed(2) : '',
+                    monto_real: subtotal > 0 ? (subtotal * rate).toFixed(2) : ''
+                }];
+            }
+            return prev;
+        });
+    }, [subtotal]);
+
+    const addPago = () => {
+        const currentPaidUsd = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
+        const remainingUsd = Math.max(0, subtotal - currentPaidUsd);
+        
+        const defaultAcc = cuentas.find((c: any) => c.moneda === 'USD') || cuentas[0];
+        if (!defaultAcc) return;
+        
+        let rate = '1.00';
+        if (defaultAcc.moneda === 'COP') rate = '4000';
+        else if (defaultAcc.moneda === 'VES') rate = '36';
+        
+        setPagos(prev => [
+            ...prev,
+            {
+                id_cuenta: String(defaultAcc.id_cuenta),
+                metodo: 'Efectivo',
+                referencia: '',
+                monto_usd: remainingUsd > 0 ? remainingUsd.toFixed(2) : '',
+                monto_real: remainingUsd > 0 ? (remainingUsd * parseFloat(rate)).toFixed(2) : '',
+                tasa_cambio: rate
+            }
+        ]);
+    };
+
+    const removePago = (index: number) => {
+        setPagos(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const updatePago = (index: number, field: string, value: string) => {
+        // Prevent negative values for numeric fields
+        if (['monto_usd', 'monto_real', 'tasa_cambio'].includes(field)) {
+            value = value.replace('-', '');
+            const parsed = parseFloat(value);
+            if (Number.isFinite(parsed) && parsed < 0) {
+                value = Math.abs(parsed).toString();
             }
         }
-    }, [selectedCuentaId, subtotal, cuentas]);
 
-    const handleTasaChange = (val: string) => {
-        setTasaCambio(val);
-        const rate = parseFloat(val);
-        if (Number.isFinite(rate) && rate > 0) {
-            setMontoPagoReal((subtotal * rate).toFixed(2));
-        } else {
-            setMontoPagoReal('');
-        }
+        setPagos(prev => prev.map((item, i) => {
+            if (i !== index) return item;
+            
+            const updated = { ...item, [field]: value };
+            
+            if (field === 'id_cuenta') {
+                const acc = cuentas.find(c => String(c.id_cuenta) === value);
+                if (acc) {
+                    let defaultRate = '1.00';
+                    if (acc.moneda === 'COP') defaultRate = '4000';
+                    else if (acc.moneda === 'VES') defaultRate = '36';
+                    
+                    updated.tasa_cambio = defaultRate;
+                    const usdVal = parseFloat(updated.monto_usd || '0');
+                    updated.monto_real = usdVal > 0 ? (usdVal * parseFloat(defaultRate)).toFixed(2) : '';
+                }
+            }
+            
+            if (field === 'tasa_cambio') {
+                const rate = parseFloat(value);
+                const usdVal = parseFloat(updated.monto_usd || '0');
+                if (Number.isFinite(rate) && rate > 0 && usdVal > 0) {
+                    updated.monto_real = (usdVal * rate).toFixed(2);
+                }
+            }
+            
+            if (field === 'monto_usd') {
+                const usdVal = parseFloat(value);
+                const rate = parseFloat(updated.tasa_cambio || '1');
+                if (Number.isFinite(usdVal) && Number.isFinite(rate) && rate > 0) {
+                    updated.monto_real = (usdVal * rate).toFixed(2);
+                } else if (value === '') {
+                    updated.monto_real = '';
+                }
+            }
+            
+            if (field === 'monto_real') {
+                const realVal = parseFloat(value);
+                const rate = parseFloat(updated.tasa_cambio || '1');
+                if (Number.isFinite(realVal) && Number.isFinite(rate) && rate > 0) {
+                    updated.monto_usd = (realVal / rate).toFixed(2);
+                } else if (value === '') {
+                    updated.monto_usd = '';
+                }
+            }
+            
+            return updated;
+        }));
     };
 
     const handleCedulaBlur = async () => {
@@ -162,20 +267,35 @@ export const POSSystem = () => {
     };
 
     const handleCheckout = async () => {
+        setError(null);
+        setSuccess(null);
         if (cart.length === 0) return;
         if (!customerData.nombre || !customerData.cedula) {
-            alert("El nombre y la cédula del cliente son requeridos.");
+            setError("El nombre y la cédula del cliente son requeridos.");
             return;
+        }
+
+        const paidTotal = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
+        const diff = subtotal - paidTotal;
+        if (Math.abs(diff) >= 0.01) {
+            setError(`El total de los pagos registrados ($${paidTotal.toFixed(2)}) debe coincidir exactamente con el total de la venta ($${subtotal.toFixed(2)}).`);
+            return;
+        }
+
+        for (const p of pagos) {
+            if (!p.id_cuenta) {
+                setError("Por favor, seleccione una cuenta de destino para todos los pagos.");
+                return;
+            }
+            const usdVal = parseFloat(p.monto_usd);
+            if (isNaN(usdVal) || usdVal <= 0) {
+                setError("El monto de cada pago debe ser mayor a 0.");
+                return;
+            }
         }
 
         setIsSubmitting(true);
         try {
-            const activeAcc = cuentas.find(c => String(c.id_cuenta) === selectedCuentaId);
-            const currency = activeAcc?.moneda || 'USD';
-            const rate = currency === 'USD' ? 1.0 : parseFloat(tasaCambio || '1');
-            const calculatedPayReal = currency === 'USD' ? subtotal : subtotal * rate;
-            const payReal = montoPagoReal ? parseFloat(montoPagoReal) : calculatedPayReal;
-
             const payload = {
                 items: cart.map(item => ({
                     id_variante_producto: item.id,
@@ -186,10 +306,19 @@ export const POSSystem = () => {
                 cliente_email: customerData.email || null,
                 cliente_telefono: customerData.telefono || null,
                 nota: customerData.observacion || 'Venta POS',
-                id_cuenta: parseInt(selectedCuentaId, 10),
-                moneda_pago: currency,
-                tasa_cambio: rate,
-                monto_pago_real: parseFloat(payReal.toFixed(2))
+                id_cuenta: parseInt(pagos[0].id_cuenta, 10),
+                moneda_pago: cuentas.find(c => String(c.id_cuenta) === pagos[0].id_cuenta)?.moneda || 'USD',
+                tasa_cambio: parseFloat(pagos[0].tasa_cambio || '1'),
+                monto_pago_real: parseFloat(parseFloat(pagos[0].monto_real || '0').toFixed(2)),
+                pagos: pagos.map(p => ({
+                    id_cuenta: parseInt(p.id_cuenta, 10),
+                    moneda_pago: cuentas.find(c => String(c.id_cuenta) === p.id_cuenta)?.moneda || 'USD',
+                    tasa_cambio: parseFloat(p.tasa_cambio || '1'),
+                    monto_real: parseFloat(parseFloat(p.monto_real || '0').toFixed(2)),
+                    monto_usd: parseFloat(parseFloat(p.monto_usd || '0').toFixed(2)),
+                    metodo: p.metodo,
+                    referencia: p.referencia || ''
+                }))
             };
 
             const response = await fetch(API_ENDPOINTS.POS.CHECKOUT, {
@@ -205,7 +334,7 @@ export const POSSystem = () => {
                 throw new Error(result.message || 'Error en el checkout');
             }
 
-            alert(`Venta registrada exitosamente! Pedido #${result.id_pedido}`);
+            setSuccess(`Venta registrada exitosamente! Pedido #${result.id_pedido}`);
             
             // Limpiar carrito y formulario
             setCart([]);
@@ -214,18 +343,29 @@ export const POSSystem = () => {
                 nombre: '',
                 email: '',
                 telefono: '',
-                metodo: 'Efectivo',
-                referencia: '',
                 observacion: ''
             });
-            setTasaCambio('1.00');
-            setMontoPagoReal('');
+            
+            if (cuentas.length > 0) {
+                const defaultAcc = cuentas.find((c: any) => c.moneda === 'USD') || cuentas[0];
+                let rate = '1.00';
+                if (defaultAcc.moneda === 'COP') rate = '4000';
+                else if (defaultAcc.moneda === 'VES') rate = '36';
+                setPagos([{
+                    id_cuenta: String(defaultAcc.id_cuenta),
+                    metodo: 'Efectivo',
+                    referencia: '',
+                    monto_usd: '',
+                    monto_real: '',
+                    tasa_cambio: rate
+                }]);
+            }
             
             // Recargar productos
             await fetchProducts();
         } catch (err: any) {
             console.error(err);
-            alert(err.message || 'Error registrando la venta.');
+            setError(err.message || 'Error registrando la venta.');
         } finally {
             setIsSubmitting(false);
         }
@@ -335,144 +475,124 @@ export const POSSystem = () => {
     };
 
     /* ─────────────────────────────── Sidebar Content (shared between mobile & desktop) ─────────────────────────────── */
-    const renderSidebarContent = () => (
-        <>
-            {/* Carrito */}
-            <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex flex-col max-h-[45%] lg:max-h-[40%]">
-                <CardHeader className="py-3 lg:py-4 border-b border-border">
-                    <CardTitle className="text-sm lg:text-md flex items-center gap-2 text-foreground font-semibold">
-                        <ShoppingCart className="h-4 w-4 text-primary" /> Carrito
-                        {totalItems > 0 && (
-                            <Badge className="ml-auto bg-primary text-primary-foreground border-none text-[10px] font-bold">
-                                {totalItems} items
-                            </Badge>
-                        )}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto p-3 lg:p-4">
-                    {cart.length === 0 ? (
-                        <div className="h-full flex items-center justify-center py-8">
-                            <div className="text-center space-y-2">
-                                <ShoppingCart className="h-8 w-8 text-muted-foreground/30 mx-auto" />
-                                <p className="text-xs text-muted-foreground">Agrega productos desde el catálogo.</p>
-                            </div>
+    const renderCarritoCard = () => (
+        <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex flex-col h-full overflow-hidden">
+            <CardHeader className="py-3 lg:py-4 border-b border-border">
+                <CardTitle className="text-sm lg:text-md flex items-center gap-2 text-foreground font-semibold">
+                    <ShoppingCart className="h-4 w-4 text-primary" /> Carrito
+                    {totalItems > 0 && (
+                        <Badge className="ml-auto bg-primary text-primary-foreground border-none text-[10px] font-bold">
+                            {totalItems} items
+                        </Badge>
+                    )}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-3 lg:p-4">
+                {cart.length === 0 ? (
+                    <div className="h-full flex items-center justify-center py-8">
+                        <div className="text-center space-y-2">
+                            <ShoppingCart className="h-8 w-8 text-muted-foreground/30 mx-auto" />
+                            <p className="text-xs text-muted-foreground">Agrega productos desde el catálogo.</p>
                         </div>
-                    ) : (
-                        <div className="space-y-2 lg:space-y-3">
-                            {cart.map(item => (
-                                <div key={item.id} className="flex gap-2 lg:gap-3 items-center border-b border-border pb-2">
-                                    <img src={item.imagen} className="w-10 h-10 lg:w-12 lg:h-12 rounded object-contain border border-border bg-white dark:bg-black/20 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] lg:text-xs font-bold text-foreground truncate">{item.nombre}</p>
-                                        <p className="text-[10px] text-primary font-bold">${item.precio}</p>
-                                    </div>
-                                    <div className="flex items-center border border-border rounded-md overflow-hidden bg-background flex-shrink-0">
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 lg:h-6 lg:w-6 hover:bg-muted text-foreground" onClick={() => updateQuantity(item.id, -1)}>
-                                            <Minus className="h-3 w-3"/>
-                                        </Button>
-                                        <span className="w-6 text-[10px] text-center font-bold text-foreground">{item.cantidad}</span>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 lg:h-6 lg:w-6 hover:bg-muted text-foreground" onClick={() => updateQuantity(item.id, 1)}>
-                                            <Plus className="h-3 w-3"/>
-                                        </Button>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive/80 flex-shrink-0" onClick={() => removeFromCart(item.id)}>
-                                        <X className="h-3.5 w-3.5" />
+                    </div>
+                ) : (
+                    <div className="space-y-2 lg:space-y-3">
+                        {cart.map(item => (
+                            <div key={item.id} className="flex gap-2 lg:gap-3 items-center border-b border-border pb-2">
+                                <img src={item.imagen} className="w-10 h-10 lg:w-12 lg:h-12 rounded object-contain border border-border bg-white dark:bg-black/20 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] lg:text-xs font-bold text-foreground truncate">{item.nombre}</p>
+                                    <p className="text-[10px] text-primary font-bold">${item.precio}</p>
+                                </div>
+                                <div className="flex items-center border border-border rounded-md overflow-hidden bg-background flex-shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 lg:h-6 lg:w-6 hover:bg-muted text-foreground" onClick={() => updateQuantity(item.id, -1)}>
+                                        <Minus className="h-3 w-3"/>
+                                    </Button>
+                                    <span className="w-6 text-[10px] text-center font-bold text-foreground">{item.cantidad}</span>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 lg:h-6 lg:w-6 hover:bg-muted text-foreground" onClick={() => updateQuantity(item.id, 1)}>
+                                        <Plus className="h-3 w-3"/>
                                     </Button>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive/80 flex-shrink-0" onClick={() => removeFromCart(item.id)}>
+                                    <X className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
 
-            {/* Datos Venta */}
-            <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex-1 flex flex-col overflow-hidden text-foreground">
-                <CardHeader className="py-3 lg:py-4 border-b border-border bg-muted/40">
-                    <CardTitle className="text-sm lg:text-md flex items-center gap-2 text-foreground font-semibold">
-                        <LayoutGrid className="h-4 w-4 text-primary" /> Datos de la Venta
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 lg:p-4 space-y-3 lg:space-y-4 overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-2 lg:gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Cédula</label>
-                            <Input 
-                                className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
-                                placeholder="V12345678" 
-                                value={customerData.cedula}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setCustomerData(prev => {
-                                        if (val.trim() === '') {
-                                            return {
-                                                ...prev,
-                                                cedula: '',
-                                                nombre: '',
-                                                email: '',
-                                                telefono: ''
-                                            };
-                                        }
-                                        return { ...prev, cedula: val };
-                                    });
-                                }}
-                                onBlur={handleCedulaBlur}
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Nombre</label>
-                            <Input 
-                                className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
-                                placeholder="Juan Pérez" 
-                                value={customerData.nombre}
-                                onChange={(e) => setCustomerData({ ...customerData, nombre: e.target.value })}
-                            />
-                        </div>
+    const renderDatosVentaCard = () => (
+        <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex flex-col h-full overflow-hidden text-foreground">
+            <CardHeader className="py-3 lg:py-4 border-b border-border bg-muted/40 flex-shrink-0">
+                <CardTitle className="text-sm lg:text-md flex items-center gap-2 text-foreground font-semibold">
+                    <LayoutGrid className="h-4 w-4 text-primary" /> Datos de la Venta
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 lg:p-4 space-y-3 lg:space-y-4 overflow-y-auto flex-1">
+                <div className="grid grid-cols-12 gap-2 lg:gap-3">
+                    {/* Cédula */}
+                    <div className="col-span-12 sm:col-span-4 space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">Cédula</label>
+                        <Input 
+                            className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary font-semibold" 
+                            placeholder="V12345678" 
+                            value={customerData.cedula}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setCustomerData(prev => {
+                                    if (val.trim() === '') {
+                                        return {
+                                            ...prev,
+                                            cedula: '',
+                                            nombre: '',
+                                            email: '',
+                                            telefono: ''
+                                        };
+                                    }
+                                    return { ...prev, cedula: val };
+                                });
+                            }}
+                            onBlur={handleCedulaBlur}
+                        />
                     </div>
-                    <div className="grid grid-cols-2 gap-2 lg:gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Email</label>
-                            <Input 
-                                type="email"
-                                className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
-                                placeholder="juan@mail.com" 
-                                value={customerData.email}
-                                onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Teléfono</label>
-                            <Input 
-                                className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
-                                placeholder="584121234567" 
-                                value={customerData.telefono}
-                                onChange={(e) => setCustomerData({ ...customerData, telefono: e.target.value })}
-                            />
-                        </div>
+                    {/* Nombre */}
+                    <div className="col-span-12 sm:col-span-8 space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">Nombre</label>
+                        <Input 
+                            className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary font-semibold" 
+                            placeholder="Juan Pérez" 
+                            value={customerData.nombre}
+                            onChange={(e) => setCustomerData({ ...customerData, nombre: e.target.value })}
+                        />
                     </div>
-                    <div className="grid grid-cols-2 gap-2 lg:gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Método *</label>
-                            <select 
-                                className="w-full h-9 lg:h-10 border border-border rounded-md px-3 text-xs bg-background text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                                value={customerData.metodo}
-                                onChange={(e) => setCustomerData({ ...customerData, metodo: e.target.value })}
-                            >
-                                <option value="Efectivo">Efectivo</option>
-                                <option value="Pago Móvil">Pago Móvil</option>
-                                <option value="Zelle">Zelle</option>
-                            </select>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Referencia</label>
-                            <Input 
-                                className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
-                                placeholder="REF-001" 
-                                value={customerData.referencia}
-                                onChange={(e) => setCustomerData({ ...customerData, referencia: e.target.value })}
-                            />
-                        </div>
+                    
+                    {/* Teléfono */}
+                    <div className="col-span-12 sm:col-span-4 space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">Teléfono</label>
+                        <Input 
+                            className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
+                            placeholder="584121234567" 
+                            value={customerData.telefono}
+                            onChange={(e) => setCustomerData({ ...customerData, telefono: e.target.value })}
+                        />
                     </div>
-                    <div className="space-y-1">
+                    {/* Email */}
+                    <div className="col-span-12 sm:col-span-8 space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">Email</label>
+                        <Input 
+                            type="email"
+                            className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
+                            placeholder="juan@mail.com" 
+                            value={customerData.email}
+                            onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
+                        />
+                    </div>
+
+                    {/* Observación */}
+                    <div className="col-span-12 space-y-1">
                         <label className="text-[10px] font-bold text-muted-foreground">Observación</label>
                         <Input 
                             className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
@@ -481,79 +601,239 @@ export const POSSystem = () => {
                             onChange={(e) => setCustomerData({ ...customerData, observacion: e.target.value })}
                         />
                     </div>
+                </div>
 
-                    {/* Cuenta de Destino y Multidivisa */}
-                    <div className="border-t border-border pt-3 mt-2 space-y-3">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-muted-foreground">Cuenta de Destino *</label>
-                            <select 
-                                className="w-full h-9 lg:h-10 border border-border rounded-md px-3 text-xs bg-background text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                                value={selectedCuentaId}
-                                onChange={(e) => setSelectedCuentaId(e.target.value)}
-                            >
-                                {cuentas.map((c: any) => (
-                                    <option key={c.id_cuenta} value={c.id_cuenta}>
-                                        {c.nombre} ({c.moneda}) - Saldo: {c.moneda === 'USD' ? '$' : c.moneda === 'COP' ? 'COP ' : 'Bs '}{Number(c.saldo).toLocaleString()}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {!isUSD && activeAcc && (
-                            <div className="grid grid-cols-2 gap-2 lg:gap-3 p-2.5 bg-primary/5 rounded-lg border border-primary/10 animate-in fade-in duration-200 text-foreground">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-primary">Tasa de Cambio ({activeAcc.moneda}/$)</label>
-                                    <Input 
-                                        type="number"
-                                        step="any"
-                                        className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary" 
-                                        placeholder="Ej: 4000" 
-                                        value={tasaCambio}
-                                        onChange={(e) => handleTasaChange(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-primary">Cobro en {activeAcc.moneda}</label>
-                                    <Input 
-                                        type="number"
-                                        step="any"
-                                        className="h-9 lg:h-10 bg-background border-border text-foreground text-sm focus-visible:ring-primary font-bold text-primary" 
-                                        placeholder="Ej: 20000" 
-                                        value={montoPagoReal}
-                                        onChange={(e) => setMontoPagoReal(e.target.value)}
-                                    />
-                                </div>
-                                <div className="col-span-2 text-[10px] text-muted-foreground font-semibold">
-                                    Monto base: ${subtotal.toFixed(2)} USD &times; {tasaCambio} = {activeAcc.moneda === 'COP' ? 'COP' : 'Bs'} {(subtotal * parseFloat(tasaCambio || '0')).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                                </div>
-                            </div>
-                        )}
+                {/* Métodos de Pago Divididos */}
+                <div className="border-t border-border pt-4 mt-3 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Métodos de Pago</h4>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={addPago}
+                            className="h-8 border-primary/20 text-primary hover:bg-primary/5 text-[10px] lg:text-xs font-semibold px-2 lg:px-2.5 rounded-lg flex items-center gap-1"
+                        >
+                            <Plus className="h-3.5 w-3.5" /> Agregar Pago
+                        </Button>
                     </div>
 
-                    <Button 
-                        className="w-full h-12 lg:h-14 mt-4 lg:mt-6 bg-green-600 hover:bg-green-500 text-white font-bold gap-2 lg:gap-3 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center uppercase tracking-wider text-xs lg:text-sm active:scale-95 transition-all"
-                        disabled={cart.length === 0 || isSubmitting}
-                        onClick={handleCheckout}
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="h-4 w-4 lg:h-5 lg:w-5 animate-spin" /> Procesando...
-                            </>
-                        ) : (
-                            <>
-                                <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5" /> Confirmar Venta • ${subtotal.toFixed(2)}
-                            </>
-                        )}
-                    </Button>
-                </CardContent>
-            </Card>
+                    <div className="space-y-3">
+                        {pagos.map((p, idx) => {
+                            const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
+                            const accCurrency = acc?.moneda || 'USD';
+                            const isRowUSD = accCurrency === 'USD';
+                            
+                            return (
+                                <div key={idx} className="relative p-3 bg-muted/20 border border-border/80 rounded-xl space-y-2.5 animate-in fade-in duration-200">
+                                    {/* Botón Eliminar */}
+                                    {pagos.length > 1 && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => removePago(idx)}
+                                            className="absolute top-2 right-2 p-1 text-destructive hover:bg-destructive/10 rounded-lg transition-colors z-10"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                    
+                                    <div className="grid grid-cols-12 gap-2 lg:gap-3">
+                                        {/* Cuenta */}
+                                        <div className="space-y-1 col-span-12 sm:col-span-7">
+                                            <label className="text-[10px] font-bold text-muted-foreground">Cuenta Destino</label>
+                                            <select 
+                                                className="w-full h-9 border border-border rounded-md px-3 text-xs bg-background text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none font-semibold"
+                                                value={p.id_cuenta}
+                                                onChange={(e) => updatePago(idx, 'id_cuenta', e.target.value)}
+                                            >
+                                                <option value="" disabled>Seleccione Cuenta</option>
+                                                {cuentas.map((c: any) => (
+                                                    <option key={c.id_cuenta} value={c.id_cuenta}>
+                                                        {c.nombre} ({c.moneda})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        {/* Método */}
+                                        <div className="space-y-1 col-span-12 sm:col-span-5">
+                                            <label className="text-[10px] font-bold text-muted-foreground">Método *</label>
+                                            <select 
+                                                className="w-full h-9 border border-border rounded-md px-3 text-xs bg-background text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                                                value={p.metodo}
+                                                onChange={(e) => updatePago(idx, 'metodo', e.target.value)}
+                                            >
+                                                <option value="Efectivo">Efectivo</option>
+                                                <option value="Pago Móvil">Pago Móvil</option>
+                                                <option value="Zelle">Zelle</option>
+                                                <option value="Transferencia">Transferencia</option>
+                                            </select>
+                                        </div>
+                                        
+                                        {/* Referencia */}
+                                        <div className="space-y-1 col-span-12 sm:col-span-6">
+                                            <label className="text-[10px] font-bold text-muted-foreground">Referencia</label>
+                                            <Input 
+                                                className="h-9 bg-background border-border text-foreground text-xs focus-visible:ring-primary" 
+                                                placeholder="Ref / Transacción" 
+                                                value={p.referencia}
+                                                onChange={(e) => updatePago(idx, 'referencia', e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* Monto USD */}
+                                        <div className="space-y-1 col-span-12 sm:col-span-6">
+                                            <label className="text-[10px] font-bold text-muted-foreground">Monto (USD)</label>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                <Input 
+                                                    type="number"
+                                                    step="any"
+                                                    min="0"
+                                                    className="pl-6 h-9 bg-background border-border text-foreground text-xs focus-visible:ring-primary font-black" 
+                                                    placeholder="0.00" 
+                                                    value={p.monto_usd}
+                                                    onChange={(e) => updatePago(idx, 'monto_usd', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Monto Real (moneda local) si no es USD */}
+                                        {!isRowUSD && (
+                                            <div className="space-y-1 col-span-6 sm:col-span-6">
+                                                <label className="text-[10px] font-bold text-primary">Monto ({accCurrency})</label>
+                                                <Input 
+                                                    type="number"
+                                                    step="any"
+                                                    min="0"
+                                                    className="h-9 bg-background border-primary/20 text-primary font-black text-xs focus-visible:ring-primary" 
+                                                    placeholder="0.00" 
+                                                    value={p.monto_real}
+                                                    onChange={(e) => updatePago(idx, 'monto_real', e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Tasa de Cambio si no es USD */}
+                                        {!isRowUSD && (
+                                            <div className="space-y-1 col-span-6 sm:col-span-6">
+                                                <label className="text-[10px] font-bold text-primary">Tasa Cambio ({accCurrency}/$)</label>
+                                                <Input 
+                                                    type="number"
+                                                    step="any"
+                                                    min="0"
+                                                    className="h-9 bg-background border-primary/20 text-foreground text-xs focus-visible:ring-primary font-semibold" 
+                                                    placeholder="Tasa" 
+                                                    value={p.tasa_cambio}
+                                                    onChange={(e) => updatePago(idx, 'tasa_cambio', e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Desglose de Totales */}
+                    <div className="p-3 bg-muted/40 border border-border rounded-xl space-y-1.5 text-xs text-foreground font-inter">
+                        <div className="flex justify-between font-medium">
+                            <span className="text-muted-foreground">Total Venta:</span>
+                            <span className="font-bold">${subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-medium">
+                            <span className="text-muted-foreground">Total Registrado:</span>
+                            <span className="font-bold text-primary">
+                                ${pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0).toFixed(2)}
+                            </span>
+                        </div>
+                        {(() => {
+                            const paid = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
+                            const diff = subtotal - paid;
+                            if (Math.abs(diff) < 0.01) {
+                                return (
+                                    <div className="flex justify-between font-bold text-green-600 bg-green-500/10 p-1.5 rounded mt-1 text-[11px] items-center">
+                                        <span>Pago Completado</span>
+                                        <span>$0.00 restante</span>
+                                    </div>
+                                );
+                            } else if (diff > 0) {
+                                return (
+                                    <div className="flex justify-between font-bold text-amber-600 bg-amber-500/10 p-1.5 rounded mt-1 text-[11px] items-center">
+                                        <span>Restante:</span>
+                                        <span>${diff.toFixed(2)}</span>
+                                    </div>
+                                );
+                            } else {
+                                return (
+                                    <div className="flex justify-between font-bold text-red-600 bg-red-500/10 p-1.5 rounded mt-1 text-[11px] items-center">
+                                        <span>Exceso:</span>
+                                        <span>${Math.abs(diff).toFixed(2)}</span>
+                                    </div>
+                                );
+                            }
+                        })()}
+                    </div>
+                </div>
+
+                <Button 
+                    className="w-full h-12 lg:h-14 mt-4 lg:mt-6 bg-green-600 hover:bg-green-500 text-white font-bold gap-2 lg:gap-3 rounded-xl shadow-lg shadow-green-600/20 flex items-center justify-center uppercase tracking-wider text-xs lg:text-sm active:scale-95 transition-all flex-shrink-0"
+                    disabled={cart.length === 0 || isSubmitting}
+                    onClick={handleCheckout}
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="h-4 w-4 lg:h-5 lg:w-5 animate-spin" /> Procesando...
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5" /> Confirmar Venta • ${subtotal.toFixed(2)}
+                        </>
+                    )}
+                </Button>
+            </CardContent>
+        </Card>
+    );
+
+    const renderSidebarContent = () => (
+        <>
+            <div className="max-h-[35%] flex flex-col">
+                {renderCarritoCard()}
+            </div>
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {renderDatosVentaCard()}
+            </div>
         </>
     );
     const userWarehouse = warehouses.find(w => w.id_almacen === currentUser?.id_almacen);
     const warehouseName = userWarehouse ? userWarehouse.nombre : (currentUser?.id_almacen ? `Almacén #${currentUser.id_almacen}` : 'Todas (Admin/Central)');
 
     return (
-        <div className="flex flex-col h-[calc(100vh-240px)] bg-transparent overflow-hidden">
+        <div className="flex flex-col h-[calc(100vh-240px)] bg-transparent overflow-hidden text-foreground">
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300 mb-4 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <button type="button" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
+            {success && (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300 mb-4 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4.5 w-4.5 text-green-500 flex-shrink-0" />
+                        <span className="text-xs font-semibold">{success}</span>
+                    </div>
+                    <button type="button" onClick={() => setSuccess(null)} className="h-6 w-6 text-green-500 hover:bg-green-500/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
             {/* Header Superior */}
             <div className="flex flex-wrap items-center gap-3 p-3 lg:p-4 bg-card/45 border border-border backdrop-blur-md rounded-xl mb-4 shadow-sm text-xs md:text-sm text-foreground">
                 <h1 className="font-extrabold text-base lg:text-lg border-r border-border pr-3 mr-1">Venta POS</h1>
@@ -571,17 +851,17 @@ export const POSSystem = () => {
                 </div>
             </div>
 
-            <div className="flex flex-1 gap-0 lg:gap-6 pb-0 lg:pb-6 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] xl:grid-cols-[1.6fr_1fr] 2xl:grid-cols-[2fr_1fr] gap-6 pb-0 lg:pb-6 overflow-hidden flex-1">
                 {/* ═══════════════════════ Contenido Principal (Catálogo) ═══════════════════════ */}
-                <div className={`flex-1 flex flex-col gap-3 lg:gap-6 overflow-hidden ${mobileView === 'cart' ? 'hidden lg:flex' : 'flex'}`}>
+                <div className={`flex flex-col gap-3 lg:gap-6 overflow-hidden ${mobileView === 'cart' ? 'hidden lg:flex' : 'flex'}`}>
                     {/* Desktop-only title row */}
-                    <div className="hidden lg:block">
-                        <h1 className="text-3xl font-extrabold text-foreground drop-shadow-sm">Registrar Venta</h1>
+                    <div className="hidden lg:block flex-shrink-0">
+                        <h1 className="text-3xl font-extrabold text-foreground drop-shadow-sm font-outfit">Registrar Venta</h1>
                         <p className="text-sm text-muted-foreground font-medium font-inter">Selecciona variantes del catálogo.</p>
                     </div>
 
                     {/* Search bar - responsive */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 lg:gap-4 p-3 lg:p-4 bg-card/45 backdrop-blur-md rounded-xl border border-border">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 lg:gap-4 p-3 lg:p-4 bg-card/45 backdrop-blur-md rounded-xl border border-border flex-shrink-0">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                             <Input 
@@ -605,7 +885,7 @@ export const POSSystem = () => {
                     </div>
 
                     {/* Grid de Productos — responsive columns */}
-                    <div className="flex-1 overflow-y-auto pb-20 lg:pb-2 pr-0 lg:pr-2 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-6 auto-rows-max">
+                    <div className="flex-1 overflow-y-auto pb-20 lg:pb-2 pr-0 lg:pr-2 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-3 lg:gap-6 auto-rows-max">
                         {loading ? (
                             Array.from({ length: 8 }).map((_, i) => (
                                 <div key={i} className="bg-card/40 backdrop-blur-sm h-[240px] lg:h-[400px] rounded-xl border border-border animate-pulse"></div>
@@ -650,7 +930,7 @@ export const POSSystem = () => {
 
                 {/* ═══════════════════════ Barra Lateral / Mobile Cart View ═══════════════════════ */}
                 {/* Desktop sidebar */}
-                <div className="hidden lg:flex w-[400px] flex-col gap-4 overflow-hidden">
+                <div className="hidden lg:flex flex-col gap-4 overflow-hidden h-full">
                     {renderSidebarContent()}
                 </div>
 
@@ -663,7 +943,8 @@ export const POSSystem = () => {
                         <h2 className="text-base font-bold text-foreground">Carrito & Venta</h2>
                     </div>
                     <div className="flex-1 flex flex-col gap-3 overflow-y-auto pb-4">
-                        {renderSidebarContent()}
+                        {renderCarritoCard()}
+                        {renderDatosVentaCard()}
                     </div>
                 </div>
             </div>

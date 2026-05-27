@@ -1,0 +1,31 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Dashboard/Header.astro";
+import Sidebar from "../../components/Dashboard/Sidebar.astro";
+import Footer from "../../components/Dashboard/Footer.astro";
+import { InventoryReports } from "../../components/Dashboard/Inventory/InventoryReports";
+import { AuthGuard } from "../../components/Dashboard/AuthGuard";
+---
+
+<Layout title="Reportes - Panel Administrativo">
+  <div class="flex flex-col min-h-screen bg-background bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]">
+    <Header />
+    <div class="flex flex-1">
+      <Sidebar />
+      <main class="flex-1 p-6 md:p-8">
+        <AuthGuard client:load allowedRoles={['admin', 'manager', 'vendedor', 'viewer']} panelName="Reportes">
+          <div class="space-y-6">
+            <div>
+              <h1 class="text-3xl font-bold tracking-tight text-foreground drop-shadow-sm font-outfit">Reportes de Inventario</h1>
+              <p class="text-foreground/70 font-medium">Exporta informes en formato PDF y CSV sobre stock, alertas y movimientos.</p>
+            </div>
+            <div class="bg-card/65 backdrop-blur-md rounded-xl border border-border p-6 shadow-xl text-foreground">
+              <InventoryReports client:load />
+            </div>
+          </div>
+        </AuthGuard>
+      </main>
+    </div>
+    <Footer />
+  </div>
+</Layout>

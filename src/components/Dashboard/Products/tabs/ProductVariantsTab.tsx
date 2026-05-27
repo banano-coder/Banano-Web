@@ -8,9 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import type { Product, Variant } from '@/types';
-import { Loader2, Plus, Trash, Edit, ArrowRightLeft, Copy } from 'lucide-react';
+import { Loader2, Plus, Trash, Edit, ArrowRightLeft, Copy, AlertTriangle, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea'; // For JSON/attributes if needed
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogCancel,
+    AlertDialogAction
+} from '@/components/ui/alert-dialog';
 
 interface ProductVariantsTabProps {
     product: Product;
@@ -31,6 +41,8 @@ const PREDEFINED_ATTRIBUTES = [
 export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product }) => {
     const [variants, setVariants] = useState<Variant[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [variantToDelete, setVariantToDelete] = useState<Variant | null>(null);
 
     // Create/Edit Dialog State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -41,6 +53,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
         precio_lista: '',
         costo: '',
         codigo_barras: '',
+        activo: true,
         atributos: [] as { key: string; value: string }[]
     });
     const [saving, setSaving] = useState(false);
@@ -55,11 +68,12 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
         if (!editingVariant || !quickStock.cantidad) return;
         const cantNum = parseInt(quickStock.cantidad);
         if (isNaN(cantNum) || cantNum <= 0) {
-            alert("La cantidad debe ser un número mayor a cero.");
+            setError("La cantidad debe ser un número mayor a cero.");
             return;
         }
 
         setRegisteringStock(true);
+        setError(null);
         try {
             await FetchData(API_ENDPOINTS.INVENTORY.MOVEMENTS, 'POST', {
                 body: {
@@ -73,12 +87,10 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             setQuickStock({ cantidad: '', tipo: 'entrada', motivo: '' });
             // Refresh to see new stock
             await fetchVariants();
-            // Important: we need to update editingVariant state too so the badge updates
-            // but since editingVariant is from parent/initial list, fetchVariants will trigger a re-render
-            // but we need to find the updated one
-            setIsDialogOpen(false); // Closing is safer or we'd need to sync editingVariant
-        } catch (error) {
-            console.error("Error registering quick stock", error);
+            setIsDialogOpen(false);
+        } catch (err: any) {
+            setError(err.message || "Error al registrar stock");
+            console.error("Error registering quick stock", err);
         } finally {
             setRegisteringStock(false);
         }
@@ -103,6 +115,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
     }, [product]);
 
     const handleOpenDialog = (variant?: Variant, isClone = false) => {
+        setError(null);
         setIsCloneMode(isClone);
         if (variant) {
             setEditingVariant(isClone ? null : variant); // If clone, we are creating a NEW one, so editingVariant is null
@@ -111,6 +124,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                 precio_lista: (variant.precio_lista ?? '').toString(),
                 costo: (variant.costo ?? '').toString(),
                 codigo_barras: variant.codigo_barras || '',
+                activo: variant.activo ?? true,
                 atributos: variant.atributos_json && typeof variant.atributos_json === 'object'
                     ? Object.entries(variant.atributos_json).map(([key, value]) => ({ key, value: String(value) }))
                     : []
@@ -118,7 +132,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
         } else {
             setEditingVariant(null);
             // Pre-fill with a placeholder indicating it's system-generated
-            setFormData({ sku: '[ GENERACIÓN AUTOMÁTICA ]', precio_lista: '', costo: '', codigo_barras: '', atributos: [] });
+            setFormData({ sku: '[ GENERACIÓN AUTOMÁTICA ]', precio_lista: '', costo: '', codigo_barras: '', activo: true, atributos: [] });
         }
         setIsDialogOpen(true);
     };
@@ -126,12 +140,14 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
+        setError(null);
         try {
             const payload = {
                 sku: formData.sku === '[ GENERACIÓN AUTOMÁTICA ]' ? undefined : formData.sku,
                 precio_lista: parseFloat(formData.precio_lista) || 0,
                 costo: parseFloat(formData.costo) || 0,
                 codigo_barras: formData.codigo_barras,
+                activo: formData.activo,
                 atributos_json: formData.atributos.reduce((acc, curr) => {
                     if (curr.key) acc[curr.key] = curr.value;
                     return acc;
@@ -145,28 +161,46 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             }
             setIsDialogOpen(false);
             fetchVariants();
-        } catch (error: any) {
-            alert(error.message || "Error al guardar variante");
-            console.error("Error saving variant", error);
+        } catch (err: any) {
+            setError(err.message || "Error al guardar variante");
+            console.error("Error saving variant", err);
         } finally {
             setSaving(false);
         }
     };
 
-    const handleToggleStatus = async (variant: Variant) => {
-        if (!confirm(`¿Seguro que deseas ${variant.activo ? 'desactivar' : 'activar'} esta variante?`)) return;
+    const handleDeleteVariant = (variant: Variant) => {
+        setError(null);
+        setVariantToDelete(variant);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!variantToDelete) return;
+        setError(null);
         try {
-            await FetchData(API_ENDPOINTS.VARIANTS.ITEM(variant.id_variante_producto), 'PATCH', {
-                body: { activo: !variant.activo }
-            });
+            await FetchData(API_ENDPOINTS.VARIANTS.ITEM(variantToDelete.id_variante_producto), 'DELETE');
             fetchVariants();
-        } catch (error) {
-            console.error("Error toggling variant", error);
+        } catch (err: any) {
+            setError(err.message || "Error al eliminar variante");
+            console.error("Error deleting variant", err);
+        } finally {
+            setVariantToDelete(null);
         }
     };
 
     return (
         <div className="space-y-4 pt-4">
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">Variantes del Producto</h3>
                 <Button onClick={() => handleOpenDialog()} size="sm">
@@ -221,9 +255,9 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => handleToggleStatus(variant)}
-                                            className={variant.activo ? "text-red-500 hover:text-red-600" : "text-green-500 hover:text-green-600"}
-                                            title={variant.activo ? "Desactivar" : "Activar"}
+                                            onClick={() => handleDeleteVariant(variant)}
+                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                            title="Eliminar"
                                         >
                                             <Trash className="h-4 w-4" />
                                         </Button>
@@ -236,13 +270,24 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] bg-card/95 border border-border backdrop-blur-md">
                     <DialogHeader>
                         <DialogTitle>
                             {editingVariant ? 'Editar Variante' : (isCloneMode ? 'Duplicar Variante' : 'Nueva Variante')}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl flex justify-between items-center animate-in fade-in duration-200">
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
+                                    <span className="text-xs font-semibold">{error}</span>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => setError(null)} className="h-5 w-5 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        )}
                         <form onSubmit={handleSave} className="space-y-4">
                             {editingVariant && (
                                 <div className="grid gap-2">
@@ -284,6 +329,18 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                     value={formData.codigo_barras}
                                     onChange={e => setFormData({ ...formData, codigo_barras: e.target.value })}
                                 />
+                            </div>
+                            <div className="flex items-center space-x-2 border-t pt-4">
+                                <input
+                                    type="checkbox"
+                                    id="activo"
+                                    checked={formData.activo}
+                                    onChange={e => setFormData({ ...formData, activo: e.target.checked })}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                />
+                                <Label htmlFor="activo" className="text-sm font-semibold cursor-pointer">
+                                    Variante Activa (Disponible para venta)
+                                </Label>
                             </div>
 
                             {/* Atributos Section */}
@@ -437,6 +494,29 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Custom confirmation dialog for deletion */}
+            <AlertDialog open={!!variantToDelete} onOpenChange={(open) => !open && setVariantToDelete(null)}>
+                <AlertDialogContent className="bg-card/95 border border-border backdrop-blur-md shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-foreground font-bold flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500 animate-pulse" /> ¿Eliminar variante?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground text-xs">
+                            Esta acción realizará un **borrado lógico** de la variante con SKU <strong className="font-mono">{variantToDelete?.sku}</strong>. El historial de inventario y movimientos se conservará para auditoría.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="border-t pt-3 mt-2">
+                        <AlertDialogCancel className="border-border text-foreground hover:bg-muted text-xs h-9 px-4 rounded-lg">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={handleDeleteConfirm} 
+                            className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs h-9 px-4 rounded-lg active:scale-95 transition-all"
+                        >
+                            Eliminar Variante
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

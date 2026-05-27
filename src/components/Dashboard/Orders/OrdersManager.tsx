@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale';
 import {
     Search, ChevronLeft, ChevronRight, Eye,
     Loader2, Package, User, ShoppingBag, X,
-    Calendar, DollarSign, Filter, Hash
+    Calendar, DollarSign, Filter, Hash, AlertTriangle
 } from 'lucide-react';
 
 // Interfaces
@@ -51,6 +51,17 @@ interface Order {
     tasa_cambio?: number;
     monto_pago_real?: number;
     origen?: string;
+    transacciones?: Array<{
+        id_transaccion: number;
+        id_cuenta: number;
+        cuenta_nombre: string;
+        cuenta_moneda: string;
+        tipo: string;
+        monto_usd: number;
+        tasa_cambio: number;
+        monto_real: number;
+        concepto: string;
+    }>;
 }
 
 
@@ -236,6 +247,7 @@ const OrdersManagerContent: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
     };
 
     const updateStatus = async (id: number, newStatus: string) => {
+        setErrorMsg(null);
         try {
             const res = await fetch(`/api/pedidos/${id}/estado`, {
                 method: 'PATCH',
@@ -247,12 +259,23 @@ const OrdersManagerContent: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                 if (selectedOrder && (selectedOrder.id === id || selectedOrder.id_pedido === id)) {
                     setSelectedOrder(prev => prev ? { ...prev, estado: newStatus as any } : null);
                 }
-            } else { alert("Error al actualizar estado"); }
-        } catch (e) { console.error(e); alert("Error de conexión"); }
+            } else { setErrorMsg("Error al actualizar estado"); }
+        } catch (e) { console.error(e); setErrorMsg("Error de conexión"); }
     };
 
     return (
         <div className="space-y-6">
+            {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <span className="text-xs font-semibold">{errorMsg}</span>
+                    </div>
+                    <button type="button" onClick={() => setErrorMsg(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
             <div className="flex flex-col gap-4">
                 {!hideHeader && (
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -474,29 +497,54 @@ const OrdersManagerContent: React.FC<{ hideHeader?: boolean }> = ({ hideHeader =
                                     </div>
 
                                     {/* Detalles del pago (Caja y Divisas) */}
-                                    {(selectedOrder.cuenta_nombre || (selectedOrder.moneda_pago && selectedOrder.moneda_pago !== 'USD')) && (
+                                    {selectedOrder.transacciones && selectedOrder.transacciones.length > 0 ? (
                                         <div className="mt-4 pt-4 border-t border-border/60">
-                                            <p className="text-sm text-muted-foreground font-bold uppercase mb-1">Detalles de Caja y Pago</p>
-                                            {selectedOrder.cuenta_nombre && (
-                                                <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Caja Destino:</span> {selectedOrder.cuenta_nombre}</p>
-                                            )}
-                                            {selectedOrder.moneda_pago && (
-                                                <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Moneda Pago:</span> {selectedOrder.moneda_pago}</p>
-                                            )}
-                                            {selectedOrder.tasa_cambio && Number(selectedOrder.tasa_cambio) !== 1 && (
-                                                <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Tasa de Cambio:</span> {Number(selectedOrder.tasa_cambio).toFixed(4)}</p>
-                                            )}
-                                            {selectedOrder.monto_pago_real && (
-                                                <p className="text-sm text-foreground mt-1">
-                                                    <span className="font-semibold text-muted-foreground">Monto Real Cobrado:</span>{' '}
-                                                    <span className="font-bold text-primary">
-                                                        {selectedOrder.moneda_pago === 'USD' ? '$' : ''}
-                                                        {Number(selectedOrder.monto_pago_real).toLocaleString('es-CO', { minimumFractionDigits: 2 })}{' '}
-                                                        {selectedOrder.moneda_pago}
-                                                    </span>
-                                                </p>
-                                            )}
+                                            <p className="text-sm text-muted-foreground font-bold uppercase mb-2">Desglose de Pago (Dividido)</p>
+                                            <div className="space-y-2">
+                                                {selectedOrder.transacciones.map((t: any, idx: number) => (
+                                                    <div key={idx} className="text-xs p-2.5 bg-muted/40 rounded-lg border border-border flex flex-col gap-1 shadow-sm">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-semibold text-foreground">{t.cuenta_nombre} ({t.cuenta_moneda})</span>
+                                                            <span className="font-bold text-primary">
+                                                                {t.cuenta_moneda === 'USD' ? '$' : ''}
+                                                                {Number(t.monto_real).toLocaleString('es-CO', { minimumFractionDigits: 2 })}{' '}
+                                                                {t.cuenta_moneda}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-muted-foreground text-[10px]">
+                                                            <span>Equivalente USD: ${Number(t.monto_usd).toFixed(2)}</span>
+                                                            {Number(t.tasa_cambio) !== 1 && <span>Tasa: {Number(t.tasa_cambio).toFixed(4)}</span>}
+                                                        </div>
+                                                        {t.concepto && <span className="text-[10px] text-muted-foreground/60 italic truncate mt-0.5">{t.concepto}</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
+                                    ) : (
+                                        (selectedOrder.cuenta_nombre || (selectedOrder.moneda_pago && selectedOrder.moneda_pago !== 'USD')) && (
+                                            <div className="mt-4 pt-4 border-t border-border/60">
+                                                <p className="text-sm text-muted-foreground font-bold uppercase mb-1">Detalles de Caja y Pago</p>
+                                                {selectedOrder.cuenta_nombre && (
+                                                    <p className="text-sm text-foreground"><span className="font-semibold text-muted-foreground">Caja Destino:</span> {selectedOrder.cuenta_nombre}</p>
+                                                )}
+                                                {selectedOrder.moneda_pago && (
+                                                    <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Moneda Pago:</span> {selectedOrder.moneda_pago}</p>
+                                                )}
+                                                {selectedOrder.tasa_cambio && Number(selectedOrder.tasa_cambio) !== 1 && (
+                                                    <p className="text-sm text-foreground mt-1"><span className="font-semibold text-muted-foreground">Tasa de Cambio:</span> {Number(selectedOrder.tasa_cambio).toFixed(4)}</p>
+                                                )}
+                                                {selectedOrder.monto_pago_real && (
+                                                    <p className="text-sm text-foreground mt-1">
+                                                        <span className="font-semibold text-muted-foreground">Monto Real Cobrado:</span>{' '}
+                                                        <span className="font-bold text-primary">
+                                                            {selectedOrder.moneda_pago === 'USD' ? '$' : ''}
+                                                            {Number(selectedOrder.monto_pago_real).toLocaleString('es-CO', { minimumFractionDigits: 2 })}{' '}
+                                                            {selectedOrder.moneda_pago}
+                                                        </span>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )
                                     )}
                                 </div>
                             </div>

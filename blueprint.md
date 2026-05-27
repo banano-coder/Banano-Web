@@ -215,6 +215,21 @@ This project is a static-first web application built with Astro.js. It is design
     *   Real-time multi-currency payments (USD, COP, VES) and exchange rate inputs at the POS Checkout.
     *   Automatic stock decrements from the cashier's warehouse and ledger updates.
     *   Interactive cash flow summary, manual adjustments, and paginated audit transaction ledgers.
+*   **Interactive Statistics Dashboard in Reports**:
+    *   Integrated dynamic metrics panels directly on the standalone **Reportes** page dashboard.
+    *   Warehouse selector and custom date range filters (`Desde`/`Hasta`) update metrics in real-time.
+    *   Four glassmorphic KPI status cards showing: Total Stock, Stock Crítico alerts count, Despachos transaction count, and Costo de Salidas total cost of sorties.
+    *   Custom interactive SVG Area Line Chart showing unit dispatch history with date/quantity tooltip hover cards.
+    *   Custom SVG horizontal bar chart displaying ranking of top 5 variants dispatched with fuchsia-to-pink gradients.
+    *   Synchronized CSV/PDF downloads with the selected warehouse and date filters.
+*   **Cash Flow filtering by Warehouse**:
+    *   Integrated `id_almacen` support across cash balance summaries, accounts list, and detailed transaction logs.
+    *   Added a sucursal dropdown selector at the top of the **Caja y Dinero** page, enabling managers/admins to inspect financial states per branch in real-time.
+    *   Automated default branch selections inside bank and cash accounts creation forms.
+*   **Variant Soft Deletion**:
+    *   Migrated variant deactivation triggers into a proper soft delete (`DELETE /variants/:id` request).
+    *   Created database migrations to track deleted items using an `eliminado` field and automatically filter them out from products variants list queries.
+    *   Added a dedicated "Activa" toggle field in the variant edit dialog to preserve status adjustments without deletion.
 
 ## Current Architecture: Inventory
 - **Table `producto`**: Logical unit. Aggregates `total_stock` and `variants_count`.
@@ -223,6 +238,18 @@ This project is a static-first web application built with Astro.js. It is design
 - **Flow**: Adjusting stock creates a record in `movimiento_inventario` and updates `inventario.stock`.
 
 ## Recent Changes
+- **Cash Flow filtering by Warehouse, Variant Soft Deletion & Native Alerts Cleanup**:
+    - Integrated sucursal dropdown filter in the Money Management dashboard.
+    - Updated backend endpoints `/cuentas`, `/money/resumen`, and `/money/movimientos` to support `id_almacen` queries.
+    - Added database migration `migrate_variant_soft_delete.js` to support soft deletes on variants.
+    - Refactored frontend variant lists to use the DELETE method, and added active checkboxes in the edit modal.
+    - Replaced all native browser `alert()` and `confirm()` dialogs in the dashboard views (`MoneyManagement.tsx`, `ProductInventoryTab.tsx`, `ProductImagesTab.tsx`, `LabelGenerator.tsx`, `OrdersManager.tsx`, `POSSystem.tsx`) with styled inline alert cards matching the global glassmorphic dashboard theme and Radix UI `<AlertDialog>` components.
+- **Interactive Reports Statistics & Custom Charts**:
+    - Implemented a dynamic metrics dashboard on the reports page.
+    - Added custom interactive SVG timeline chart (Area Line Chart) with dynamic tooltip calculations on mouse hover.
+    - Added custom SVG horizontal bar chart for top products.
+    - Updated backend API proxies with `salidas-serie.ts` to support retrieval of temporal exit patterns.
+    - Integrated warehouse and date range filters directly updating the metric components via parallel API fetches.
 - **Multi-Warehouse Selector & Stock Queries**:
     - Created the database migration `migrate_inventory_warehouses.js` to add `id_almacen` references to `public.inventario` and `public.movimiento_inventario`, and added compound unique constraint.
     - Updated variants list endpoint query on backend to handle specific `id_almacen` or return consolidated stocks sum.
@@ -409,3 +436,58 @@ This project is a static-first web application built with Astro.js. It is design
 2. **Backend Route Implementation**: In `Proyectobanano/src/routes/pedidos.routes.js`, require `aplicarMovimiento` from `./inventario.routes`. Implement the `POST /pos/checkout` route using a secure transaction. The route will accept the customer information, selected cash account, payment currency, exchange rate, and items, performing variant stock verification, client upsert, database order insertion, warehouse stock updates, cash account balance updates, cash flow transaction logging, and cashier auditing.
 3. **Sales History Integration**: Add a `hideHeader` prop to `OrdersManager.tsx` and render it inside `SalesManagement.tsx` under the "Historial de Ventas" tab to replace the placeholder with the active transactional sales history list.
 4. **Verification**: Build the application, confirm all routes resolve correctly, and verify transactions and sales history logs from both desktop and mobile viewports.
+
+## Detailed Plan: POS Layout Visual Optimization
+1. **Layout Card Separation**: Extract the Carrito (Cart) and Datos de la Venta (Sales Form) cards into separate helper rendering methods (`renderCarritoCard` and `renderDatosVentaCard`) in `POSSystem.tsx`.
+2. **Main Layout Grid**: Keep the responsive 2-column layout for `lg` and up: `lg:grid-cols-[3fr_2fr] xl:grid-cols-[1.6fr_1fr] 2xl:grid-cols-[2fr_1fr]`.
+3. **Stacked Sidebar**: Render both cards stacked vertically in the right-side column using `renderSidebarContent()`, with the Cart occupying the top (max-h 35%) and the Data Form taking the remaining height.
+4. **Form Grid Alignment**:
+   - Customer details grid: Lay out fields compactly: Cédula (`col-span-3`), Nombre (`col-span-5`), Teléfono (`col-span-4`) on Row 1; Email (`col-span-6`), Observación (`col-span-6`) on Row 2.
+   - Payment list grid: Use spacious grid alignments to prevent text clipping: Cuenta Destino (`col-span-7`) and Método (`col-span-5`) on Row 1; Referencia (`col-span-6`) and Monto USD (`col-span-6`) on Row 2; Monto local (`col-span-6`) and Tasa (`col-span-6`) on Row 3 for non-USD payments.
+5. **Verification**: Run `npm run build` and manually inspect the dashboard to ensure correct rendering.
+
+## Detailed Plan: Independent Reports Module
+1. **Remove Tab in Product Management**: Open `ProductsManagement.tsx` and delete the "Reportes" `<TabsTrigger>` and `<TabsContent>` containing `<InventoryReports />`. Remove the import of `InventoryReports`.
+2. **Create Standalone Astro Page**: Create `src/pages/dashboard/reports.astro`. Embed `Layout`, `Header`, `Sidebar`, `Footer`, `AuthGuard` (allowed roles: admin, manager, vendedor, viewer), and render the `<InventoryReports client:load />` component wrapped in a beautiful title and card layout.
+3. **Update Navigation Menu**: Add a new nav link to `/dashboard/reports` labeled "Reportes" right under "Almacenes" in `Sidebar.astro`.
+4. **Verification**: Run `npm run build` and test the pages in the browser.
+
+## Detailed Plan: Align Reports with Multi-Warehouse Architecture
+1. **Backend Route Parameter**: Update `reports.routes.js` to accept `id_almacen` in query parameters and append `m.id_almacen = $X` to SQL query conditions for `/reports/inventario/top-salidas`, `/reports/inventario/salidas-serie`, `/reports/movimientos/kpis`, and `/reports/movimientos/detalle`.
+2. **Astro Route Proxies**: Update proxy endpoints for reports (`top-salidas.ts`, `movimientos-detalle.ts`, `movimientos-kpis.ts`) to forward `id_almacen` query parameters to the backend.
+3. **Frontend Warehouse Selector**: Fetch active warehouses dynamically in `InventoryReports.tsx` and render a fuchsia-styled `<select>` dropdown at the top of the dashboard.
+4. **PDF/CSV Personalization**: Update PDF subtitles and CSV filenames to dynamically reflect the selected warehouse name.
+5. **Verification**: Verify project compilation with `npm run build`.
+
+## Detailed Plan: Interactive Statistics Dashboard in Reports
+1. **Astro API Proxy**: Add `src/pages/api/reports/salidas-serie.ts` to proxy requests to backend `/reports/inventario/salidas-serie`, forwarding `id_almacen`, `from`, `to`, and `granularity` search parameters along with authorization cookies.
+2. **Filters & State Integration**: Add React states for date ranges (defaulting to the last 30 days), KPIs (`kpiData`), top sales (`topSales`), stock counts (`stockTotal`), critical items count (`criticalCount`), and historical outputs (`seriesData`).
+3. **Layout Rendering**: Render responsive filters card with warehouse select and date range controls. Below it, display 4 glassmorphic KPI cards (Total Stock, Stock Crítico, Despachos, Costo de Salidas) with fuchsia and colored highlights.
+4. **Custom SVG Graphics**:
+   - `LineChart`: Build responsive SVG Area Line Chart with custom path commands (`M` and `L` layout mapping), linear area gradients, glowing stroke, gridlines, axes labels, and dynamic tooltips on mouse hover.
+   - `BarChart`: Build horizontal progress bars with fuchsia-to-pink gradient fills representing the top variants.
+5. **Download Filters Synchronization**: Pass selected `from`, `to`, and `id_almacen` filters in CSV and PDF download fetch requests to make reports match the dashboard view.
+6. **Verification**: Run `npm run build` to verify compiling results.
+
+## Detailed Plan: Cash Flow and Money Movements by Branch (Sucursal)
+1. **Database Schema Integration**: Confirm that financial accounts (`public.cuenta`) contain `id_almacen` references linking them to warehouses/sucursales.
+2. **Backend API Parameter Support**:
+   - Update `GET /cuentas` to parse `id_almacen` and filter active accounts.
+   - Update `GET /money/resumen` to accept `id_almacen` and restrict balance totals and transaction metrics by branch.
+   - Update `GET /money/movimientos` to accept `id_almacen` and join `public.cuenta` to restrict transaction logs to accounts under that warehouse.
+3. **Frontend Unified Selector Filter**: Add `selectedWarehouseId` state and render a dropdown in the `MoneyManagement.tsx` header. Load accounts, summaries, and transactions with the dynamic sucursal query filter in real-time.
+4. **Form Automation**: Default the sucursal select input value in the "Crear Nueva Cuenta" modal to match the active top-level filter.
+
+## Detailed Plan: Product Variant Soft Delete & Active Toggle
+1. **Database Migration Script**: Create and run `migrate_variant_soft_delete.js` adding the `eliminado` column to `public.variante_producto`.
+2. **Backend Deletion Endpoint**: Convert backend `DELETE /variants/:id` to perform soft delete (`SET eliminado = true, activo = false`). Prevent updates or queries on soft-deleted variants in `GET` / `PATCH` variants routes.
+3. **Frontend Deletion Confirmation**: Rename deactivation handler to `handleDeleteVariant`, use proper `DELETE` method call, and confirm variant deletion with `"¿Seguro que deseas eliminar esta variante?"`.
+4. **Frontend Form Active Status**: Add `activo` field to form state and insert an "Activa (Disponible para venta)" checkbox inside the variant edit modal to let users deactivate variants without deleting them.
+
+## Detailed Plan: Label Generator Layout Unification and Rotation (No IVA)
+1. **Revert to Stacked Layout**: Update `LabelGenerator.tsx` so that both the print engine (`handlePrint`) and live preview render the original vertically-stacked layout (Logo Header, Barcode, Barcode Text, Product Title, and Price Line).
+2. **Apply CSS rotation for Vertical format**: Apply `-90deg` rotation and dimensions swap in CSS when vertical orientation is active.
+3. **Keep IVA completely removed**: Ensure only final list price is displayed, with no tax base or IVA percentage references.
+4. **Compile and Verify**: Run `npm run build` to confirm compiling results are clean.
+
+

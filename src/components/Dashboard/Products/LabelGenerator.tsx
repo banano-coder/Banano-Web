@@ -9,7 +9,7 @@ import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import { Barcode } from '@/components/Common/Barcode';
 import { renderBarcodeSvgHtml } from '@/lib/barcodeHelper';
-import { Printer, Search, Tag, Settings, RefreshCw, Layers } from 'lucide-react';
+import { Printer, Search, Tag, Settings, RefreshCw, Layers, AlertTriangle, X } from 'lucide-react';
 
 interface ProductItem {
     id_producto: number;
@@ -52,22 +52,26 @@ export const LabelGenerator: React.FC = () => {
 
     // List of selected labels to print
     const [selectedLabels, setSelectedLabels] = useState<SelectedLabel[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     // Configuration Settings
     const [labelWidth, setLabelWidth] = useState<number>(50); // mm
     const [labelHeight, setLabelHeight] = useState<number>(30); // mm
-    const [ivaPercent, setIvaPercent] = useState<number>(0); // %
     const [currencySign, setCurrencySign] = useState<string>('$');
+    const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+    const [scale, setScale] = useState<number>(1.0);
 
     // Load initial products
     const loadProducts = async () => {
         setLoadingProducts(true);
+        setError(null);
         try {
             const res = await FetchData<any>(`${API_ENDPOINTS.PRODUCTS.LIST}?limit=150`);
             const list = Array.isArray(res) ? res : res.data || [];
             setProducts(list);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Error loading products for labels:", e);
+            setError(e.message || "Error al cargar la lista de productos.");
         } finally {
             setLoadingProducts(false);
         }
@@ -85,12 +89,14 @@ export const LabelGenerator: React.FC = () => {
         }
         const loadVariants = async () => {
             setLoadingVariants(true);
+            setError(null);
             try {
                 const res = await FetchData<any>(API_ENDPOINTS.PRODUCTS.VARIANTS(selectedProductId));
                 const list = Array.isArray(res) ? res : res.data || [];
                 setVariants(list.filter((v: any) => v.activo));
-            } catch (e) {
+            } catch (e: any) {
                 console.error("Error loading variants for label generator:", e);
+                setError(e.message || "Error al cargar las variantes del producto.");
             } finally {
                 setLoadingVariants(false);
             }
@@ -109,13 +115,22 @@ export const LabelGenerator: React.FC = () => {
     const getAttributesText = (atributos: Record<string, string> | null): string => {
         if (!atributos || Object.keys(atributos).length === 0) return 'Estándar';
         return Object.entries(atributos)
-            .map(([key, val]) => `${key}: ${val}`)
+            .map(([key, val]) => {
+                const cleanKey = key.trim().toLowerCase();
+                if (cleanKey === 'tipo') return val;
+                return `${key}: ${val}`;
+            })
             .join(' / ');
+    };
+
+    const isStandardText = (text: string): boolean => {
+        const clean = (text || '').trim().toLowerCase();
+        return clean === 'estándar' || clean === 'estandar' || clean === 'tipo: estándar' || clean === 'tipo: estandar';
     };
 
     // Toggle selecting a variant for label generation
     const handleToggleVariant = (variant: VariantItem, isChecked: boolean) => {
-        const prod = products.find(p => p.id_producto === variant.id_producto);
+        const prod = products.find(p => Number(p.id_producto) === Number(variant.id_producto));
         const name = prod ? prod.nombre : 'Producto';
         const attributes = getAttributesText(variant.atributos_json);
         
@@ -158,60 +173,45 @@ export const LabelGenerator: React.FC = () => {
     };
 
     // Calculation formulas
-    const calculatePrices = (finalPrice: number) => {
-        const rate = ivaPercent / 100;
-        const base = finalPrice / (1 + rate);
-        const iva = finalPrice - base;
-        return {
-            base,
-            iva,
-            pmvp: finalPrice
-        };
-    };
 
     const handlePrint = () => {
+        setError(null);
         if (selectedLabels.length === 0) {
-            alert("Seleccione al menos una etiqueta para imprimir.");
+            setError("Seleccione al menos una etiqueta para imprimir.");
             return;
         }
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
-            alert("No se pudo abrir la ventana de impresión. Por favor habilite las ventanas emergentes (popups).");
+            setError("No se pudo abrir la ventana de impresión. Por favor habilite las ventanas emergentes (popups).");
             return;
         }
 
         const labelsHtml = selectedLabels.flatMap(item => {
-            const { base, iva, pmvp } = calculatePrices(item.price);
             const barcodeHtml = renderBarcodeSvgHtml(item.barcode);
-            const titleFull = item.attributesText === 'Estándar' 
+            const titleFull = isStandardText(item.attributesText) 
                 ? item.productName 
                 : `${item.productName} (${item.attributesText})`;
 
-            const copiesList = [];
+            const copiesList: string[] = [];
             for (let i = 0; i < item.copies; i++) {
                 copiesList.push(`
-                    <div class="label-page">
-                        <div class="barcode-container">
-                            ${barcodeHtml}
+                    <div class="label-page ${orientation}">
+                        <div class="label-wrapper">
+                            <div class="label-header">
+                                <img src="/logo_original.png" class="shop-logo" />
+                                <span class="shop-name">BANANO</span>
+                            </div>
+                            <div class="barcode-container">
+                                ${barcodeHtml}
+                            </div>
+                            <div class="barcode-text">${item.barcode}</div>
+                            <div class="product-title" title="${titleFull}">${titleFull}</div>
+                            <div class="price-display">
+                                <span class="price-label">PRECIO:</span>
+                                <span class="price-amount">${currencySign}${item.price.toFixed(2)}</span>
+                            </div>
                         </div>
-                        <div class="barcode-text">${item.barcode}</div>
-                        <div class="product-title">${titleFull}</div>
-                        
-                        <table class="price-table">
-                            <tr>
-                                <td>Base:</td>
-                                <td class="price-val">${currencySign}${base.toFixed(2)}</td>
-                            </tr>
-                            <tr>
-                                <td>IVA:</td>
-                                <td class="price-val">${currencySign}${iva.toFixed(2)}</td>
-                            </tr>
-                            <tr class="font-bold">
-                                <td>PMVP:</td>
-                                <td class="price-val">${currencySign}${pmvp.toFixed(2)}</td>
-                            </tr>
-                        </table>
                     </div>
                 `);
             }
@@ -224,35 +224,74 @@ export const LabelGenerator: React.FC = () => {
                     <title>Imprimir Etiquetas</title>
                     <style>
                         @page {
-                            size: ${labelWidth}mm ${labelHeight}mm;
+                            size: ${orientation === 'horizontal' ? `${labelWidth}mm ${labelHeight}mm` : `${labelHeight}mm ${labelWidth}mm`};
                             margin: 0;
                         }
                         body {
                             margin: 0;
                             padding: 0;
                             font-family: Arial, sans-serif;
-                            font-size: 7.5px;
                             line-height: 1.1;
                             -webkit-print-color-adjust: exact;
                         }
                         .label-page {
+                            width: ${orientation === 'horizontal' ? labelWidth : labelHeight}mm;
+                            height: ${orientation === 'horizontal' ? labelHeight : labelWidth}mm;
+                            box-sizing: border-box;
+                            background: white;
+                            color: black;
+                            overflow: hidden;
+                            page-break-after: always;
+                            position: relative;
+                        }
+                        .label-wrapper {
+                            position: absolute;
+                            left: 50%;
+                            top: 50%;
                             width: ${labelWidth}mm;
                             height: ${labelHeight}mm;
-                            padding: 2.2mm 2.2mm;
-                            box-sizing: border-box;
                             display: flex;
+                            box-sizing: border-box;
                             flex-direction: column;
                             align-items: center;
                             justify-content: center;
                             text-align: center;
-                            page-break-after: always;
-                            overflow: hidden;
-                            background: white;
-                            color: black;
+                            padding: 1mm 1.5mm;
+                        }
+                        
+                        /* VERTICAL LAYOUT (ROTATED STACKED) */
+                        .label-page.vertical .label-wrapper {
+                            transform: translate(-50%, -50%) rotate(-90deg) scale(${scale});
+                            transform-origin: center center;
+                        }
+                        
+                        /* HORIZONTAL LAYOUT */
+                        .label-page.horizontal .label-wrapper {
+                            transform: translate(-50%, -50%) scale(${scale});
+                            transform-origin: center center;
+                        }
+                        
+                        .label-header {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 0.8mm;
+                            height: 3.5mm;
+                            margin-bottom: 1.2mm;
+                        }
+                        .shop-logo {
+                            height: 3.5mm;
+                            width: auto;
+                            object-fit: contain;
+                        }
+                        .shop-name {
+                            font-size: 5px;
+                            font-weight: 900;
+                            letter-spacing: 0.2px;
                         }
                         .barcode-container {
                             width: 100%;
-                            height: 11mm;
+                            height: 9mm;
                             display: flex;
                             justify-content: center;
                             align-items: center;
@@ -262,39 +301,41 @@ export const LabelGenerator: React.FC = () => {
                             height: 100%;
                         }
                         .barcode-text {
-                            font-size: 8px;
-                            letter-spacing: 1.5px;
-                            margin-top: 0.5mm;
+                            font-size: 6px;
                             font-weight: bold;
+                            letter-spacing: 1.2px;
+                            margin-top: 0.5mm;
+                            margin-bottom: 1.2mm;
                         }
                         .product-title {
-                            font-size: 6.8px;
+                            font-size: 6.5px;
                             font-weight: bold;
                             text-transform: uppercase;
-                            margin: 1.2mm 0 1.8mm 0;
                             white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
                             width: 100%;
+                            margin-bottom: 1.5mm;
+                            line-height: 1.2;
                         }
-                        .price-table {
+                        .price-display {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 1.5mm;
                             width: 85%;
-                            font-size: 6.5px;
-                            border-collapse: collapse;
+                            border-top: 0.2mm dashed #ccc;
+                            padding-top: 1mm;
                         }
-                        .price-table td {
-                            text-align: left;
-                            padding: 0.2mm 0;
-                            border-bottom: 0.3px dashed #bbb;
-                        }
-                        .price-table tr:last-child td {
-                            border-bottom: none;
-                        }
-                        .price-table .price-val {
-                            text-align: right;
-                        }
-                        .font-bold {
+                        .price-label {
+                            font-size: 5px;
+                            color: #666;
                             font-weight: bold;
+                        }
+                        .price-amount {
+                            font-size: 11px;
+                            font-weight: 900;
+                            color: black;
                         }
                     </style>
                 </head>
@@ -314,6 +355,17 @@ export const LabelGenerator: React.FC = () => {
 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {error && (
+                <div className="col-span-full bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
             
             {/* ════════════════ Column 1: Config & Selectors ════════════════ */}
             <div className="space-y-6 xl:col-span-2">
@@ -535,14 +587,16 @@ export const LabelGenerator: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
-                                <Label htmlFor="iva-input">Porcentaje IVA (%)</Label>
-                                <Input 
-                                    id="iva-input"
-                                    type="number"
-                                    className="bg-background border-border text-foreground font-medium"
-                                    value={ivaPercent}
-                                    onChange={(e) => setIvaPercent(Math.max(0, parseFloat(e.target.value) || 0))}
-                                />
+                                <Label htmlFor="orientation-select">Orientación</Label>
+                                <select 
+                                    id="orientation-select"
+                                    value={orientation}
+                                    onChange={(e) => setOrientation(e.target.value as 'horizontal' | 'vertical')}
+                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                >
+                                    <option value="horizontal">Horizontal (Apaisado)</option>
+                                    <option value="vertical">Vertical (Retrato)</option>
+                                </select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="curr-input">Símbolo Divisa</Label>
@@ -553,6 +607,26 @@ export const LabelGenerator: React.FC = () => {
                                     onChange={(e) => setCurrencySign(e.target.value || '$')}
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="scale-slider">Escala / Tamaño de Impresión</Label>
+                                <span className="text-xs font-bold text-primary">{(scale * 100).toFixed(0)}%</span>
+                            </div>
+                            <input 
+                                id="scale-slider"
+                                type="range"
+                                min="0.5"
+                                max="1.5"
+                                step="0.05"
+                                value={scale}
+                                onChange={(e) => setScale(parseFloat(e.target.value))}
+                                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                            />
+                            <p className="text-[10px] text-muted-foreground italic">
+                                Deslice para escalar todos los elementos internos y adaptarlos a su papel de etiquetas.
+                            </p>
                         </div>
 
                         {/* Print Button */}
@@ -578,45 +652,62 @@ export const LabelGenerator: React.FC = () => {
                             {/* Render first selected label as a preview */}
                             {(() => {
                                 const previewItem = selectedLabels[0];
-                                const { base, iva, pmvp } = calculatePrices(previewItem.price);
-                                const titleFull = previewItem.attributesText === 'Estándar'
+                                const titleFull = isStandardText(previewItem.attributesText)
                                     ? previewItem.productName
                                     : `${previewItem.productName} (${previewItem.attributesText})`;
-
                                 return (
                                     <div 
-                                        className="border border-border/70 rounded bg-white text-black p-3 flex flex-col items-center shadow-lg relative select-none"
+                                        className="border border-border/70 rounded bg-white text-black shadow-lg relative overflow-hidden select-none"
                                         style={{ 
-                                            width: `${labelWidth * 4.5}px`, // Scaled for screen preview
-                                            height: `${labelHeight * 4.5}px`, 
+                                            width: orientation === 'horizontal' ? `${labelWidth * 5}px` : `${labelHeight * 5}px`, // Swapped for screen preview
+                                            height: orientation === 'horizontal' ? `${labelHeight * 5}px` : `${labelWidth * 5}px`, 
                                             fontFamily: 'Arial, sans-serif'
                                         }}
                                     >
-                                        {/* Barcode svg */}
-                                        <div className="w-full h-[35%] flex justify-center items-center">
-                                            <Barcode value={previewItem.barcode} height={40} width={150} />
-                                        </div>
-                                        {/* Barcode Value */}
-                                        <div className="text-[10px] tracking-[1.5px] font-bold mt-1 text-center font-mono">
-                                            {previewItem.barcode}
-                                        </div>
-                                        {/* Product Title */}
-                                        <div className="text-[9px] font-bold text-center uppercase truncate w-full mt-1.5">
-                                            {titleFull}
-                                        </div>
-                                        {/* Prices block */}
-                                        <div className="w-[85%] mt-2 text-[8px] space-y-0.5 border-t border-dashed border-gray-300 pt-1">
-                                            <div className="flex justify-between">
-                                                <span>Base:</span>
-                                                <span>{currencySign}{base.toFixed(2)}</span>
+                                        <div 
+                                            style={{
+                                                position: 'absolute',
+                                                left: '50%',
+                                                top: '50%',
+                                                width: `${labelWidth * 5}px`,
+                                                height: `${labelHeight * 5}px`,
+                                                transform: orientation === 'horizontal' 
+                                                    ? `translate(-50%, -50%) scale(${scale})` 
+                                                    : `translate(-50%, -50%) rotate(-90deg) scale(${scale})`,
+                                                transformOrigin: 'center center',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                boxSizing: 'border-box',
+                                                padding: '5px 7.5px'
+                                            }}
+                                        >
+                                            {/* Header */}
+                                            <div className="flex items-center justify-center gap-1 w-full h-[12%] shrink-0 mb-1">
+                                                <img src="/logo_original.png" alt="Logo" className="h-[90%] w-auto object-contain" />
+                                                <span className="text-[7px] font-black tracking-wider text-black leading-none">
+                                                    BANANO
+                                                </span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>IVA:</span>
-                                                <span>{currencySign}{iva.toFixed(2)}</span>
+                                            {/* Barcode svg */}
+                                            <div className="w-full h-[32%] flex justify-center items-center shrink-0">
+                                                <Barcode value={previewItem.barcode} height={26} width={130} />
                                             </div>
-                                            <div className="flex justify-between font-bold">
-                                                <span>PMVP:</span>
-                                                <span>{currencySign}{pmvp.toFixed(2)}</span>
+                                            {/* Barcode Value */}
+                                            <div className="text-[7px] font-bold text-center font-mono mt-0.5 mb-1 leading-none tracking-wider">
+                                                {previewItem.barcode}
+                                            </div>
+                                            {/* Product Title */}
+                                            <div className="text-[8px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
+                                                {titleFull}
+                                            </div>
+                                            {/* Prices block */}
+                                            <div className="w-[85%] mt-1.5 border-t border-dashed border-gray-300 pt-1 flex justify-center items-center gap-2 font-bold">
+                                                <span className="text-[6px] font-bold text-gray-500">PRECIO:</span>
+                                                <span className="text-[11px] font-black text-black leading-none">
+                                                    {currencySign}{previewItem.price.toFixed(2)}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

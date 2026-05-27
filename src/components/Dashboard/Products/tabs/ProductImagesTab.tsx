@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import type { Product, ProductImage, Variant } from '@/types';
-import { Loader2, Upload, Trash, Star, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, Star, RefreshCw, Trash, AlertTriangle, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -27,6 +27,7 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [selectedVariantId, setSelectedVariantId] = useState<string>("all");
+    const [error, setError] = useState<string | null>(null);
 
     // "all" = show all images (gallery view)
     // "generic" = show images with id_variante_producto === null
@@ -74,15 +75,16 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
         }
 
         try {
+            setError(null);
             await FetchData(
                 API_ENDPOINTS.PRODUCTS.IMAGES(product.id_producto),
                 'POST',
                 { body: formData }
             );
             fetchRes();
-        } catch (error) {
-            console.error("Error uploading image", error);
-            alert("Error al subir imagen");
+        } catch (err: any) {
+            console.error("Error uploading image", err);
+            setError(err.message || "Error al subir imagen");
         } finally {
             setUploading(false);
             e.target.value = '';
@@ -92,11 +94,12 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
     const confirmDelete = async () => {
         if (!imageToDelete) return;
         try {
+            setError(null);
             await FetchData(API_ENDPOINTS.IMAGES.ITEM(product.id_producto, imageToDelete), 'DELETE');
             fetchRes();
-        } catch (error) {
-            console.error("Error deleting image", error);
-            alert("No se pudo eliminar la imagen. Verifique la consola.");
+        } catch (err: any) {
+            console.error("Error deleting image", err);
+            setError(err.message || "No se pudo eliminar la imagen.");
         } finally {
             setImageToDelete(null);
         }
@@ -135,6 +138,17 @@ export const ProductImagesTab: React.FC<ProductImagesTabProps> = ({ product }) =
 
     return (
         <div className="space-y-6 pt-4">
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div className="flex items-center gap-2 w-full lg:w-auto">
                     <Select value={selectedVariantId} onValueChange={setSelectedVariantId}>

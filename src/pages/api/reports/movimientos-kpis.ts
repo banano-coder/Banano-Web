@@ -14,11 +14,13 @@ export const GET: APIRoute = async ({ cookies, url }) => {
 
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
+    const idAlmacen = url.searchParams.get('id_almacen');
 
     let targetUrl = `${externalApiBase}/reports/movimientos/kpis`;
     const params = new URLSearchParams();
     if (from) params.append('from', from);
     if (to) params.append('to', to);
+    if (idAlmacen) params.append('id_almacen', idAlmacen);
     if (params.toString()) targetUrl += `?${params.toString()}`;
 
     try {

@@ -6,12 +6,26 @@ import { Button } from "@/components/ui/button";
 import { 
   Coins, Plus, PlusCircle, Trash, ArrowUpRight, ArrowDownLeft, 
   Calendar, User, Wallet, Banknote, Building2,
-  Loader2, Filter, ChevronLeft, ChevronRight, RefreshCw, X
+  Loader2, Filter, ChevronLeft, ChevronRight, RefreshCw, X, AlertTriangle
 } from 'lucide-react';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction
+} from '@/components/ui/alert-dialog';
 
 export const MoneyManagement: React.FC = () => {
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<any | null>(null);
   const [cuentas, setCuentas] = useState<any[]>([]);
   const [almacenes, setAlmacenes] = useState<any[]>([]);
   const [resumen, setResumen] = useState<any>(null);
@@ -48,12 +62,20 @@ export const MoneyManagement: React.FC = () => {
     concepto: ''
   });
 
+  // Default accounts modal branch value
+  useEffect(() => {
+    if (showCreateAccountModal) {
+      setNewAccountData(prev => ({ ...prev, id_almacen: selectedWarehouseId }));
+    }
+  }, [showCreateAccountModal, selectedWarehouseId]);
+
   // Cargar datos
   const fetchAllData = async () => {
     try {
+      const warehouseQuery = selectedWarehouseId ? `?id_almacen=${selectedWarehouseId}` : '';
       const [resCuentas, resResumen, resAlmacenes] = await Promise.all([
-        FetchData<any[]>(API_ENDPOINTS.MONEY.CUENTAS, 'GET'),
-        FetchData<any>(API_ENDPOINTS.MONEY.RESUMEN, 'GET'),
+        FetchData<any[]>(`${API_ENDPOINTS.MONEY.CUENTAS}${warehouseQuery}`, 'GET'),
+        FetchData<any>(`${API_ENDPOINTS.MONEY.RESUMEN}${warehouseQuery}`, 'GET'),
         FetchData<any[]>(API_ENDPOINTS.ALMACENES.LIST, 'GET')
       ]);
 
@@ -79,6 +101,7 @@ export const MoneyManagement: React.FC = () => {
       if (filterCuenta) query += `&id_cuenta=${filterCuenta}`;
       if (filterTipo) query += `&tipo=${filterTipo}`;
       if (searchTerm) query += `&search=${encodeURIComponent(searchTerm)}`;
+      if (selectedWarehouseId) query += `&id_almacen=${selectedWarehouseId}`;
 
       const res = await FetchData<any>(`${API_ENDPOINTS.MONEY.MOVIMIENTOS}${query}`, 'GET');
       if (res) {
@@ -95,11 +118,11 @@ export const MoneyManagement: React.FC = () => {
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [selectedWarehouseId]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [page, filterCuenta, filterTipo, searchTerm]);
+  }, [page, filterCuenta, filterTipo, searchTerm, selectedWarehouseId]);
 
   // Manejar cambio de tasa por defecto cuando se selecciona cuenta en el modal de movimientos
   useEffect(() => {
@@ -116,12 +139,26 @@ export const MoneyManagement: React.FC = () => {
     }
   }, [newMovementData.id_cuenta, cuentas]);
 
+  const handleOpenCreateAccount = () => {
+    setError(null);
+    setSuccess(null);
+    setShowCreateAccountModal(true);
+  };
+
+  const handleOpenCreateMovement = () => {
+    setError(null);
+    setSuccess(null);
+    setShowCreateMovementModal(true);
+  };
+
   // Crear Cuenta
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAccountData.nombre.trim()) return;
 
     setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
     try {
       const response = await fetch(API_ENDPOINTS.MONEY.CUENTAS, {
         method: 'POST',
@@ -139,7 +176,7 @@ export const MoneyManagement: React.FC = () => {
         throw new Error(err.message || 'Error al crear la cuenta');
       }
 
-      alert('Cuenta creada exitosamente!');
+      setSuccess('Cuenta creada exitosamente!');
       setShowCreateAccountModal(false);
       setNewAccountData({
         nombre: '',
@@ -149,7 +186,7 @@ export const MoneyManagement: React.FC = () => {
       });
       await fetchAllData();
     } catch (err: any) {
-      alert(err.message || 'Error al crear cuenta');
+      setError(err.message || 'Error al crear cuenta');
     } finally {
       setIsSubmitting(false);
     }
@@ -162,6 +199,8 @@ export const MoneyManagement: React.FC = () => {
     if (!id_cuenta || !monto_usd || !concepto.trim()) return;
 
     setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
     try {
       const response = await fetch(API_ENDPOINTS.MONEY.MOVIMIENTOS, {
         method: 'POST',
@@ -180,7 +219,7 @@ export const MoneyManagement: React.FC = () => {
         throw new Error(err.message || 'Error al registrar el movimiento');
       }
 
-      alert('Movimiento registrado exitosamente!');
+      setSuccess('Movimiento registrado exitosamente!');
       setShowCreateMovementModal(false);
       setNewMovementData({
         id_cuenta: cuentas[0] ? String(cuentas[0].id_cuenta) : '',
@@ -192,27 +231,37 @@ export const MoneyManagement: React.FC = () => {
       await fetchAllData();
       await fetchTransactions();
     } catch (err: any) {
-      alert(err.message || 'Error al registrar movimiento');
+      setError(err.message || 'Error al registrar movimiento');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Desactivar/Eliminar Cuenta
-  const handleDeleteAccount = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta cuenta bancaria? El saldo y los movimientos históricos se conservarán.')) return;
+  const handleDeleteAccountClick = (cuenta: any) => {
+    setError(null);
+    setSuccess(null);
+    setAccountToDelete(cuenta);
+  };
+
+  const handleDeleteAccountConfirm = async () => {
+    if (!accountToDelete) return;
+    setError(null);
+    setSuccess(null);
     try {
-      const response = await fetch(`${API_ENDPOINTS.MONEY.CUENTAS}/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.MONEY.CUENTAS}/${accountToDelete.id_cuenta}`, {
         method: 'DELETE'
       });
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.message || 'Error al eliminar la cuenta');
       }
-      alert('Cuenta eliminada exitosamente.');
+      setSuccess('Cuenta eliminada exitosamente.');
       await fetchAllData();
     } catch (err: any) {
-      alert(err.message || 'Error al eliminar cuenta');
+      setError(err.message || 'Error al eliminar cuenta');
+    } finally {
+      setAccountToDelete(null);
     }
   };
 
@@ -227,22 +276,62 @@ export const MoneyManagement: React.FC = () => {
 
   return (
     <div className="space-y-6 text-foreground pb-12">
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+            <span className="text-xs font-semibold">{error}</span>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+          <div className="flex items-center gap-2">
+            <Coins className="h-4.5 w-4.5 text-green-500 flex-shrink-0" />
+            <span className="text-xs font-semibold">{success}</span>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setSuccess(null)} className="h-6 w-6 text-green-500 hover:bg-green-500/10 flex-shrink-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Dinero y Caja</h1>
           <p className="text-muted-foreground font-medium">Administra tus cuentas bancarias, ingresos, egresos y tasas de cambio.</p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {/* Warehouse Selector */}
+          <div className="flex items-center gap-2 border border-foreground/10 bg-background/50 rounded-xl px-3 py-1.5 h-11 shadow-sm">
+            <Building2 className="h-4 w-4 text-primary" />
+            <select
+              value={selectedWarehouseId}
+              onChange={(e) => setSelectedWarehouseId(e.target.value)}
+              className="bg-transparent border-none text-foreground text-xs font-semibold focus:outline-none cursor-pointer"
+            >
+              <option value="" className="bg-card text-foreground">Consolidado (Todas)</option>
+              {almacenes.map(a => (
+                <option key={a.id_almacen} value={String(a.id_almacen)} className="bg-card text-foreground">
+                  {a.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
           <Button 
             className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all text-xs h-11"
-            onClick={() => setShowCreateAccountModal(true)}
+            onClick={handleOpenCreateAccount}
           >
             <Wallet className="h-4 w-4" /> Crear Cuenta
           </Button>
           <Button 
             className="flex-1 sm:flex-none bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl gap-2 shadow-lg shadow-green-600/20 active:scale-95 transition-all text-xs h-11"
-            onClick={() => setShowCreateMovementModal(true)}
+            onClick={handleOpenCreateMovement}
           >
             <PlusCircle className="h-4 w-4" /> Registrar Ajuste
           </Button>
@@ -310,7 +399,7 @@ export const MoneyManagement: React.FC = () => {
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex-shrink-0"
-                        onClick={() => handleDeleteAccount(c.id_cuenta)}
+                        onClick={() => handleDeleteAccountClick(c)}
                       >
                         <Trash className="h-4 w-4" />
                       </Button>
@@ -520,6 +609,17 @@ export const MoneyManagement: React.FC = () => {
             </CardHeader>
             <form onSubmit={handleCreateAccount}>
               <CardContent className="p-4 space-y-4">
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl flex justify-between items-center animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
+                      <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setError(null)} className="h-5 w-5 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-muted-foreground">Nombre de la Cuenta *</label>
                   <Input 
@@ -616,6 +716,17 @@ export const MoneyManagement: React.FC = () => {
             </CardHeader>
             <form onSubmit={handleCreateMovement}>
               <CardContent className="p-4 space-y-4 text-foreground">
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl flex justify-between items-center animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
+                      <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setError(null)} className="h-5 w-5 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-muted-foreground">Cuenta de Caja *</label>
@@ -718,6 +829,29 @@ export const MoneyManagement: React.FC = () => {
           </Card>
         </div>
       )}
+
+      {/* Custom confirmation dialog for deletion */}
+      <AlertDialog open={!!accountToDelete} onOpenChange={(open) => !open && setAccountToDelete(null)}>
+        <AlertDialogContent className="bg-card/95 border border-border backdrop-blur-md shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground font-bold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500 animate-pulse" /> ¿Eliminar cuenta bancaria?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-xs">
+              ¿Estás seguro de que deseas eliminar la cuenta bancaria <strong>{accountToDelete?.nombre}</strong>? El saldo y los movimientos históricos se conservarán para auditoría.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="border-t pt-3 mt-2">
+            <AlertDialogCancel className="border-border text-foreground hover:bg-muted text-xs h-9 px-4 rounded-lg font-semibold">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAccountConfirm} 
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs h-9 px-4 rounded-lg active:scale-95 transition-all"
+            >
+              Eliminar Cuenta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

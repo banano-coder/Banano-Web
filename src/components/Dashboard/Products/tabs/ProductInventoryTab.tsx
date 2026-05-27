@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import type { Product, Variant, Almacen } from '@/types';
-import { Loader2, ArrowRightLeft, History, Warehouse } from 'lucide-react';
+import { Loader2, ArrowRightLeft, History, Warehouse, AlertTriangle, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -23,6 +23,7 @@ interface StockInfo {
 
 export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ product }) => {
     const [variants, setVariants] = useState<Variant[]>([]);
+    const [error, setError] = useState<string | null>(null);
     const [stocks, setStocks] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(false);
 
@@ -122,6 +123,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
 
     useEffect(() => {
         if (isDialogOpen) {
+            setError(null);
             if (selectedWarehouseFilter !== 'consolidado') {
                 setSelectedWarehouseMove(selectedWarehouseFilter);
             } else if (warehouses.length > 0) {
@@ -135,6 +137,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
     const handleMovement = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
+        setError(null);
         try {
             const payload = {
                 id_variante_producto: parseInt(selectedVariantId),
@@ -160,9 +163,9 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
             setReason('');
             setRefExt('');
             setCostUnit('');
-        } catch (error: any) {
-            alert(error.message || "Error registrando movimiento");
-            console.error("Movement error", error);
+        } catch (err: any) {
+            setError(err.message || "Error registrando movimiento");
+            console.error("Movement error", err);
         } finally {
             setSubmitting(false);
         }
@@ -170,6 +173,17 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
 
     return (
         <div className="space-y-6 pt-2">
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <span className="text-xs font-semibold">{error}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
             {/* Header section with Warehouse selector */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pb-4 border-b border-border">
                 <div>
@@ -245,6 +259,17 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                         </DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleMovement} className="space-y-4">
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl flex justify-between items-center animate-in fade-in duration-200">
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
+                                    <span className="text-xs font-semibold">{error}</span>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => setError(null)} className="h-5 w-5 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        )}
                         <div className="grid gap-2">
                             <Label htmlFor="move-almacen" className="font-semibold text-sm">Almacén de Destino/Origen <span className="text-red-500">*</span></Label>
                             <Select value={selectedWarehouseMove} onValueChange={setSelectedWarehouseMove} required>

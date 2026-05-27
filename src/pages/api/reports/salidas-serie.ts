@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = async ({ cookies, url }) => {
+export const GET: APIRoute = async ({ request, cookies }) => {
     const externalApiBase = import.meta.env.PUBLIC_EXTERNAL_API_BASE;
     const token = cookies.get('token')?.value;
 
@@ -12,19 +12,10 @@ export const GET: APIRoute = async ({ cookies, url }) => {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const from = url.searchParams.get('from');
-    const to = url.searchParams.get('to');
-    const idAlmacen = url.searchParams.get('id_almacen');
-
-    let targetUrl = `${externalApiBase}/reports/movimientos/detalle`;
-    const params = new URLSearchParams();
-    if (from) params.append('from', from);
-    if (to) params.append('to', to);
-    if (idAlmacen) params.append('id_almacen', idAlmacen);
-    if (params.toString()) targetUrl += `?${params.toString()}`;
-
     try {
-        const response = await fetch(targetUrl, {
+        const url = new URL(request.url);
+        const searchParams = url.searchParams.toString();
+        const response = await fetch(`${externalApiBase}/reports/inventario/salidas-serie?${searchParams}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -40,7 +31,7 @@ export const GET: APIRoute = async ({ cookies, url }) => {
             }
         });
     } catch (error) {
-        console.error("Error fetching movimientos detalle:", error);
+        console.error("Error fetching salidas-serie report:", error);
         return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 });
     }
 };
