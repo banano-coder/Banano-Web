@@ -7,6 +7,7 @@ export interface Props {
 }
 
 const { title } = Astro.props;
+const showWhatsApp = !Astro.url.pathname.startsWith("/dashboard");
 ---
 
 <!DOCTYPE html>
@@ -64,6 +65,6 @@ const { title } = Astro.props;
 	</head>
 	<body>
 		<slot />
-		<WhatsAppButton client:load />
+		{showWhatsApp && <WhatsAppButton client:load />}
 	</body>
 </html>

@@ -238,6 +238,14 @@ This project is a static-first web application built with Astro.js. It is design
 - **Flow**: Adjusting stock creates a record in `movimiento_inventario` and updates `inventario.stock`.
 
 ## Recent Changes
+- **WhatsApp Button Restriction in Layout**:
+    - Restricted the floating WhatsApp button visibility inside `Layout.astro` by checking `Astro.url.pathname`.
+    - The button is now hidden on all dashboard routes (`/dashboard/*`) and only renders on the public storefront catalog or other non-dashboard pages, as requested.
+- **Single-Variant Layout Optimization**:
+    - Modified both `BatchStockEntry.tsx` and `InventoryReports.tsx` to handle single-variant products differently: instead of rendering a grouped product header row and sub-variant rows with `↳`, products with exactly one variant are rendered as a single row. The product name is displayed directly in the first column ("Producto"), saving substantial vertical space.
+    - Updated `downloadPDF` in `InventoryReports.tsx` to adopt the identical layout rule (collapsing single-variant products into a single line and including a "Producto" column), while keeping multi-variant products cleanly grouped.
+- **Batch Stock Entry API Endpoints Correction**:
+    - Fixed the category and brand endpoints in `BatchStockEntry.tsx` from `/api/categorias` and `/api/marcas` (which returned 404) to the correct proxy paths `API_ENDPOINTS.CATEGORIES.LIST` (`/api/categories`) and `API_ENDPOINTS.BRANDS.LIST` (`/api/brands`), allowing warehouses, categories, brands, and products to load properly.
 - **Cash Flow filtering by Warehouse, Variant Soft Deletion & Native Alerts Cleanup**:
     - Integrated sucursal dropdown filter in the Money Management dashboard.
     - Updated backend endpoints `/cuentas`, `/money/resumen`, and `/money/movimientos` to support `id_almacen` queries.
@@ -273,6 +281,7 @@ This project is a static-first web application built with Astro.js. It is design
 - **Data Validation**: Checkout requires Cédula, Name, Email, and Phone. Conflict resolution (409) is implemented for overlapping contact info.
 
 ## Planned Changes
+- **Batch Stock Entry Pagination**: Paginate the products table inside `BatchStockEntry.tsx` to optimize client-side rendering performance with large datasets.
 - **Bulk Product Creation**: Implement the UI for parsing Excel/CSV files and creating products in bulk.
     - Create `BulkProductUpload.tsx` component.
     - Integrate "Carga Masiva" tab in `ProductsManagement.tsx`.
@@ -494,3 +503,46 @@ This project is a static-first web application built with Astro.js. It is design
 1. **Enlarge Label Typography**: Update sizes in CSS inside `handlePrint` and live preview. Increase logo and shop name heights, SKU code size, and product title fonts. Adjust barcode SVG height to prevent page height overflow.
 2. **Align Price Row (Left/Right)**: Convert price row into a full-width container (`width: 100%`) using flex layout with `justify-content: space-between` and horizontal padding. This ensures "PRECIO:" sits on the far left and the amount on the far right.
 3. **Robust Settings Storage**: Refactor `useState` inside `LabelGenerator.tsx` to load values immediately from `localStorage` using lazy initializers (function state initializers). This prevents lifecycle race conditions from resetting user settings.
+
+## Detailed Plan: Layout Optimization for Single-Variant Products
+1. **Batch Stock Entry Layout Update**:
+   - In `BatchStockEntry.tsx`, modify the table rows rendering logic.
+   - For product groups with **more than 1 variant**, keep the current layout: a header row for the product name and subsequent variant rows starting with `↳`.
+   - For product groups with **exactly 1 variant**, do not render the product header row. Instead, render a single row where the first column ("Producto") contains the product name (styled `font-semibold text-foreground/80`), and the other columns display the variant details directly.
+2. **Inventory Reports Layout Update**:
+   - In `InventoryReports.tsx`, add the "Producto" column as the first column of the table (matching `BatchStockEntry.tsx`).
+   - Modify the table rows rendering logic to behave identically to the Batch Stock Entry layout:
+     - Multi-variant products: Render a header row with `colSpan=9` for the product name, and subsequent variant rows with the `↳` arrow in the "Producto" column.
+     - Single-variant products: Do not render the product header row. Render a single variant row where the "Producto" column displays the product name directly.
+3. **Report Exports Update (PDF/CSV)**:
+   - Update `downloadPDF` in `InventoryReports.tsx` to follow the same visual optimization:
+     - Multi-variant products: Render a group header row (colSpan=9) and subsequent rows with the `↳` prefix in the "Producto" column.
+     - Single-variant products: Omit the group header row and write the product name in the first column of the variant row.
+   - Adjust column headers and widths in PDF generation to accommodate the new "Producto" column.
+4. **Compile and Verify**: Run `npm run build` to verify compiling results are clean.
+
+## Detailed Plan: Remove WhatsApp Button from Internal Dashboard
+1. **Layout Conditional Check**:
+   - Inside `src/layouts/Layout.astro` frontmatter, obtain the current pathname from `Astro.url.pathname`.
+   - Create a boolean helper: `const showWhatsApp = !Astro.url.pathname.startsWith("/dashboard");` to identify if we are outside the dashboard.
+2. **Conditional Render**:
+   - Wrap the `<WhatsAppButton client:load />` component inside the layout template `<body>` tag with `{showWhatsApp && <WhatsAppButton client:load />}`.
+3. **Verification**:
+   - Build the frontend project with `npm run build` to guarantee compilation is successful.
+
+## Detailed Plan: Batch Stock Entry Pagination
+1. **State & Effect Hook Additions**:
+   - Add state `page` initialized to `1` and page size `PAGE_SIZE = 25`.
+   - Add a `useEffect` hook to reset `page` to `1` when filters (`selectedWarehouseId`, `search`, `selectedCategories`, `selectedBrands`) change.
+2. **Paginating Product Groups**:
+   - Inside the render function of `BatchStockEntry.tsx`, group the `filteredRows` array by `id_producto` using a `Map`.
+   - Convert the group map entries to an array: `const groupEntries = Array.from(productGroups.entries());`.
+   - Calculate `totalPages` as `Math.ceil(groupEntries.length / PAGE_SIZE)`.
+   - Slice the array to get only the groups for the current page: `groupEntries.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)`.
+   - Iterate over the sliced page entries to build table rows.
+3. **Pagination Controls UI**:
+   - Render pagination controls (First, Previous, numeric pages with ellipses, Next, Last buttons) inside the table card footer if `totalPages > 1`.
+   - Apply the fuchsia and glassmorphism styling to match the rest of the application.
+4. **Verification**:
+   - Run `npm run build` to verify compiling results are clean.
+

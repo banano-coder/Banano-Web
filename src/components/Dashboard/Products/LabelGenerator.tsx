@@ -16,6 +16,7 @@ interface ProductItem {
     nombre: string;
     descripcion?: string;
     categoria_nombre?: string;
+    category_name?: string;
     brand_name?: string;
 }
 
@@ -29,6 +30,9 @@ interface VariantItem {
     atributos_json: Record<string, string> | null;
     activo: boolean;
     stock_actual: number;
+    producto?: string;
+    categoria?: string | null;
+    marca?: string | null;
 }
 
 interface SelectedLabel {
@@ -39,20 +43,25 @@ interface SelectedLabel {
     barcode: string;
     price: number;
     copies: number;
+    stock_actual: number;
 }
 
 export const LabelGenerator: React.FC = () => {
     // Products and variants lists
-    const [products, setProducts] = useState<ProductItem[]>([]);
+    const [allVariants, setAllVariants] = useState<VariantItem[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<string>('');
-    const [variants, setVariants] = useState<VariantItem[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
-    const [loadingVariants, setLoadingVariants] = useState(false);
     const [productSearch, setProductSearch] = useState('');
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('');
+    const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('');
+    const [printByStock, setPrintByStock] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     // List of selected labels to print
     const [selectedLabels, setSelectedLabels] = useState<SelectedLabel[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
 
     // Configuration Settings — lazy initializers read directly from localStorage on first render
     // This prevents mount lifecycle race conditions from overwriting saved settings.
@@ -97,55 +106,105 @@ export const LabelGenerator: React.FC = () => {
         localStorage.setItem('label_print_scale', scale.toString());
     }, [scale]);
 
-    // Load initial products
-    const loadProducts = async () => {
+    // Load all active variants at once
+    const loadAllVariantsData = async () => {
         setLoadingProducts(true);
         setError(null);
         try {
-            const res = await FetchData<any>(`${API_ENDPOINTS.PRODUCTS.LIST}?limit=150`);
+            const res = await FetchData<any>('/api/reports/stock-actual');
             const list = Array.isArray(res) ? res : res.data || [];
-            setProducts(list);
+            setAllVariants(list.map((r: any) => ({
+                id_variante_producto: r.id_variante_producto,
+                id_producto: r.id_producto,
+                sku: r.sku,
+                precio_lista: Number(r.precio) || 0,
+                costo: Number(r.costo) || 0,
+                codigo_barras: r.codigo_barras,
+                atributos_json: r.variante,
+                activo: true,
+                stock_actual: r.stock || 0,
+                producto: r.producto,
+                categoria: r.categoria,
+                marca: r.marca
+            })));
         } catch (e: any) {
-            console.error("Error loading products for labels:", e);
-            setError(e.message || "Error al cargar la lista de productos.");
+            console.error("Error loading active variants for label generator:", e);
+            setError(e.message || "Error al cargar la lista de productos y variantes.");
         } finally {
             setLoadingProducts(false);
         }
     };
 
     useEffect(() => {
-        loadProducts();
+        loadAllVariantsData();
     }, []);
 
-    // Load variants when product changes
+    // Click outside handler for dropdown
     useEffect(() => {
-        if (!selectedProductId) {
-            setVariants([]);
-            return;
-        }
-        const loadVariants = async () => {
-            setLoadingVariants(true);
-            setError(null);
-            try {
-                const res = await FetchData<any>(API_ENDPOINTS.PRODUCTS.VARIANTS(selectedProductId));
-                const list = Array.isArray(res) ? res : res.data || [];
-                setVariants(list.filter((v: any) => v.activo));
-            } catch (e: any) {
-                console.error("Error loading variants for label generator:", e);
-                setError(e.message || "Error al cargar las variantes del producto.");
-            } finally {
-                setLoadingVariants(false);
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
             }
         };
-        loadVariants();
-    }, [selectedProductId]);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    // Derive unique products list from loaded variants
+    const products = React.useMemo(() => {
+        const prodMap = new Map<number, ProductItem>();
+        allVariants.forEach(v => {
+            if (!prodMap.has(v.id_producto)) {
+                prodMap.set(v.id_producto, {
+                    id_producto: v.id_producto,
+                    nombre: v.producto || 'Producto',
+                    categoria_nombre: v.categoria || undefined,
+                    brand_name: v.marca || undefined
+                });
+            }
+        });
+        return Array.from(prodMap.values());
+    }, [allVariants]);
+
+    // Derive active variants of the selected product
+    const variants = React.useMemo(() => {
+        if (!selectedProductId) return [];
+        return allVariants.filter(v => String(v.id_producto) === selectedProductId);
+    }, [allVariants, selectedProductId]);
+
+    // Extract unique categories and brands from loaded products list
+    const availableCategories = React.useMemo(() => {
+        const cats = new Set<string>();
+        products.forEach(p => {
+            const name = p.category_name || p.categoria_nombre;
+            if (name) cats.add(name);
+        });
+        return Array.from(cats).sort();
+    }, [products]);
+
+    const availableBrands = React.useMemo(() => {
+        const brands = new Set<string>();
+        products.forEach(p => {
+            if (p.brand_name) brands.add(p.brand_name);
+        });
+        return Array.from(brands).sort();
+    }, [products]);
 
     // Search and filter products
-    const filteredProducts = products.filter(p => 
-        p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
-        (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(productSearch.toLowerCase())) ||
-        (p.brand_name && p.brand_name.toLowerCase().includes(productSearch.toLowerCase()))
-    );
+    const filteredProducts = products.filter(p => {
+        const name = p.nombre.toLowerCase();
+        const cat = (p.category_name || p.categoria_nombre || '').toLowerCase();
+        const brand = (p.brand_name || '').toLowerCase();
+        const query = productSearch.toLowerCase();
+        
+        const matchSearch = name.includes(query) || cat.includes(query) || brand.includes(query);
+        const matchCat = !selectedCategoryFilter || (p.category_name || p.categoria_nombre) === selectedCategoryFilter;
+        const matchBrand = !selectedBrandFilter || p.brand_name === selectedBrandFilter;
+        
+        return matchSearch && matchCat && matchBrand;
+    });
 
     // Helpers to get attributes text
     const getAttributesText = (atributos: Record<string, string> | null): string => {
@@ -179,13 +238,119 @@ export const LabelGenerator: React.FC = () => {
                 sku: variant.sku,
                 barcode: variant.codigo_barras || variant.sku,
                 price: Number(variant.precio_lista) || 0,
-                copies: 1
+                copies: printByStock ? (variant.stock_actual > 0 ? variant.stock_actual : 1) : 1,
+                stock_actual: variant.stock_actual
             };
             setSelectedLabels(prev => [...prev, newLabel]);
         } else {
             // Remove from selected list
             setSelectedLabels(prev => prev.filter(item => item.id_variante_producto !== variant.id_variante_producto));
         }
+    };
+
+    // Handle select/deselect all variants of the current product
+    const handleSelectAllVariants = (isChecked: boolean) => {
+        if (isChecked) {
+            setSelectedLabels(prev => {
+                const updated = [...prev];
+                variants.forEach(v => {
+                    if (!updated.some(item => item.id_variante_producto === v.id_variante_producto)) {
+                        const prod = products.find(p => Number(p.id_producto) === Number(v.id_producto));
+                        const name = prod ? prod.nombre : 'Producto';
+                        const attributes = getAttributesText(v.atributos_json);
+                        updated.push({
+                            id_variante_producto: v.id_variante_producto,
+                            productName: name,
+                            attributesText: attributes,
+                            sku: v.sku,
+                            barcode: v.codigo_barras || v.sku,
+                            price: Number(v.precio_lista) || 0,
+                            copies: printByStock ? (v.stock_actual > 0 ? v.stock_actual : 1) : 1,
+                            stock_actual: v.stock_actual
+                        });
+                    }
+                });
+                return updated;
+            });
+        } else {
+            const variantIds = new Set(variants.map(v => v.id_variante_producto));
+            setSelectedLabels(prev => prev.filter(item => !variantIds.has(item.id_variante_producto)));
+        }
+    };
+
+    // Handle select/deselect all variants of a specific product from dropdown
+    const handleToggleProduct = (productId: number, isChecked: boolean) => {
+        const pVars = allVariants.filter(v => v.id_producto === productId);
+        if (isChecked) {
+            setSelectedLabels(prev => {
+                const updated = [...prev];
+                pVars.forEach(v => {
+                    if (!updated.some(item => item.id_variante_producto === v.id_variante_producto)) {
+                        updated.push({
+                            id_variante_producto: v.id_variante_producto,
+                            productName: v.producto || 'Producto',
+                            attributesText: getAttributesText(v.atributos_json),
+                            sku: v.sku,
+                            barcode: v.codigo_barras || v.sku,
+                            price: Number(v.precio_lista) || 0,
+                            copies: printByStock ? (v.stock_actual > 0 ? v.stock_actual : 1) : 1,
+                            stock_actual: v.stock_actual
+                        });
+                    }
+                });
+                return updated;
+            });
+        } else {
+            const variantIds = new Set(pVars.map(v => v.id_variante_producto));
+            setSelectedLabels(prev => prev.filter(item => !variantIds.has(item.id_variante_producto)));
+        }
+    };
+
+    // Handle select/deselect all variants of all filtered products
+    const handleToggleAllFilteredProducts = (isChecked: boolean) => {
+        if (isChecked) {
+            setSelectedLabels(prev => {
+                const updated = [...prev];
+                filteredProducts.forEach(p => {
+                    const pVars = allVariants.filter(v => v.id_producto === p.id_producto);
+                    pVars.forEach(v => {
+                        if (!updated.some(item => item.id_variante_producto === v.id_variante_producto)) {
+                            updated.push({
+                                id_variante_producto: v.id_variante_producto,
+                                productName: v.producto || 'Producto',
+                                attributesText: getAttributesText(v.atributos_json),
+                                sku: v.sku,
+                                barcode: v.codigo_barras || v.sku,
+                                price: Number(v.precio_lista) || 0,
+                                copies: printByStock ? (v.stock_actual > 0 ? v.stock_actual : 1) : 1,
+                                stock_actual: v.stock_actual
+                            });
+                        }
+                    });
+                });
+                return updated;
+            });
+        } else {
+            const variantIdsToRemove = new Set<number>();
+            filteredProducts.forEach(p => {
+                allVariants.filter(v => v.id_producto === p.id_producto).forEach(v => {
+                    variantIdsToRemove.add(v.id_variante_producto);
+                });
+            });
+            setSelectedLabels(prev => prev.filter(item => !variantIdsToRemove.has(item.id_variante_producto)));
+        }
+    };
+
+    // Handle toggling "Imprimir por stock" behavior
+    const handleTogglePrintByStock = (isChecked: boolean) => {
+        setPrintByStock(isChecked);
+        setSelectedLabels(prev => prev.map(item => {
+            let copies = 1;
+            if (isChecked) {
+                copies = item.stock_actual > 0 ? item.stock_actual : 1;
+            }
+            return { ...item, copies };
+        }));
     };
 
     const handleUpdateCopies = (variantId: number, count: number) => {
@@ -228,7 +393,7 @@ export const LabelGenerator: React.FC = () => {
         }
 
         const labelsHtml = selectedLabels.flatMap(item => {
-            const barcodeHtml = renderBarcodeSvgHtml(item.barcode);
+            const barcodeHtml = renderBarcodeSvgHtml(item.sku);
             const titleFull = isStandardText(item.attributesText) 
                 ? item.productName 
                 : `${item.productName} (${item.attributesText})`;
@@ -245,7 +410,7 @@ export const LabelGenerator: React.FC = () => {
                             <div class="barcode-container">
                                 ${barcodeHtml}
                             </div>
-                            <div class="barcode-text">${item.barcode}</div>
+                            <div class="barcode-text">${item.sku}</div>
                             <div class="product-title" title="${titleFull}">${titleFull}</div>
                             <div class="price-display">
                                 <span class="price-label">PRECIO:</span>
@@ -422,42 +587,146 @@ export const LabelGenerator: React.FC = () => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {/* Search & Select Product */}
-                        <div className="space-y-2">
-                            <Label htmlFor="search-product" className="font-semibold text-foreground/80">Buscar Producto</Label>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    id="search-product"
-                                    type="text"
-                                    placeholder="Nombre, marca o categoría del producto..."
-                                    className="pl-10 bg-background border-border text-foreground"
-                                    value={productSearch}
-                                    onChange={(e) => setProductSearch(e.target.value.replace(/'/g, '-'))}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Filters Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="select-product" className="font-semibold text-foreground/80">Seleccionar Producto ({filteredProducts.length})</Label>
+                                <Label htmlFor="search-product" className="font-semibold text-foreground/80">Buscar Producto</Label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        id="search-product"
+                                        type="text"
+                                        placeholder="Nombre, marca o categoría..."
+                                        className="pl-10 bg-background border-border text-foreground"
+                                        value={productSearch}
+                                        onChange={(e) => setProductSearch(e.target.value.replace(/'/g, '-'))}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="filter-category" className="font-semibold text-foreground/80">Filtrar por Categoría</Label>
                                 <select 
-                                    id="select-product"
-                                    value={selectedProductId}
-                                    onChange={(e) => setSelectedProductId(e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    id="filter-category"
+                                    value={selectedCategoryFilter}
+                                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                 >
-                                    <option value="">-- Elija un producto --</option>
-                                    {filteredProducts.map(p => (
-                                        <option key={p.id_producto} value={p.id_producto}>
-                                            {p.nombre} {p.brand_name ? `(${p.brand_name})` : ''}
-                                        </option>
+                                    <option value="">Todas las categorías</option>
+                                    {availableCategories.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
                                     ))}
                                 </select>
                             </div>
 
+                            <div className="space-y-2">
+                                <Label htmlFor="filter-brand" className="font-semibold text-foreground/80">Filtrar por Marca</Label>
+                                <select 
+                                    id="filter-brand"
+                                    value={selectedBrandFilter}
+                                    onChange={(e) => setSelectedBrandFilter(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                >
+                                    <option value="">Todas las marcas</option>
+                                    {availableBrands.map(brand => (
+                                        <option key={brand} value={brand}>{brand}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2" ref={dropdownRef}>
+                                <Label className="font-semibold text-foreground/80">Seleccionar Producto ({filteredProducts.length})</Label>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                        className="flex h-10 w-full items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 shadow-sm font-medium hover:border-primary/45 transition-colors"
+                                    >
+                                        <span className="truncate">
+                                            {selectedProductId 
+                                                ? `Viendo: ${products.find(p => String(p.id_producto) === selectedProductId)?.nombre || ''}`
+                                                : selectedLabels.length > 0 
+                                                    ? `${selectedLabels.length} variante(s) seleccionada(s)` 
+                                                    : '-- Elija un producto / Marcar todos --'}
+                                        </span>
+                                        <span className="ml-2 text-xs opacity-50 shrink-0">▼</span>
+                                    </button>
+
+                                    {isDropdownOpen && (
+                                        <div 
+                                            className="absolute left-0 mt-1.5 w-full rounded-md border border-border bg-card shadow-2xl z-50 p-2 space-y-1.5 max-h-72 overflow-y-auto"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {/* Select all filtered */}
+                                            <div className="flex items-center gap-2 px-2 py-2 border-b border-border/40 pb-2">
+                                                <Checkbox 
+                                                    id="select-all-filtered-dropdown"
+                                                    checked={filteredProducts.length > 0 && filteredProducts.every(p => {
+                                                        const pVars = allVariants.filter(v => v.id_producto === p.id_producto);
+                                                        return pVars.length > 0 && pVars.every(v => selectedLabels.some(item => item.id_variante_producto === v.id_variante_producto));
+                                                    })}
+                                                    onCheckedChange={(checked) => handleToggleAllFilteredProducts(!!checked)}
+                                                    className="border-border text-primary focus-visible:ring-primary shrink-0"
+                                                />
+                                                <label htmlFor="select-all-filtered-dropdown" className="text-xs font-bold text-foreground cursor-pointer select-none truncate">
+                                                    Marcar Todos los Filtrados ({filteredProducts.length})
+                                                </label>
+                                            </div>
+
+                                            {/* Products List */}
+                                            <div className="space-y-1 pr-1">
+                                                {filteredProducts.length === 0 ? (
+                                                    <div className="text-xs text-muted-foreground text-center py-4 font-semibold">
+                                                        No se encontraron productos.
+                                                    </div>
+                                                ) : (
+                                                    filteredProducts.map(p => {
+                                                        const pVars = allVariants.filter(v => v.id_producto === p.id_producto);
+                                                        const isChecked = pVars.length > 0 && pVars.every(v => selectedLabels.some(item => item.id_variante_producto === v.id_variante_producto));
+                                                        const isViewing = selectedProductId === String(p.id_producto);
+
+                                                        return (
+                                                            <div 
+                                                                key={p.id_producto}
+                                                                className={`flex items-center justify-between px-2 py-1.5 rounded transition-colors ${
+                                                                    isViewing ? 'bg-primary/10 border border-primary/20' : 'hover:bg-muted/50 border border-transparent'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                                                    <Checkbox 
+                                                                        checked={isChecked}
+                                                                        onCheckedChange={(checked) => handleToggleProduct(p.id_producto, !!checked)}
+                                                                        className="border-border text-primary focus-visible:ring-primary shrink-0"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setSelectedProductId(String(p.id_producto));
+                                                                            setIsDropdownOpen(false);
+                                                                        }}
+                                                                        className="text-xs text-left font-bold text-foreground truncate hover:text-primary transition-colors flex-1"
+                                                                        title="Haga clic para ver variantes abajo"
+                                                                    >
+                                                                        {p.nombre} {p.brand_name ? `(${p.brand_name})` : ''}
+                                                                    </button>
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-muted-foreground/80 bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0">
+                                                                    {pVars.length} var
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="flex items-end">
-                                <Button variant="outline" onClick={loadProducts} className="w-full flex gap-2 h-10" disabled={loadingProducts}>
+                                <Button variant="outline" onClick={loadAllVariantsData} className="w-full flex gap-2 h-10 font-semibold" disabled={loadingProducts}>
                                     <RefreshCw className={`h-4 w-4 ${loadingProducts ? 'animate-spin' : ''}`} /> Actualizar Productos
                                 </Button>
                             </div>
@@ -475,7 +744,7 @@ export const LabelGenerator: React.FC = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">
-                            {loadingVariants ? (
+                            {loadingProducts ? (
                                 <div className="text-center py-10 text-muted-foreground animate-pulse font-medium">Cargando variantes...</div>
                             ) : variants.length === 0 ? (
                                 <div className="text-center py-10 text-muted-foreground font-medium">Este producto no contiene variantes activas.</div>
@@ -483,7 +752,13 @@ export const LabelGenerator: React.FC = () => {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="border-border">
-                                            <TableHead className="w-12 text-center"></TableHead>
+                                            <TableHead className="w-12 text-center">
+                                                <Checkbox 
+                                                    checked={variants.length > 0 && variants.every(v => selectedLabels.some(item => item.id_variante_producto === v.id_variante_producto))}
+                                                    onCheckedChange={(checked) => handleSelectAllVariants(!!checked)}
+                                                    className="border-border text-primary focus-visible:ring-primary"
+                                                />
+                                            </TableHead>
                                             <TableHead className="text-foreground/90 font-bold">Variante</TableHead>
                                             <TableHead className="text-foreground/90 font-bold">Código Barras</TableHead>
                                             <TableHead className="text-foreground/90 font-bold">SKU</TableHead>
@@ -521,21 +796,40 @@ export const LabelGenerator: React.FC = () => {
                 {/* Queue Table Card */}
                 {selectedLabels.length > 0 && (
                     <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm">
-                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <CardTitle className="text-lg font-bold text-foreground">Cola de Impresión</CardTitle>
                                 <CardDescription>
                                     Ajuste los precios y cantidades antes de generar el lote de etiquetas.
                                 </CardDescription>
                             </div>
-                            <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                className="font-semibold text-xs"
-                                onClick={() => setSelectedLabels([])}
-                            >
-                                Limpiar Todo
-                            </Button>
+                            <div className="flex items-center gap-3">
+                                {/* Imprimir por Stock checkbox */}
+                                <div className="flex items-center gap-2 bg-muted/40 px-3 py-1.5 rounded-lg border border-border">
+                                    <Checkbox 
+                                        id="print-by-stock"
+                                        checked={printByStock}
+                                        onCheckedChange={(checked) => handleTogglePrintByStock(!!checked)}
+                                        className="border-border text-primary focus-visible:ring-primary"
+                                    />
+                                    <div className="grid gap-0.5 leading-none text-left">
+                                        <label htmlFor="print-by-stock" className="text-xs font-bold text-foreground cursor-pointer select-none">
+                                            Imprimir por Stock
+                                        </label>
+                                        <p className="text-[9px] text-muted-foreground font-medium">
+                                            Copias según stock actual
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button 
+                                    variant="destructive" 
+                                    size="sm" 
+                                    className="font-semibold text-xs h-9"
+                                    onClick={() => setSelectedLabels([])}
+                                >
+                                    Limpiar Todo
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
@@ -735,11 +1029,11 @@ export const LabelGenerator: React.FC = () => {
                                             </div>
                                             {/* Barcode svg */}
                                             <div className="w-full h-[28%] flex justify-center items-center shrink-0">
-                                                <Barcode value={previewItem.barcode} height={32} width={130} />
+                                                <Barcode value={previewItem.sku} height={32} width={130} />
                                             </div>
                                             {/* Barcode Value */}
                                             <div className="text-[10px] font-bold text-center font-mono mt-0.5 mb-0.5 leading-none tracking-wider">
-                                                {previewItem.barcode}
+                                                {previewItem.sku}
                                             </div>
                                             {/* Product Title */}
                                             <div className="text-[13px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">

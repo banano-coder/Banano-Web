@@ -13,9 +13,14 @@ const COLUMN_NAMES: Record<string, string> = {
     'producto': 'Producto',
     'id_variante_producto': 'ID Var',
     'sku': 'SKU',
-    'stock': 'Stock',
-    'total_salidas': 'Salidas',
     'variante': 'Variante',
+    'stock': 'Stock',
+    'costo': 'Costo',
+    'precio': 'Precio',
+    'categoria': 'Categoría',
+    'marca': 'Marca',
+    'almacen': 'Almacén',
+    'total_salidas': 'Salidas',
     'id_salida': 'ID Salida',
     'fecha': 'Fecha',
     'cantidad': 'Cant',
@@ -199,6 +204,9 @@ export const InventoryReports = () => {
                     list = response;
                 }
                 setWarehouses(list);
+                if (list.length > 0) {
+                    setSelectedWarehouseId(String(list[0].id_almacen));
+                }
             } catch (error) {
                 console.error("Error loading warehouses for reports:", error);
             }
@@ -214,6 +222,12 @@ export const InventoryReports = () => {
     const [criticalCount, setCriticalCount] = useState(0);
     const [topSales, setTopSales] = useState<any[]>([]);
     const [seriesData, setSeriesData] = useState<any[]>([]);
+    const [stockReport, setStockReport] = useState<any[]>([]);
+    const [stockPage, setStockPage] = useState(1);
+    const STOCK_PAGE_SIZE = 25; // products per page
+
+    // Reset page when warehouse or data changes
+    useEffect(() => { setStockPage(1); }, [selectedWarehouseId, stockReport.length]);
 
     // Date range default: last 30 days
     const [fromDate, setFromDate] = useState(() => {
@@ -249,6 +263,7 @@ export const InventoryReports = () => {
             const stockList = Array.isArray(stockRes) ? stockRes : stockRes?.data || [];
             const totalStockCount = stockList.reduce((acc: number, item: any) => acc + (item.stock || 0), 0);
             setStockTotal(totalStockCount);
+            setStockReport(stockList);
 
             // Critical alerts count
             const lowStockList = Array.isArray(lowStockRes) ? lowStockRes : lowStockRes?.data || [];
@@ -280,8 +295,55 @@ export const InventoryReports = () => {
         return headers.map(h => COLUMN_NAMES[h] || h.toUpperCase());
     };
 
+    // Helper: parse atributos_json variant into readable label
+    const formatVariantLabel = (atributos: any): string => {
+        if (!atributos || typeof atributos !== 'object') return 'Estándar';
+        const entries = Object.entries(atributos);
+        if (entries.length === 0) return 'Estándar';
+        return entries.map(([k, v]) => {
+            const key = k.trim().toLowerCase();
+            if (key === 'tipo') return String(v);
+            return `${k}: ${v}`;
+        }).join(' / ');
+    };
+
     const downloadCSV = (data: any[], fileName: string, warehouseName: string) => {
         if (!data || data.length === 0) return;
+
+        const safeW = warehouseName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
+        // Special handling for stock report with grouped, clean columns
+        if (fileName.includes('stock')) {
+            const headers = ['SKU', 'Producto', 'Variante', 'Stock', 'Costo', 'Precio', 'Categoría', 'Marca', 'Almacén'];
+            const dataRows = data.map((row: any) => [
+                `"${row.sku || ''}"`,
+                `"${row.producto || ''}"`,
+                `"${formatVariantLabel(row.variante)}"`,
+                row.stock ?? 0,
+                row.costo ?? 0,
+                row.precio ?? 0,
+                `"${row.categoria || ''}"`,
+                `"${row.marca || ''}"`,
+                `"${row.almacen || 'Consolidado'}"`
+            ]);
+
+            const uniqueProducts = new Set(data.map((r: any) => r.id_producto)).size;
+            const totalStock = data.reduce((s: number, r: any) => s + (r.stock || 0), 0);
+            const totalValue = data.reduce((s: number, r: any) => s + ((r.stock || 0) * (r.costo || 0)), 0);
+            dataRows.push([]);
+            dataRows.push([`"RESUMEN"`, `"Productos únicos: ${uniqueProducts}"`, `""`, `"Stock total: ${totalStock}"`, `""`, `""`, `"Valor inventario: ${totalValue.toFixed(2)}"`, `""`, `""`]);
+
+            const csvContent = [headers.join(';'), ...dataRows.map(r => r.join(';'))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.setAttribute('href', URL.createObjectURL(blob));
+            link.setAttribute('download', `${fileName}_${safeW}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            return;
+        }
 
         const rawHeaders = Object.keys(data[0]);
         const translatedHeaders = formatHeaders(rawHeaders);
@@ -299,11 +361,8 @@ export const InventoryReports = () => {
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        const safeWarehouseName = warehouseName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `${fileName}_${safeWarehouseName}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('href', URL.createObjectURL(blob));
+        link.setAttribute('download', `${fileName}_${safeW}_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -315,42 +374,105 @@ export const InventoryReports = () => {
 
         const doc = new jsPDF();
 
-        // Add Title
+        // Title
         doc.setFontSize(18);
         doc.text(title, 14, 20);
-
-        // Add Subtitle / Warehouse Info
         doc.setFontSize(12);
         doc.setTextColor(80);
         doc.text(`Almacén: ${warehouseName}`, 14, 27);
-
-        // Add Date
         doc.setFontSize(10);
         doc.setTextColor(120);
-        const date = new Date().toLocaleDateString();
-        doc.text(`Fecha de generación: ${date}`, 14, 34);
+        doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 14, 34);
 
-        // Prepare data for autoTable
-        const rawHeaders = Object.keys(data[0]);
-        const translatedHeaders = formatHeaders(rawHeaders);
-        const body = data.map(row => rawHeaders.map(header => {
-            const val = row[header];
-            if (header === 'fecha') return new Date(val as string).toLocaleDateString();
-            if (header.includes('valor') || header === 'subtotal' || header === 'costo_unit') {
-                return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(val as number);
-            }
-            return val;
-        }));
+        // Special stock report format: grouped by product
+        if (fileName.includes('stock')) {
+            // Group rows by product
+            const grouped = new Map<number, { name: string; rows: any[] }>();
+            data.forEach((row: any) => {
+                const pid = row.id_producto;
+                if (!grouped.has(pid)) grouped.set(pid, { name: row.producto, rows: [] });
+                grouped.get(pid)!.rows.push(row);
+            });
 
-        autoTable(doc, {
-            startY: 40,
-            head: [translatedHeaders],
-            body: body,
-            theme: 'grid',
-            headStyles: { fillColor: [219, 39, 119] }, // Fuchsia style
-            styles: { fontSize: 7, cellPadding: 2 },
-            alternateRowStyles: { fillColor: [245, 247, 250] }
-        });
+            const head = [['Producto', 'SKU', 'Variante', 'Stock', 'Costo', 'Precio', 'Categoría', 'Marca', 'Almacén']];
+            const body: any[] = [];
+
+            grouped.forEach(({ name, rows }) => {
+                const fmtVal = (n: any) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n) || 0);
+                if (rows.length > 1) {
+                    // Product header row
+                    body.push([{ content: name, colSpan: 9, styles: { fontStyle: 'bold', fillColor: [240, 240, 245], textColor: [30, 30, 30] } }]);
+                    rows.forEach((r: any) => {
+                        const varLabel = formatVariantLabel(r.variante);
+                        body.push([
+                            '↳',
+                            r.sku || '',
+                            varLabel,
+                            r.stock ?? 0,
+                            fmtVal(r.costo),
+                            fmtVal(r.precio),
+                            r.categoria || '',
+                            r.marca || '',
+                            r.almacen || 'Consolidado'
+                        ]);
+                    });
+                } else {
+                    const r = rows[0];
+                    const varLabel = formatVariantLabel(r.variante);
+                    body.push([
+                        name,
+                        r.sku || '',
+                        varLabel,
+                        r.stock ?? 0,
+                        fmtVal(r.costo),
+                        fmtVal(r.precio),
+                        r.categoria || '',
+                        r.marca || '',
+                        r.almacen || 'Consolidated'
+                    ]);
+                }
+            });
+
+            // Summary
+            const uniqueProducts = grouped.size;
+            const totalStock = data.reduce((s: number, r: any) => s + (r.stock || 0), 0);
+            const totalValue = data.reduce((s: number, r: any) => s + ((r.stock || 0) * (r.costo || 0)), 0);
+            const fmtVal = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+            body.push([{ content: '', colSpan: 9, styles: { fillColor: [255, 255, 255] } }]);
+            body.push([{ content: `RESUMEN   |   Productos únicos: ${uniqueProducts}   |   Stock total: ${totalStock} uds   |   Valor inventario: ${fmtVal(totalValue)}`, colSpan: 9, styles: { fontStyle: 'bold', fillColor: [219, 39, 119], textColor: [255, 255, 255] } }]);
+
+            autoTable(doc, {
+                startY: 40,
+                head,
+                body,
+                theme: 'grid',
+                headStyles: { fillColor: [219, 39, 119] },
+                styles: { fontSize: 7, cellPadding: 2 },
+                alternateRowStyles: { fillColor: [250, 250, 255] }
+            });
+        } else {
+            // Generic table format
+            const rawHeaders = Object.keys(data[0]);
+            const translatedHeaders = formatHeaders(rawHeaders);
+            const body = data.map(row => rawHeaders.map(header => {
+                const val = row[header];
+                if (header === 'fecha') return new Date(val as string).toLocaleDateString();
+                if (header.includes('valor') || header === 'subtotal' || header === 'costo_unit') {
+                    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(val as number);
+                }
+                return val;
+            }));
+
+            autoTable(doc, {
+                startY: 40,
+                head: [translatedHeaders],
+                body,
+                theme: 'grid',
+                headStyles: { fillColor: [219, 39, 119] },
+                styles: { fontSize: 7, cellPadding: 2 },
+                alternateRowStyles: { fillColor: [245, 247, 250] }
+            });
+        }
 
         const safeWarehouseName = warehouseName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
         doc.save(`${fileName}_${safeWarehouseName}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -629,6 +751,200 @@ export const InventoryReports = () => {
                 </Card>
             </div>
 
+            {/* In-Screen Inventory Table */}
+            <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg">
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-lg text-foreground font-bold flex items-center gap-2">
+                                <Box className="h-5 w-5 text-primary" /> Inventario de Stock Actual
+                            </CardTitle>
+                            <CardDescription className="text-xs mt-0.5">
+                                Vista agrupada por producto — {selectedWarehouseName}
+                            </CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0 overflow-x-auto">
+                    {dashboardLoading ? (
+                        <div className="py-12 text-center text-muted-foreground text-sm font-semibold animate-pulse">Cargando inventario...</div>
+                    ) : stockReport.length === 0 ? (
+                        <div className="py-12 text-center text-muted-foreground text-sm font-semibold">No hay datos de inventario disponibles.</div>
+                    ) : (() => {
+                        // Group by product — preserve insertion order for pagination
+                        const grouped = new Map<number, { name: string; rows: any[] }>();
+                        stockReport.forEach((row: any) => {
+                            const pid = row.id_producto;
+                            if (!grouped.has(pid)) grouped.set(pid, { name: row.producto, rows: [] });
+                            grouped.get(pid)!.rows.push(row);
+                        });
+
+                        // Summary stats — always computed over the full dataset
+                        const uniqueProducts = grouped.size;
+                        const totalStockUnits = stockReport.reduce((s: number, r: any) => s + (r.stock || 0), 0);
+                        const totalInventoryValue = stockReport.reduce((s: number, r: any) => s + ((r.stock || 0) * (r.costo || 0)), 0);
+                        const fmt = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+
+                        // Pagination over product groups
+                        const groupEntries = Array.from(grouped.entries());
+                        const totalPages = Math.ceil(groupEntries.length / STOCK_PAGE_SIZE);
+                        const safePage = Math.min(Math.max(stockPage, 1), totalPages || 1);
+                        const pageEntries = groupEntries.slice((safePage - 1) * STOCK_PAGE_SIZE, safePage * STOCK_PAGE_SIZE);
+
+                        // Build visible rows for current page
+                        const warehouseFallback = selectedWarehouseId ? selectedWarehouseName : 'Consolidado';
+                        const rows: React.ReactNode[] = [];
+                        pageEntries.forEach(([pid, { name, rows: variantRows }]) => {
+                            if (variantRows.length > 1) {
+                                rows.push(
+                                    <tr key={`prod-${pid}`} className="bg-primary/10 border-t-2 border-primary/20">
+                                        <td colSpan={9} className="px-4 py-2 font-bold text-sm text-primary uppercase tracking-wide">
+                                            {name}
+                                        </td>
+                                    </tr>
+                                );
+                                variantRows.forEach((r: any, idx: number) => {
+                                    const varLabel = formatVariantLabel(r.variante);
+                                    rows.push(
+                                        <tr key={`v-${r.id_variante_producto}-${idx}`} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                                            <td className="px-4 py-2.5 text-xs text-foreground/50 italic pl-6">↳</td>
+                                            <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{r.sku}</td>
+                                            <td className="px-4 py-2 text-xs text-foreground/80">{varLabel}</td>
+                                            <td className="px-4 py-2 text-center font-bold text-sm"
+                                                style={{ color: (r.stock || 0) <= 3 ? '#ef4444' : (r.stock || 0) <= 10 ? '#f59e0b' : '#22c55e' }}>
+                                                {r.stock ?? 0}
+                                            </td>
+                                            <td className="px-4 py-2 text-right text-xs text-foreground/70 font-mono">{fmt(r.costo)}</td>
+                                            <td className="px-4 py-2 text-right text-xs font-semibold text-foreground font-mono">{fmt(r.precio)}</td>
+                                            <td className="px-4 py-2 text-xs text-foreground/70">{r.categoria || '—'}</td>
+                                            <td className="px-4 py-2 text-xs text-foreground/70">{r.marca || '—'}</td>
+                                            <td className="px-4 py-2 text-xs text-muted-foreground">{r.almacen || warehouseFallback}</td>
+                                        </tr>
+                                    );
+                                });
+                            } else {
+                                const r = variantRows[0];
+                                const varLabel = formatVariantLabel(r.variante);
+                                rows.push(
+                                    <tr key={`v-${r.id_variante_producto}`} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                                        <td className="px-4 py-2.5 text-xs font-semibold text-foreground/80">{name}</td>
+                                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{r.sku}</td>
+                                        <td className="px-4 py-2 text-xs text-foreground/80">{varLabel}</td>
+                                        <td className="px-4 py-2 text-center font-bold text-sm"
+                                            style={{ color: (r.stock || 0) <= 3 ? '#ef4444' : (r.stock || 0) <= 10 ? '#f59e0b' : '#22c55e' }}>
+                                            {r.stock ?? 0}
+                                        </td>
+                                        <td className="px-4 py-2 text-right text-xs text-foreground/70 font-mono">{fmt(r.costo)}</td>
+                                        <td className="px-4 py-2 text-right text-xs font-semibold text-foreground font-mono">{fmt(r.precio)}</td>
+                                        <td className="px-4 py-2 text-xs text-foreground/70">{r.categoria || '—'}</td>
+                                        <td className="px-4 py-2 text-xs text-foreground/70">{r.marca || '—'}</td>
+                                        <td className="px-4 py-2 text-xs text-muted-foreground">{r.almacen || warehouseFallback}</td>
+                                    </tr>
+                                );
+                            }
+                        });
+
+                        return (
+                            <>
+                                <table className="w-full text-sm border-collapse min-w-[700px]">
+                                    <thead>
+                                        <tr className="bg-primary text-primary-foreground text-xs uppercase tracking-wider">
+                                            <th className="px-4 py-3 text-left font-bold">Producto</th>
+                                            <th className="px-4 py-3 text-left font-bold">SKU</th>
+                                            <th className="px-4 py-3 text-left font-bold">Variante</th>
+                                            <th className="px-4 py-3 text-center font-bold">Stock</th>
+                                            <th className="px-4 py-3 text-right font-bold">Costo</th>
+                                            <th className="px-4 py-3 text-right font-bold">Precio</th>
+                                            <th className="px-4 py-3 text-left font-bold">Categoría</th>
+                                            <th className="px-4 py-3 text-left font-bold">Marca</th>
+                                            <th className="px-4 py-3 text-left font-bold">Almacén</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>{rows}</tbody>
+                                </table>
+
+                                {/* Pagination controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-between px-6 py-3 border-t border-border/40 bg-card/40">
+                                        <span className="text-xs text-muted-foreground font-medium">
+                                            Página <span className="font-bold text-foreground">{safePage}</span> de <span className="font-bold text-foreground">{totalPages}</span>
+                                            {' '}— mostrando productos {(safePage - 1) * STOCK_PAGE_SIZE + 1}–{Math.min(safePage * STOCK_PAGE_SIZE, groupEntries.length)} de {groupEntries.length}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => setStockPage(1)}
+                                                disabled={safePage === 1}
+                                                className="px-2 py-1 rounded-md text-xs font-bold border border-border/40 hover:bg-primary/10 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            >«</button>
+                                            <button
+                                                onClick={() => setStockPage(p => Math.max(1, p - 1))}
+                                                disabled={safePage === 1}
+                                                className="px-2.5 py-1 rounded-md text-xs font-bold border border-border/40 hover:bg-primary/10 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            >‹</button>
+                                            {/* Page number pills */}
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                                                .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                                                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('ellipsis');
+                                                    acc.push(p);
+                                                    return acc;
+                                                }, [])
+                                                .map((item, i) =>
+                                                    item === 'ellipsis' ? (
+                                                        <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground">…</span>
+                                                    ) : (
+                                                        <button
+                                                            key={item}
+                                                            onClick={() => setStockPage(item as number)}
+                                                            className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-colors ${
+                                                                item === safePage
+                                                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                                                    : 'border-border/40 hover:bg-primary/10 hover:text-primary'
+                                                            }`}
+                                                        >{item}</button>
+                                                    )
+                                                )
+                                            }
+                                            <button
+                                                onClick={() => setStockPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={safePage === totalPages}
+                                                className="px-2.5 py-1 rounded-md text-xs font-bold border border-border/40 hover:bg-primary/10 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            >›</button>
+                                            <button
+                                                onClick={() => setStockPage(totalPages)}
+                                                disabled={safePage === totalPages}
+                                                className="px-2 py-1 rounded-md text-xs font-bold border border-border/40 hover:bg-primary/10 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                            >»</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Summary bar — always visible at the bottom regardless of page */}
+                                <div className="border-t-2 border-primary/30 bg-primary/5 px-6 py-4 flex flex-wrap gap-6 items-center">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Productos únicos</span>
+                                        <span className="text-xl font-black text-foreground">{uniqueProducts}</span>
+                                    </div>
+                                    <div className="w-px h-6 bg-border" />
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Stock total</span>
+                                        <span className="text-xl font-black text-foreground">{totalStockUnits} <span className="text-xs font-normal text-muted-foreground">uds</span></span>
+                                    </div>
+                                    <div className="w-px h-6 bg-border" />
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Valor inventario</span>
+                                        <span className="text-xl font-black text-primary">{fmt(totalInventoryValue)}</span>
+                                    </div>
+                                    {totalPages > 1 && (
+                                        <span className="ml-auto text-[10px] text-muted-foreground/60 italic">* Totales calculados sobre los {groupEntries.length} productos del almacén completo</span>
+                                    )}
+                                </div>
+                            </>
+                        );
+                    })()}
+                </CardContent>
+            </Card>
+
             {/* Downloader Section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-bold text-foreground flex items-center gap-2 border-b border-border pb-2 mt-4">
@@ -644,7 +960,7 @@ export const InventoryReports = () => {
                             </div>
                             <CardTitle className="text-base text-foreground font-bold">Reporte de Stock</CardTitle>
                             <CardDescription className="text-xs text-foreground/70">
-                                Descarga el stock actual filtrado por el almacén seleccionado.
+                                Exporta el inventario con SKU, variante, stock, costo, precio, categoría y marca agrupados por producto.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-2 pt-0">
