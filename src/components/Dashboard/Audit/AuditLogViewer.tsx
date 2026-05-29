@@ -57,6 +57,7 @@ export const AuditLogViewer: React.FC = () => {
     const [usersMap, setUsersMap] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [expandedLotes, setExpandedLotes] = useState<Record<number, boolean>>({});
 
     const [page, setPage] = useState(1);
     const [limit] = useState(20);
@@ -173,6 +174,8 @@ export const AuditLogViewer: React.FC = () => {
                 return <>{boldActor} registró <span className="text-red-600 font-medium">salida (-{payload.cantidad || ''})</span> para <span className="font-semibold">{variantName}</span></>;
             case 'INV_AJUSTE':
                 return <>{boldActor} realizó un <span className="text-amber-600 font-medium">ajuste de stock</span> para <span className="font-semibold">{variantName}</span></>;
+            case 'INV_ENTRADA_LOTE':
+                return <>{boldActor} registró <span className="text-green-600 font-bold">ingreso de stock por lote</span> ({payload.total_items || (payload.items?.length || 0)} ítems) en <span className="font-semibold">{payload.almacen_nombre || 'Almacén'}</span></>;
             case 'VARIANT_PRICE_CHANGE':
                 return <>{boldActor} <span className="text-blue-600 font-medium">modificó precios</span> de la variante <span className="font-semibold">{variantName}</span></>;
             case 'VARIANT_DISABLE':
@@ -225,6 +228,83 @@ export const AuditLogViewer: React.FC = () => {
                     {log.target_label && <> en <span className="font-semibold">{log.target_label}</span></>}
                 </>;
         }
+    };
+
+    const formatVariantLabelLocal = (atributos: any): string => {
+        if (!atributos || typeof atributos !== 'object') return 'Estándar';
+        const entries = Object.entries(atributos);
+        if (entries.length === 0) return 'Estándar';
+        return entries.map(([k, v]) => k.toLowerCase() === 'tipo' ? String(v) : `${k}: ${v}`).join(' / ');
+    };
+
+    const toggleLote = (logId: number) => {
+        setExpandedLotes(prev => ({ ...prev, [logId]: !prev[logId] }));
+    };
+
+    const renderBatchLoteDetails = (log: AuditLog) => {
+        const payload = typeof log.payload === 'string' ? JSON.parse(log.payload || '{}') : (log.payload || {});
+        const isExpanded = !!expandedLotes[log.id];
+        const items = payload.items || [];
+
+        return (
+            <div className="mt-3 space-y-2">
+                <div className="flex flex-wrap items-center gap-4 text-xs bg-muted/40 p-2.5 rounded-lg border border-border/40 justify-between">
+                    <div className="flex gap-4">
+                        {payload.motivo && (
+                            <div>
+                                <span className="text-muted-foreground font-medium">Motivo: </span>
+                                <span className="text-foreground/80 font-semibold">{payload.motivo}</span>
+                            </div>
+                        )}
+                        {payload.ref_externa && (
+                            <div>
+                                <span className="text-muted-foreground font-medium">Referencia: </span>
+                                <span className="text-foreground/80 font-semibold">{payload.ref_externa}</span>
+                            </div>
+                        )}
+                    </div>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => toggleLote(log.id)}
+                        className="h-7 text-xs font-bold text-primary hover:bg-primary/5 px-2 bg-background/40 hover:bg-background/60 shadow-sm border border-border/20 rounded-md transition-all active:scale-95"
+                    >
+                        {isExpanded ? 'Ocultar Detalle' : `Visualizar Detalle (${items.length} prod)`}
+                    </Button>
+                </div>
+
+                {isExpanded && items.length > 0 && (
+                    <div className="border border-border/40 rounded-lg overflow-hidden bg-background/50 shadow-sm animate-in slide-in-from-top-1 duration-200">
+                        <table className="w-full text-[11px] border-collapse text-left">
+                            <thead>
+                                <tr className="bg-muted text-muted-foreground font-bold uppercase tracking-wider text-[10px]">
+                                    <th className="px-3 py-2">Producto</th>
+                                    <th className="px-3 py-2">SKU</th>
+                                    <th className="px-3 py-2">Variante</th>
+                                    <th className="px-3 py-2 text-center">Cantidad</th>
+                                    <th className="px-3 py-2 text-center">Antes</th>
+                                    <th className="px-3 py-2 text-center">Después</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {items.map((item: any, idx: number) => {
+                                    return (
+                                        <tr key={idx} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
+                                            <td className="px-3 py-1.5 font-semibold text-foreground/80">{item.producto || '—'}</td>
+                                            <td className="px-3 py-1.5 font-mono text-muted-foreground">{item.sku || '—'}</td>
+                                            <td className="px-3 py-1.5 text-muted-foreground">{formatVariantLabelLocal(item.variante)}</td>
+                                            <td className="px-3 py-1.5 text-center font-bold text-emerald-600">+{item.cantidad}</td>
+                                            <td className="px-3 py-1.5 text-center text-muted-foreground">{item.stock_antes ?? '—'}</td>
+                                            <td className="px-3 py-1.5 text-center text-foreground font-semibold">{item.stock_despues ?? '—'}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     const renderPayloadDetails = (payload: any) => {
@@ -401,8 +481,10 @@ export const AuditLogViewer: React.FC = () => {
                                         </span>
                                     </div>
 
-                                    {/* Small Preview for inventory/prices */}
-                                    {(log.action.includes('INV') || log.action.includes('PRICE')) && renderPayloadDetails(log.payload)}
+                                     {/* Collapsible detail view for batch stock entry */}
+                                     {log.action === 'INV_ENTRADA_LOTE' && renderBatchLoteDetails(log)}
+                                     {/* Small Preview for other inventory/prices */}
+                                     {log.action !== 'INV_ENTRADA_LOTE' && (log.action.includes('INV') || log.action.includes('PRICE')) && renderPayloadDetails(log.payload)}
                                 </div>
                             </div>
                         );

@@ -183,11 +183,44 @@ export const BatchStockEntry: React.FC = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [reviewRows, setReviewRows] = useState<VariantRow[]>([]);
+
+    const handleStartReview = () => {
+        const selected = rows.filter(r => r.dirty && parseInt(r.inputQty, 10) > 0);
+        if (selected.length === 0) {
+            showToast('error', 'Por favor ingresa cantidad en al menos un producto.');
+            return;
+        }
+        setReviewRows(selected);
+        setIsReviewing(true);
+    };
+
+    const handleReviewQtyChange = (id: number, val: string) => {
+        setReviewRows(prev => prev.map(r => 
+            r.id_variante_producto === id ? { ...r, inputQty: val } : r
+        ));
+        setRows(prev => prev.map(r =>
+            r.id_variante_producto === id
+                ? { ...r, inputQty: val, dirty: val.trim() !== '' && parseInt(val, 10) > 0 }
+                : r
+        ));
+    };
+
+    const handleCancelReview = () => {
+        setIsReviewing(false);
+        setReviewRows([]);
+    };
+
     const handleSave = async () => {
-        if (dirtyRows.length === 0) return;
+        const selected = reviewRows.filter(r => parseInt(r.inputQty, 10) > 0);
+        if (selected.length === 0) {
+            showToast('error', 'No hay productos con cantidades válidas en el lote.');
+            return;
+        }
         setSaving(true);
         try {
-            const items = dirtyRows.map(r => ({
+            const items = selected.map(r => ({
                 id_variante_producto: r.id_variante_producto,
                 cantidad: parseInt(r.inputQty, 10),
             }));
@@ -220,6 +253,8 @@ export const BatchStockEntry: React.FC = () => {
                 inputQty: '',
                 dirty: false,
             })));
+            setReviewRows([]);
+            setIsReviewing(false);
 
             showToast('success', `✓ ${json.total_procesados} entradas registradas correctamente.`);
         } catch (e) {
@@ -246,6 +281,132 @@ export const BatchStockEntry: React.FC = () => {
     };
 
     const selectedWarehouseName = warehouses.find(w => String(w.id_almacen) === selectedWarehouseId)?.nombre || '';
+
+    if (isReviewing) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Toast */}
+                {toast && (
+                    <div className={`fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold transition-all animate-in slide-in-from-top-2 ${toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+                        {toast.type === 'success' ? <CheckCircle2 className="h-5 w-5 shrink-0" /> : <AlertTriangle className="h-5 w-5 shrink-0" />}
+                        {toast.msg}
+                        <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
+                    </div>
+                )}
+
+                {/* Review Header */}
+                <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg">
+                    <CardContent className="p-6">
+                        <div className="flex-1 space-y-1">
+                            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                                <PackagePlus className="h-5 w-5 text-primary" />
+                                Revisar Lote de Inventario
+                            </h2>
+                            <p className="text-xs text-foreground/70">
+                                Revisa los productos y las cantidades que vas a ingresar al almacén <span className="font-bold text-foreground underline">{selectedWarehouseName}</span>. Puedes modificar las cantidades si es necesario.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Config details editable in review */}
+                <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 bg-card/30 border border-foreground/10 p-4 rounded-xl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 w-full">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-foreground/70">Motivo del ingreso</label>
+                            <input
+                                type="text"
+                                value={globalMotivo}
+                                onChange={e => setGlobalMotivo(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="Ingreso por lote"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-foreground/70">Referencia (opcional)</label>
+                            <input
+                                type="text"
+                                value={globalRef}
+                                onChange={e => setGlobalRef(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                placeholder="Nro. factura, orden..."
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Review Table Card */}
+                <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg overflow-hidden">
+                    <CardHeader className="pb-3 border-b border-border/30">
+                        <CardTitle className="text-base font-bold text-foreground">
+                            Detalles del Lote ({reviewRows.length} productos a ingresar)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 overflow-x-auto">
+                        <table className="w-full text-sm border-collapse min-w-[600px]">
+                            <thead>
+                                <tr className="bg-primary text-primary-foreground text-xs uppercase tracking-wider">
+                                    <th className="px-4 py-3 text-left font-bold">Producto</th>
+                                    <th className="px-4 py-3 text-left font-bold">SKU</th>
+                                    <th className="px-4 py-3 text-left font-bold">Variante</th>
+                                    <th className="px-4 py-3 text-center font-bold">Stock actual</th>
+                                    <th className="px-4 py-3 text-center font-bold w-32">Cantidad a sumar</th>
+                                    <th className="px-4 py-3 text-center font-bold">Stock final</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reviewRows.map((r) => {
+                                    const qty = parseInt(r.inputQty, 10) || 0;
+                                    const stockFinal = r.stock + qty;
+                                    return (
+                                        <tr key={`rev-${r.id_variante_producto}`} className="border-b border-border/30 hover:bg-muted/10 transition-colors">
+                                            <td className="px-4 py-3 font-semibold text-foreground/80">{r.producto}</td>
+                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.sku}</td>
+                                            <td className="px-4 py-3 text-xs text-foreground/80">{formatVariantLabel(r.variante)}</td>
+                                            <td className="px-4 py-3 text-center font-semibold text-foreground/60">{r.stock}</td>
+                                            <td className="px-3 py-2 text-center">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    value={r.inputQty}
+                                                    onChange={e => handleReviewQtyChange(r.id_variante_producto, e.target.value)}
+                                                    className="w-24 text-center px-2 py-1 rounded-lg border border-emerald-500/60 bg-background/60 text-emerald-600 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className="font-bold text-sm text-emerald-500">
+                                                    {stockFinal}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </CardContent>
+                    <div className="border-t border-border/30 bg-card/30 px-6 py-4 flex items-center justify-between">
+                        <Button 
+                            variant="outline" 
+                            onClick={handleCancelReview} 
+                            disabled={saving}
+                            className="font-semibold text-xs border-foreground/15 hover:border-primary/40"
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Volver a Editar
+                        </Button>
+                        <Button 
+                            onClick={handleSave} 
+                            disabled={saving || reviewRows.every(r => !(parseInt(r.inputQty, 10) > 0))}
+                            className="gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20"
+                        >
+                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {saving ? 'Procesando...' : 'Confirmar e Ingresar Lote'}
+                        </Button>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
@@ -361,42 +522,46 @@ export const BatchStockEntry: React.FC = () => {
             </Card>
 
             {/* Batch config + save bar */}
-            <div className="flex flex-wrap items-end gap-4">
-                <div className="space-y-1 flex-1 min-w-[180px]">
-                    <label className="text-xs font-semibold text-foreground/70">Motivo del ingreso</label>
-                    <input
-                        type="text"
-                        value={globalMotivo}
-                        onChange={e => setGlobalMotivo(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="Ingreso por lote"
-                    />
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 bg-card/30 border border-foreground/10 p-4 rounded-xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 w-full">
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground/70">Motivo del ingreso</label>
+                        <input
+                            type="text"
+                            value={globalMotivo}
+                            onChange={e => setGlobalMotivo(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="Ingreso por lote"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground/70">Referencia (opcional)</label>
+                        <input
+                            type="text"
+                            value={globalRef}
+                            onChange={e => setGlobalRef(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="Nro. factura, orden..."
+                        />
+                    </div>
                 </div>
-                <div className="space-y-1 flex-1 min-w-[140px]">
-                    <label className="text-xs font-semibold text-foreground/70">Referencia (opcional)</label>
-                    <input
-                        type="text"
-                        value={globalRef}
-                        onChange={e => setGlobalRef(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="Nro. factura, orden..."
-                    />
-                </div>
-                <div className="flex items-center gap-3 pb-0.5">
-                    <span className="text-sm font-semibold text-foreground/60">
+                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full xl:w-auto pt-2 xl:pt-0 border-t xl:border-t-0 border-foreground/10">
+                    <span className="text-xs sm:text-sm font-semibold text-foreground/60">
                         {dirtyRows.length > 0 ? (
                             <span className="text-primary font-bold">{dirtyRows.length} variante{dirtyRows.length > 1 ? 's' : ''} con cambios</span>
                         ) : 'Sin cambios pendientes'}
                     </span>
-                    <Button variant="outline" size="sm" onClick={handleReset} disabled={dirtyRows.length === 0 || saving}
-                        className="h-9 gap-1.5 text-xs font-semibold border-foreground/15 hover:border-primary/40">
-                        <RotateCcw className="h-3.5 w-3.5" /> Limpiar
-                    </Button>
-                    <Button onClick={handleSave} disabled={dirtyRows.length === 0 || saving}
-                        className="h-9 gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20">
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        {saving ? 'Guardando...' : `Guardar ${dirtyRows.length > 0 ? `(${dirtyRows.length})` : ''}`}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleReset} disabled={dirtyRows.length === 0 || saving}
+                            className="h-9 gap-1.5 text-xs font-semibold border-foreground/15 hover:border-primary/40">
+                            <RotateCcw className="h-3.5 w-3.5" /> Limpiar
+                        </Button>
+                        <Button onClick={handleStartReview} disabled={dirtyRows.length === 0 || saving}
+                            className="h-9 gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20">
+                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {saving ? 'Revisando...' : `Revisar Lote ${dirtyRows.length > 0 ? `(${dirtyRows.length})` : ''}`}
+                        </Button>
+                    </div>
                 </div>
             </div>
 

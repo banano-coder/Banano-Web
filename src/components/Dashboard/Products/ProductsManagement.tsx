@@ -46,14 +46,14 @@ export const ProductsManagement = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="bg-card/60 backdrop-blur-md border border-foreground/10 p-1 shadow-sm">
-                    <TabsTrigger value="inventory" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
+                <TabsList className="bg-card/60 backdrop-blur-md border border-foreground/10 p-1 shadow-sm w-full flex overflow-x-auto justify-start h-auto flex-nowrap whitespace-nowrap gap-1 no-scrollbar scrollbar-none">
+                    <TabsTrigger value="inventory" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold shrink-0">
                         <Box className="h-4 w-4" /> Productos
                     </TabsTrigger>
-                    <TabsTrigger value="taxonomies" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
+                    <TabsTrigger value="taxonomies" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold shrink-0">
                         <Tags className="h-4 w-4" /> Categorías y Marcas
                     </TabsTrigger>
-                    <TabsTrigger value="bulk" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold relative">
+                    <TabsTrigger value="bulk" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold relative shrink-0">
                         <UploadCloud className="h-4 w-4" /> Carga Masiva
                         {pendingCount > 0 && (
                             <span className="absolute -top-1 -right-1 flex h-3 w-3">
@@ -62,10 +62,10 @@ export const ProductsManagement = () => {
                             </span>
                         )}
                     </TabsTrigger>
-                    <TabsTrigger value="batch-stock" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
+                    <TabsTrigger value="batch-stock" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold shrink-0">
                         <PackagePlus className="h-4 w-4" /> Ingreso por Lote
                     </TabsTrigger>
-                    <TabsTrigger value="labels" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold">
+                    <TabsTrigger value="labels" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold shrink-0">
                         <Barcode className="h-4 w-4" /> Generar Etiquetas
                     </TabsTrigger>
                 </TabsList>

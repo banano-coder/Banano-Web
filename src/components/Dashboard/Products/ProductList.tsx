@@ -49,6 +49,7 @@ export const ProductList = () => {
     const [selectedBrand, setSelectedBrand] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [selectedWarehouse, setSelectedWarehouse] = useState('');
+    const [selectedStock, setSelectedStock] = useState('');
 
     const fetchFilters = async () => {
         try {
@@ -95,6 +96,7 @@ export const ProductList = () => {
             if (selectedBrand) queryParams.append('id_marca', selectedBrand);
             if (selectedStatus) queryParams.append('status', selectedStatus);
             if (selectedWarehouse) queryParams.append('id_almacen', selectedWarehouse);
+            if (selectedStock) queryParams.append('stock_status', selectedStock);
             queryParams.append('_t', Date.now().toString());
 
             const url = `${API_ENDPOINTS.PRODUCTS.LIST}?${queryParams.toString()}`;
@@ -122,7 +124,7 @@ export const ProductList = () => {
         }, 400);
 
         return () => clearTimeout(timer);
-    }, [searchTerm, selectedCategory, selectedBrand, selectedStatus, selectedWarehouse]);
+    }, [searchTerm, selectedCategory, selectedBrand, selectedStatus, selectedWarehouse, selectedStock]);
 
     // Fetch on page change
     useEffect(() => {
@@ -222,6 +224,17 @@ export const ProductList = () => {
                         <option value="borrador">Borradores (Revisión)</option>
                     </select>
 
+                    {/* Stock Status Filter */}
+                    <select
+                        value={selectedStock}
+                        onChange={(e) => setSelectedStock(e.target.value)}
+                        className="flex h-10 w-full sm:w-44 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <option value="">Todos los Stocks</option>
+                        <option value="positivo">Stock Positivo</option>
+                        <option value="cero">Stock en 0</option>
+                    </select>
+
                     {/* Warehouse Filter */}
                     <select
                         value={selectedWarehouse}
@@ -237,7 +250,7 @@ export const ProductList = () => {
                     </select>
 
                     {/* Reset Button */}
-                    {(selectedCategory || selectedBrand || selectedStatus || selectedWarehouse || searchTerm) && (
+                    {(selectedCategory || selectedBrand || selectedStatus || selectedWarehouse || selectedStock || searchTerm) && (
                         <Button
                             variant="ghost"
                             onClick={() => {
@@ -245,6 +258,7 @@ export const ProductList = () => {
                                 setSelectedBrand('');
                                 setSelectedStatus('');
                                 setSelectedWarehouse('');
+                                setSelectedStock('');
                                 setSearchTerm('');
                             }}
                             className="h-10 px-3 text-xs text-red-500 hover:text-red-700 hover:bg-red-50/50"

@@ -12,7 +12,7 @@ import { AuthGuard } from "../../components/Dashboard/AuthGuard";
     <Header />
     <div class="flex flex-1">
       <Sidebar />
-      <main class="flex-1 p-6 md:p-8">
+      <main class="flex-1 min-w-0 p-6 md:p-8">
         <AuthGuard client:load allowedRoles={['admin', 'manager']} panelName="Dinero y Caja">
           <MoneyManagement client:load />  
         </AuthGuard>

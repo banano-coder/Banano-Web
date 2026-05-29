@@ -82,9 +82,13 @@ export const ProductGrid: React.FC = () => {
       try {
         // Construct Query Params
         const params = new URLSearchParams();
-        params.append('limit', '100'); // Fetch more to allow client filtering if backend doesn't support it yet
+        params.append('limit', '100'); // Fetch up to 100 matching products from the database
 
         if (searchTerm) params.append('q', searchTerm);
+        if (selectedCategory.id !== 'all') params.append('category', selectedCategory.id);
+        if (selectedBrand.id !== 'all') params.append('brand', selectedBrand.id);
+        params.append('min', String(priceRange.min));
+        params.append('max', String(priceRange.max));
 
         // Mapping Sorting
         if (orderBy === 'price-asc') {
@@ -140,9 +144,9 @@ export const ProductGrid: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, orderBy]);
+  }, [searchTerm, orderBy, selectedCategory.id, selectedBrand.id, priceRange.min, priceRange.max]);
 
-  // Client-Side Filter for Categories, Brands
+  // Client-Side Filter for Categories, Brands fallback
   const filteredProducts = useMemo(() => {
     return products.map(p => {
       // Lookup real brand name from the brands list if brand is generic
@@ -153,14 +157,8 @@ export const ProductGrid: React.FC = () => {
         }
       }
       return p;
-    }).filter(product => {
-      const matchCategory = selectedCategory.id === 'all' || product.categoryId === selectedCategory.id;
-      const matchBrand = selectedBrand.id === 'all' || product.brandId === selectedBrand.id;
-      const matchPrice = product.price >= priceRange.min && product.price <= priceRange.max;
-
-      return matchCategory && matchBrand && matchPrice;
     });
-  }, [products, selectedCategory, selectedBrand, priceRange, brands]);
+  }, [products, brands]);
 
 
   return (
