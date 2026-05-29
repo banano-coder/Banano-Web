@@ -57,6 +57,14 @@ export const API_ENDPOINTS = {
     MOVIMIENTOS: `/api/money/movimientos`,
     RESUMEN: `/api/money/resumen`
   },
+  EXPENSES: {
+    LIST: `/api/expenses`,
+    CREATE: `/api/expenses`,
+    DELETE: (id: string | number) => `/api/expenses/${id}`,
+    CATEGORIES: `/api/expenses/categories`,
+    CATEGORY_ITEM: (id: string | number) => `/api/expenses/categories/${id}`,
+    WEEKLY_SUMMARY: `/api/expenses/weekly-summary`
+  },
   POS: {
     CHECKOUT: `/api/pos/checkout`
   }

@@ -33,6 +33,7 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
     const [selectedWarehouseMove, setSelectedWarehouseMove] = useState<string>('');
     const [dialogStocks, setDialogStocks] = useState<Record<number, number>>({});
     const [dialogStocksLoading, setDialogStocksLoading] = useState(false);
+    const [isVendedor, setIsVendedor] = useState(false);
 
     // Movement Dialog
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -109,6 +110,18 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
 
     useEffect(() => {
         fetchWarehouses();
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                if (user && Array.isArray(user.roles)) {
+                    const rolesLower = user.roles.map((r: string) => r.toLowerCase());
+                    setIsVendedor(rolesLower.includes('vendedor'));
+                }
+            } catch (e) {
+                console.error("Error parsing user roles in ProductInventoryTab", e);
+            }
+        }
     }, []);
 
     useEffect(() => {
@@ -311,8 +324,8 @@ export const ProductInventoryTab: React.FC<ProductInventoryTabProps> = ({ produc
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="entrada">Entrada (+)</SelectItem>
-                                        <SelectItem value="salida">Salida (-)</SelectItem>
-                                        <SelectItem value="ajuste">Ajuste (Manual)</SelectItem>
+                                        {!isVendedor && <SelectItem value="salida">Salida (-)</SelectItem>}
+                                        {!isVendedor && <SelectItem value="ajuste">Ajuste (Manual)</SelectItem>}
                                     </SelectContent>
                                 </Select>
                             </div>

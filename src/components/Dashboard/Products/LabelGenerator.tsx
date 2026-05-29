@@ -433,118 +433,131 @@ export const LabelGenerator: React.FC = () => {
                             margin: 0;
                         }
                         body {
-                            margin: 0;
-                            padding: 0;
-                            font-family: Arial, sans-serif;
-                            line-height: 1.1;
-                            -webkit-print-color-adjust: exact;
-                        }
-                        .label-page {
-                            width: ${labelHeight}mm;
-                            height: ${labelWidth}mm;
-                            box-sizing: border-box;
-                            background: white;
-                            color: black;
-                            overflow: hidden;
-                            page-break-after: always;
-                            position: relative;
-                        }
-                        .label-wrapper {
-                            position: absolute;
-                            left: 50%;
-                            top: 50%;
-                            width: ${labelWidth}mm;
-                            height: ${labelHeight}mm;
-                            display: flex;
-                            box-sizing: border-box;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            text-align: center;
-                            padding: 1.2mm 1.5mm;
-                        }
-                        
-                        /* VERTICAL LAYOUT (ROTATED STACKED) */
-                        .label-page.vertical .label-wrapper {
-                            transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
-                            transform-origin: center center;
-                        }
-                        
-                        /* HORIZONTAL LAYOUT */
-                        .label-page.horizontal .label-wrapper {
-                            transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
-                            transform-origin: center center;
-                        }
-                        
-                        .label-header {
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 1.5mm;
-                            height: 8.5mm;
-                            margin-bottom: 1mm;
-                        }
-                        .shop-logo {
-                            height: 8.5mm;
-                            width: auto;
-                            object-fit: contain;
-                        }
-                        .shop-name {
-                            font-size: 16px;
-                            font-weight: 900;
-                            letter-spacing: 0.5px;
-                        }
-                        .barcode-container {
-                            width: 100%;
-                            height: 8mm;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                        }
-                        .barcode-container svg {
-                            max-width: 95%;
-                            height: 100%;
-                        }
-                        .barcode-text {
-                            font-size: 11px;
-                            font-weight: bold;
-                            letter-spacing: 1.5px;
-                            margin-top: 0.5mm;
-                            margin-bottom: 1mm;
-                        }
-                        .product-title {
-                            font-size: 14px;
-                            font-weight: 900;
-                            text-transform: uppercase;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            width: 100%;
-                            margin-bottom: 1.5mm;
-                            line-height: 1.2;
-                        }
-                        .price-display {
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            width: 100%;
-                            box-sizing: border-box;
-                            padding: 0 2mm;
-                            border-top: 0.3mm dashed #aaa;
-                            padding-top: 1mm;
-                        }
-                        .price-label {
-                            font-size: 12px;
-                            color: #555;
-                            font-weight: bold;
-                            text-transform: uppercase;
-                        }
-                        .price-amount {
-                            font-size: 22px;
-                            font-weight: 900;
-                            color: black;
-                            line-height: 1;
-                        }
+                             margin: 0;
+                             padding: 0;
+                             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                             line-height: 1.1;
+                             -webkit-print-color-adjust: exact;
+                         }
+                         .label-page {
+                             width: ${labelHeight}mm;
+                             height: ${labelWidth}mm;
+                             box-sizing: border-box;
+                             background: white;
+                             color: black;
+                             overflow: hidden;
+                             page-break-after: always;
+                             position: relative;
+                         }
+                         .label-wrapper {
+                             position: absolute;
+                             left: 50%;
+                             top: 50%;
+                             width: ${labelWidth}mm;
+                             height: ${labelHeight}mm;
+                             display: flex;
+                             box-sizing: border-box;
+                             flex-direction: column;
+                             align-items: center;
+                             justify-content: center;
+                             text-align: center;
+                             padding: 1.2mm 1.5mm;
+                         }
+                         
+                         /* VERTICAL LAYOUT (ROTATED STACKED) */
+                         .label-page.vertical .label-wrapper {
+                             transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
+                             transform-origin: center center;
+                         }
+                         
+                         /* HORIZONTAL LAYOUT */
+                         .label-page.horizontal .label-wrapper {
+                             transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
+                             transform-origin: center center;
+                         }
+                         
+                         .label-header {
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              gap: 1.5mm;
+                              height: 8.5mm;
+                              margin-bottom: 0.8mm;
+                              flex-shrink: 0;
+                          }
+                          .shop-logo {
+                              height: 8.5mm;
+                              width: auto;
+                              object-fit: contain;
+                          }
+                          .shop-name {
+                              font-size: 15px;
+                              font-weight: 800;
+                              color: #000000;
+                              letter-spacing: 1px;
+                          }
+                          .barcode-container {
+                              width: 100%;
+                              height: 8mm;
+                              display: flex;
+                              justify-content: center;
+                              align-items: center;
+                              flex-shrink: 0;
+                          }
+                          .barcode-container svg {
+                              max-width: 95%;
+                              height: 100%;
+                          }
+                          .barcode-text {
+                              font-family: Monaco, Consolas, "Courier New", monospace;
+                              font-size: 10px;
+                              font-weight: 500;
+                              color: #000000;
+                              letter-spacing: 2px;
+                              margin-top: 1.2mm;
+                              margin-bottom: 0.8mm;
+                              text-transform: uppercase;
+                              flex-shrink: 0;
+                          }
+                          .product-title {
+                              font-size: 13px;
+                              font-weight: 700;
+                              color: #000000;
+                              text-transform: uppercase;
+                              white-space: nowrap;
+                              overflow: hidden;
+                              text-overflow: ellipsis;
+                              width: 100%;
+                              margin-bottom: 1.5mm;
+                              line-height: 1.2;
+                              letter-spacing: 0.4px;
+                              flex-shrink: 0;
+                          }
+                          .price-display {
+                              display: flex;
+                              align-items: center;
+                              justify-content: space-between;
+                              width: 100%;
+                              box-sizing: border-box;
+                              padding: 0 1.5mm;
+                              border-top: 0.25mm dashed #000000;
+                              padding-top: 1.5mm;
+                              margin-top: 0.5mm;
+                              flex-shrink: 0;
+                          }
+                          .price-label {
+                              font-size: 11px;
+                              color: #000000;
+                              font-weight: 700;
+                              text-transform: uppercase;
+                              letter-spacing: 0.8px;
+                          }
+                          .price-amount {
+                              font-size: 20px;
+                              font-weight: 800;
+                              color: #000000;
+                              line-height: 1;
+                          }
                     </style>
                 </head>
                 <body>
@@ -577,7 +590,7 @@ export const LabelGenerator: React.FC = () => {
             
             {/* ════════════════ Column 1: Config & Selectors ════════════════ */}
             <div className="space-y-6 xl:col-span-2">
-                <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm">
+                <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm relative z-20">
                     <CardHeader className="pb-4">
                         <CardTitle className="flex items-center gap-2 text-foreground font-bold">
                             <Tag className="h-5 w-5 text-primary" /> Generador de Etiquetas
@@ -736,7 +749,7 @@ export const LabelGenerator: React.FC = () => {
 
                 {/* Variants Table Card */}
                 {selectedProductId && (
-                    <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm">
+                    <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm relative z-10">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-lg font-bold text-foreground">Variantes Disponibles</CardTitle>
                             <CardDescription>
@@ -795,7 +808,7 @@ export const LabelGenerator: React.FC = () => {
 
                 {/* Queue Table Card */}
                 {selectedLabels.length > 0 && (
-                    <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm">
+                    <Card className="bg-card/70 border border-border/80 shadow-md backdrop-blur-sm relative z-10">
                         <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <CardTitle className="text-lg font-bold text-foreground">Cola de Impresión</CardTitle>
@@ -998,7 +1011,7 @@ export const LabelGenerator: React.FC = () => {
                                         style={{ 
                                             width: `${labelWidth * 5}px`, // Always match physical dimensions
                                             height: `${labelHeight * 5}px`, 
-                                            fontFamily: 'Arial, sans-serif'
+                                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                                         }}
                                     >
                                         <div 
@@ -1023,7 +1036,7 @@ export const LabelGenerator: React.FC = () => {
                                             {/* Header */}
                                             <div className="flex items-center justify-center gap-2 w-full h-[20%] shrink-0 mb-1">
                                                 <img src="/logo_original.png" alt="Logo" className="h-full w-auto object-contain" />
-                                                <span className="text-[16px] font-black tracking-wide text-black leading-none">
+                                                <span className="text-[15px] font-extrabold tracking-wider text-gray-900 leading-none">
                                                     BANANO
                                                 </span>
                                             </div>
@@ -1032,17 +1045,17 @@ export const LabelGenerator: React.FC = () => {
                                                 <Barcode value={previewItem.sku} height={32} width={130} />
                                             </div>
                                             {/* Barcode Value */}
-                                            <div className="text-[10px] font-bold text-center font-mono mt-0.5 mb-0.5 leading-none tracking-wider">
+                                            <div className="text-[10px] font-medium text-center font-mono mt-1.5 mb-1 leading-none tracking-[0.2em] text-gray-600 uppercase shrink-0">
                                                 {previewItem.sku}
                                             </div>
                                             {/* Product Title */}
-                                            <div className="text-[13px] font-extrabold uppercase text-center truncate w-full mb-1 leading-none text-black">
+                                            <div className="text-[13px] font-bold uppercase text-center truncate w-full mb-1.5 leading-none text-gray-900 tracking-wide shrink-0">
                                                 {titleFull}
                                             </div>
                                             {/* Prices block */}
-                                            <div className="w-full mt-1 border-t border-dashed border-gray-300 pt-1 flex justify-between items-center px-2 font-bold box-border">
-                                                <span className="text-[11px] font-bold text-gray-600 uppercase">PRECIO:</span>
-                                                <span className="text-[20px] font-black text-black leading-none">
+                                            <div className="w-full mt-1 border-t border-dashed border-gray-300 pt-1.5 flex justify-between items-center px-1.5 font-bold box-border shrink-0">
+                                                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">PRECIO:</span>
+                                                <span className="text-[20px] font-extrabold text-gray-950 leading-none">
                                                     {currencySign}{previewItem.price.toFixed(2)}
                                                 </span>
                                             </div>

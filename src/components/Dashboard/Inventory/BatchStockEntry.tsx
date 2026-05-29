@@ -45,6 +45,7 @@ export const BatchStockEntry: React.FC = () => {
     // Warehouse / filter state
     const [warehouses, setWarehouses] = useState<Almacen[]>([]);
     const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('');
+    const [isVendedor, setIsVendedor] = useState(false);
     const [categories, setCategories] = useState<Categoria[]>([]);
     const [brands, setBrands] = useState<Marca[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set());
@@ -72,6 +73,25 @@ export const BatchStockEntry: React.FC = () => {
     useEffect(() => {
         const init = async () => {
             try {
+                let seller = false;
+                let userWhId = '';
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    try {
+                        const user = JSON.parse(storedUser);
+                        if (user && Array.isArray(user.roles)) {
+                            const rolesLower = user.roles.map((r: string) => r.toLowerCase());
+                            seller = rolesLower.includes('vendedor');
+                            setIsVendedor(seller);
+                            if (seller && user.id_almacen) {
+                                userWhId = String(user.id_almacen);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing user roles in BatchStockEntry init', e);
+                    }
+                }
+
                 const [wRes, cRes, bRes] = await Promise.all([
                     FetchData<{ data: Almacen[] } | Almacen[]>(`${API_ENDPOINTS.ALMACENES.LIST}?activo=true`),
                     FetchData<any>(API_ENDPOINTS.CATEGORIES.LIST),
@@ -80,7 +100,12 @@ export const BatchStockEntry: React.FC = () => {
 
                 const wList: Almacen[] = Array.isArray(wRes) ? wRes : (wRes as any)?.data || [];
                 setWarehouses(wList);
-                if (wList.length > 0) setSelectedWarehouseId(String(wList[0].id_almacen));
+
+                if (seller && userWhId) {
+                    setSelectedWarehouseId(userWhId);
+                } else if (wList.length > 0) {
+                    setSelectedWarehouseId(String(wList[0].id_almacen));
+                }
 
                 const cList: Categoria[] = Array.isArray(cRes) ? cRes : cRes?.data || [];
                 setCategories(cList.filter((c: any) => c.activo !== false));
@@ -443,7 +468,8 @@ export const BatchStockEntry: React.FC = () => {
                                 <select
                                     value={selectedWarehouseId}
                                     onChange={e => setSelectedWarehouseId(e.target.value)}
-                                    className="min-w-[200px] px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium shadow-sm"
+                                    disabled={isVendedor}
+                                    className="min-w-[200px] px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium shadow-sm disabled:opacity-80 disabled:cursor-not-allowed"
                                 >
                                     {warehouses.map(w => (
                                         <option key={w.id_almacen} value={String(w.id_almacen)} className="bg-card text-foreground">{w.nombre}</option>
