@@ -15,7 +15,8 @@ interface ParsedVariant {
   descripcion: string;
   costo: number;
   precio_lista: number;
-  stock: number;
+  stock?: number;
+  stock_sucursales?: Record<number, number>;
 }
 
 interface ParsedProduct {
@@ -168,25 +169,15 @@ export const BulkProductUpload = () => {
             <p className="text-muted-foreground mt-4 max-w-md mx-auto">
               Sube tu inventario para procesar jerarquías. Si dejas la celda de nombre vacía, el sistema asumirá que es otra variante del producto anterior.
             </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-4">
+            <div className="mt-4 flex justify-center">
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-primary border-primary/20 hover:bg-primary/5 font-semibold"
+                className="text-green-500 border-green-500/20 hover:bg-green-500/5 font-semibold shadow-sm"
                 asChild
               >
-                <a href="/templates/plantilla_productos.csv" download="plantilla_productos.csv">
-                  <Download className="h-4 w-4 mr-2" /> Plantilla CSV
-                </a>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-green-500 border-green-500/20 hover:bg-green-500/5 font-semibold"
-                asChild
-              >
-                <a href="/templates/plantilla_productos.xlsx" download="plantilla_productos.xlsx">
-                  <Download className="h-4 w-4 mr-2" /> Plantilla Excel
+                <a href="/api/bulk/template" download="plantilla_productos.xlsx">
+                  <Download className="h-4 w-4 mr-2 animate-pulse" /> Descargar Plantilla Excel (Multisucursal)
                 </a>
               </Button>
             </div>
@@ -239,7 +230,7 @@ export const BulkProductUpload = () => {
           <div className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
             <div className="p-4 rounded-lg bg-white/5 border border-white/5">
               <h4 className="font-bold text-sm text-primary mb-1">Columnas Requeridas</h4>
-              <p className="text-xs text-muted-foreground">codigo (opcional), nombre, descripcion (atributo variante), costo, precio_lista, stock, categoria_nombre, marca_nombre (opcional)</p>
+              <p className="text-xs text-muted-foreground">codigo (opcional), nombre, descripcion (atributo variante), costo, precio_lista, [Nombres de Sucursales], categoria_nombre, marca_nombre (opcional)</p>
             </div>
             <div className="p-4 rounded-lg bg-white/5 border border-white/5">
               <h4 className="font-bold text-sm text-primary mb-1">Mapeo Completo</h4>

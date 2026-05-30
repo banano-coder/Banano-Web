@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
-import type { Product, Variant } from '@/types';
+import type { Product, Variant, Almacen } from '@/types';
 import { Loader2, Plus, Trash, Edit, ArrowRightLeft, Copy, AlertTriangle, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea'; // For JSON/attributes if needed
@@ -59,33 +59,104 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
     const [saving, setSaving] = useState(false);
     const [registeringStock, setRegisteringStock] = useState(false);
     const [quickStock, setQuickStock] = useState({
-        cantidad: '',
         tipo: 'entrada',
-        motivo: ''
+        motivo: '',
+        cantidades: {} as Record<number, string>
     });
 
+    const [warehouseStocks, setWarehouseStocks] = useState<{ id_almacen: number; nombre: string; stock: number }[]>([]);
+    const [loadingStocks, setLoadingStocks] = useState(false);
+    const [isVendedor, setIsVendedor] = useState(false);
+    const [userWarehouseId, setUserWarehouseId] = useState<string | null>(null);
+
+    const handleQuantityChange = (warehouseId: number, val: string) => {
+        setQuickStock(prev => ({
+            ...prev,
+            cantidades: {
+                ...prev.cantidades,
+                [warehouseId]: val
+            }
+        }));
+    };
+
+    const fetchWarehouseStocks = async (variantId: number) => {
+        setLoadingStocks(true);
+        try {
+            const res = await FetchData<any>(`${API_ENDPOINTS.INVENTORY.STOCK(variantId)}?detallado=true`);
+            if (res && Array.isArray(res.stocks)) {
+                setWarehouseStocks(res.stocks);
+            }
+        } catch (e) {
+            console.error("Error fetching detailed stock", e);
+        } finally {
+            setLoadingStocks(false);
+        }
+    };
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                if (user && Array.isArray(user.roles)) {
+                    const rolesLower = user.roles.map((r: string) => r.toLowerCase());
+                    const seller = rolesLower.includes('vendedor');
+                    setIsVendedor(seller);
+                    if (seller && user.id_almacen) {
+                        setUserWarehouseId(String(user.id_almacen));
+                    }
+                }
+            } catch (e) {
+                console.error("Error parsing user roles in ProductVariantsTab", e);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (editingVariant) {
+            fetchWarehouseStocks(editingVariant.id_variante_producto);
+        } else {
+            setWarehouseStocks([]);
+        }
+    }, [editingVariant]);
+
+    useEffect(() => {
+        if (isVendedor) {
+            setQuickStock(prev => ({ ...prev, tipo: 'entrada' }));
+        }
+    }, [isVendedor]);
+
     const handleRegisterQuickStock = async () => {
-        if (!editingVariant || !quickStock.cantidad) return;
-        const cantNum = parseInt(quickStock.cantidad);
-        if (isNaN(cantNum) || cantNum <= 0) {
-            setError("La cantidad debe ser un número mayor a cero.");
+        if (!editingVariant) return;
+
+        const entries = Object.entries(quickStock.cantidades).filter(([_, qty]) => {
+            const num = parseInt(qty);
+            return !isNaN(num) && num > 0;
+        });
+
+        if (entries.length === 0) {
+            setError("Debes ingresar al menos una cantidad válida mayor a cero.");
             return;
         }
 
         setRegisteringStock(true);
         setError(null);
         try {
-            await FetchData(API_ENDPOINTS.INVENTORY.MOVEMENTS, 'POST', {
-                body: {
-                    id_variante_producto: editingVariant.id_variante_producto,
-                    tipo: quickStock.tipo,
-                    cantidad: parseInt(quickStock.cantidad),
-                    motivo: quickStock.motivo || 'Ajuste rápido desde edición'
-                }
+            const promises = entries.map(([whId, qty]) => {
+                return FetchData(API_ENDPOINTS.INVENTORY.MOVEMENTS, 'POST', {
+                    body: {
+                        id_variante_producto: editingVariant.id_variante_producto,
+                        id_almacen: parseInt(whId),
+                        tipo: quickStock.tipo,
+                        cantidad: parseInt(qty),
+                        motivo: quickStock.motivo || 'Ajuste rápido desde edición'
+                    }
+                });
             });
-            // Reset stock form
-            setQuickStock({ cantidad: '', tipo: 'entrada', motivo: '' });
-            // Refresh to see new stock
+
+            await Promise.all(promises);
+
+            setQuickStock(prev => ({ ...prev, cantidades: {}, motivo: '' }));
             await fetchVariants();
             setIsDialogOpen(false);
         } catch (err: any) {
@@ -423,68 +494,102 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                         </form>
 
                         {/* QUICK STOCK SECTION (Only for existing variants) */}
-                        {editingVariant && (
-                            <div className="border-t pt-4 space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
-                                        <ArrowRightLeft className="h-4 w-4" /> Gestión Rápida de Stock
-                                    </h4>
-                                    <Badge variant="outline" className="font-mono">
-                                        Actual: {editingVariant.stock_actual ?? 0}
-                                    </Badge>
-                                </div>
+                        {editingVariant && (() => {
+                            const hasAnyQuantity = Object.values(quickStock.cantidades).some(qty => {
+                                const num = parseInt(qty);
+                                return !isNaN(num) && num > 0;
+                            });
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label className="text-xs">Tipo</Label>
-                                        <Select
-                                            value={quickStock.tipo}
-                                            onValueChange={(val: any) => setQuickStock({ ...quickStock, tipo: val })}
-                                        >
-                                            <SelectTrigger className="h-8 text-xs">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="entrada">Entrada (+)</SelectItem>
-                                                <SelectItem value="salida">Salida (-)</SelectItem>
-                                                <SelectItem value="ajuste">Ajuste (Manual)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                            return (
+                                <div className="border-t pt-4 space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
+                                            <ArrowRightLeft className="h-4 w-4" /> Gestión Rápida de Stock
+                                        </h4>
+                                        <Badge variant="outline" className="font-mono">
+                                            Actual: {editingVariant.stock_actual ?? 0}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div className="grid gap-1.5">
+                                            <Label className="text-xs">Tipo de Movimiento</Label>
+                                            <Select
+                                                value={quickStock.tipo}
+                                                onValueChange={(val: any) => setQuickStock({ ...quickStock, tipo: val })}
+                                                disabled={isVendedor}
+                                            >
+                                                <SelectTrigger className="h-8 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="entrada">Entrada (+)</SelectItem>
+                                                    {!isVendedor && <SelectItem value="salida">Salida (-)</SelectItem>}
+                                                    {!isVendedor && <SelectItem value="ajuste">Ajuste (Manual)</SelectItem>}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2 border border-border/60 rounded-lg p-3 bg-muted/20">
+                                            <Label className="text-xs font-bold text-foreground/80">Cantidad por Sede / Almacén</Label>
+                                            
+                                            {loadingStocks ? (
+                                                <div className="text-xs text-muted-foreground flex items-center gap-2 py-2">
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando stock por sede...
+                                                </div>
+                                            ) : warehouseStocks.length === 0 ? (
+                                                <div className="text-xs text-muted-foreground italic py-1">No hay sedes disponibles.</div>
+                                            ) : (
+                                                <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                                                    {warehouseStocks.map((wh) => {
+                                                        const isDisabled = isVendedor && userWarehouseId !== String(wh.id_almacen);
+                                                        return (
+                                                            <div key={wh.id_almacen} className="flex items-center justify-between gap-3 text-xs py-1 border-b border-border/40 last:border-0">
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="font-semibold truncate text-foreground/90">{wh.nombre}</p>
+                                                                    <p className="text-[10px] text-muted-foreground">Stock actual: {wh.stock}</p>
+                                                                </div>
+                                                                <div className="w-24 shrink-0">
+                                                                    <Input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        disabled={isDisabled}
+                                                                        placeholder={isDisabled ? "Bloqueado" : "Ej: 10"}
+                                                                        className="h-8 text-xs font-semibold"
+                                                                        value={quickStock.cantidades[wh.id_almacen] || ''}
+                                                                        onChange={(e) => handleQuantityChange(wh.id_almacen, e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label className="text-xs">Cantidad</Label>
+                                        <Label className="text-xs">Motivo / Referencia</Label>
                                         <Input
-                                            type="number"
-                                            min="1"
                                             className="h-8 text-xs"
-                                            value={quickStock.cantidad}
-                                            onChange={e => setQuickStock({ ...quickStock, cantidad: e.target.value })}
-                                            placeholder="Ej: 10"
+                                            value={quickStock.motivo}
+                                            onChange={e => setQuickStock({ ...quickStock, motivo: e.target.value })}
+                                            placeholder="Ej: Ajuste inicial, Entrada pedido..."
                                         />
                                     </div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="secondary"
+                                        className="w-full h-8 text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20"
+                                        disabled={registeringStock || !hasAnyQuantity}
+                                        onClick={handleRegisterQuickStock}
+                                    >
+                                        {registeringStock ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Plus className="mr-2 h-3 w-3" />}
+                                        Registrar Stock
+                                    </Button>
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label className="text-xs">Motivo / Referencia</Label>
-                                    <Input
-                                        className="h-8 text-xs"
-                                        value={quickStock.motivo}
-                                        onChange={e => setQuickStock({ ...quickStock, motivo: e.target.value })}
-                                        placeholder="Ej: Ajuste inicial, Entrada pedido..."
-                                    />
-                                </div>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    className="w-full h-8 text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20"
-                                    disabled={registeringStock || !quickStock.cantidad}
-                                    onClick={handleRegisterQuickStock}
-                                >
-                                    {registeringStock ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Plus className="mr-2 h-3 w-3" />}
-                                    Registrar Stock
-                                </Button>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     <DialogFooter className="border-t pt-4">
