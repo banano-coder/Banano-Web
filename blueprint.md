@@ -28,6 +28,12 @@ This project is a static-first web application built with Astro.js. It is design
 - **Flow**: Adjusting stock creates a record in `movimiento_inventario` and updates `inventario.stock`.
 
 ## Recent Changes
+- **Seller Stock Entry in Multiple Warehouses**:
+    - Modified backend `inventario.routes.js` to allow salespeople (vendedores) to register stock entries (`entrada`) in any warehouse without sucursal restriction.
+    - Updated frontend `ProductVariantsTab.tsx` to enable the quick stock warehouse input fields for vendedores, allowing them to enter values for all locations.
+- **Logo Usage Refinement**:
+    - Restored `/public/logo_original.png` to the original transparent banana mascot image, which is used throughout the pages/system (header, hero title, footer).
+    - Kept `/public/app_icon.png` as the colorful gradient background icon, ensuring it is only used for app installation/shortcuts (like desktop icons).
 - **Multi-Warehouse Selector & Stock Queries**:
     - Created the database migration `migrate_inventory_warehouses.js` to add `id_almacen` references to `public.inventario` and `public.movimiento_inventario`, and added compound unique constraint.
     - Updated variants list endpoint query on backend to handle specific `id_almacen` or return consolidated stocks sum.
@@ -764,3 +770,22 @@ This project is a static-first web application built with Astro.js. It is design
    - Remove client-side filtering logic for categories, brands, and prices in the `filteredProducts` memoization, relying entirely on the server-filtered output instead.
 3. **Verify**:
    - Compile the frontend and verify filtering behavior on the live catalog interface.
+
+## Detailed Plan: Logo Usage Refinement
+1. **Logo Reversion**:
+   - Restore the original banana cartoon mascot (transparent background) to `public/logo_original.png` from previous commit history.
+2. **Icon Separation**:
+   - Reserve `public/app_icon.png` (with fuchsia/yellow gradient background) exclusively for PWA shortcuts and apple-touch-icon.
+3. **Verify**:
+   - Compile the frontend project with `npm run build` and inspect page layout headers and footers to ensure the transparent banana logo renders properly.
+
+## Detailed Plan: Seller Stock Entry in Multiple Warehouses
+1. **Backend Route Update**:
+   - In backend [inventario.routes.js](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/Proyectobanano/src/routes/inventario.routes.js), modify the `POST /inventario/movimientos` endpoint.
+   - Adjust the sucursal constraint check so that if `isVendedor` is `true`, it is bypassed when the movement type (`tipo`) is `'entrada'`.
+   - In the `POST /inventario/movimientos/lote` endpoint, remove the sucursal restriction entirely (since batch stock movements are exclusively `'entrada'`).
+2. **Frontend Component Update**:
+   - In frontend [ProductVariantsTab.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Products/tabs/ProductVariantsTab.tsx), change `isDisabled` calculation in the quick stock management warehouse list: set `const isDisabled = false;` instead of restricting it based on `isVendedor` and `userWarehouseId`.
+3. **Compile and Verify**:
+   - Run `npm run build` on the frontend project to verify compiling results are clean.
+

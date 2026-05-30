@@ -542,7 +542,7 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                             ) : (
                                                 <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                                                     {warehouseStocks.map((wh) => {
-                                                        const isDisabled = isVendedor && userWarehouseId !== String(wh.id_almacen);
+                                                        const isDisabled = false;
                                                         return (
                                                             <div key={wh.id_almacen} className="flex items-center justify-between gap-3 text-xs py-1 border-b border-border/40 last:border-0">
                                                                 <div className="flex-1 min-w-0">
