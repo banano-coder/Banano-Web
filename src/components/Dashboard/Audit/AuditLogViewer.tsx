@@ -15,6 +15,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AuthorizationRequests } from './AuthorizationRequests';
 
 interface AuditLog {
     id: number;
@@ -66,6 +68,7 @@ export const AuditLogViewer: React.FC = () => {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [showDates, setShowDates] = useState(false);
+    const [activeTab, setActiveTab] = useState<'logs' | 'requests'>('logs');
 
     useEffect(() => {
         const loadUsers = async () => {
@@ -329,194 +332,213 @@ export const AuditLogViewer: React.FC = () => {
     };
 
     return (
-        <div className="space-y-8">
-            <header className="flex flex-col md:flex-row justify-between items-end gap-4">
-                <div className="space-y-1">
-                    <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
-                        Registro de Movimientos
-                    </h2>
-                    <p className="text-base text-muted-foreground font-medium">
-                        Historial de actividad reciente.
-                    </p>
-                </div>
+        <div className="space-y-6">
+            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'logs' | 'requests')} className="w-full">
+                <TabsList className="bg-card/60 backdrop-blur-md border border-foreground/10 p-1 shadow-sm flex overflow-x-auto justify-start h-auto flex-nowrap whitespace-nowrap gap-1 no-scrollbar scrollbar-none mb-6">
+                    <TabsTrigger value="logs" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold shrink-0">
+                        Historial de Actividad
+                    </TabsTrigger>
+                    <TabsTrigger value="requests" className="flex items-center gap-2 text-foreground/60 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold shrink-0">
+                        Solicitudes de Autorización
+                    </TabsTrigger>
+                </TabsList>
 
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar..."
-                            className="h-10 pl-9 bg-background border-border/60 rounded-lg text-sm focus-visible:ring-primary/20"
-                            value={action}
-                            onChange={e => setAction(e.target.value)}
-                        />
+                <header className="flex flex-col md:flex-row justify-between items-end gap-4 mb-6">
+                    <div className="space-y-1">
+                        <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
+                            {activeTab === 'logs' ? 'Registro de Movimientos' : 'Solicitudes de Autorización'}
+                        </h2>
+                        <p className="text-base text-muted-foreground font-medium">
+                            {activeTab === 'logs' ? 'Historial de actividad reciente.' : 'Revisa y responde a las solicitudes de eliminación y salida de los vendedores.'}
+                        </p>
                     </div>
 
-                    <Select
-                        value={targetType || "all"}
-                        onValueChange={(val) => {
-                            setTargetType(val === "all" ? "" : val);
-                            setPage(1);
-                        }}
-                    >
-                        <SelectTrigger className="w-[140px] h-10 text-sm rounded-lg border-border/40 focus:ring-primary/20 bg-background font-semibold">
-                            <SelectValue placeholder="Filtrar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">
-                                <div className="flex items-center gap-2">
-                                    <Layers className="w-3.5 h-3.5 opacity-60" />
-                                    <span>Todo</span>
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="pedido">
-                                <div className="flex items-center gap-2">
-                                    <ShoppingCart className="w-3.5 h-3.5 text-green-500/70" />
-                                    <span>Pedidos</span>
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="usuario">
-                                <div className="flex items-center gap-2">
-                                    <User className="w-3.5 h-3.5 text-blue-500/70" />
-                                    <span>Usuarios</span>
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="producto">
-                                <div className="flex items-center gap-2">
-                                    <Package className="w-3.5 h-3.5 text-orange-500/70" />
-                                    <span>Productos</span>
-                                </div>
-                            </SelectItem>
-                            <SelectItem value="inventario">
-                                <div className="flex items-center gap-2">
-                                    <Plus className="w-3.5 h-3.5 text-purple-500/70" />
-                                    <span>Inventario</span>
-                                </div>
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-9 w-9 rounded-lg border border-border/40 transition-colors ${showDates ? 'bg-primary/5 text-primary border-primary/20' : 'text-muted-foreground'}`}
-                        onClick={() => setShowDates(!showDates)}
-                        title="Filtrar por fecha"
-                    >
-                        <Calendar className="w-3.5 h-3.5" />
-                    </Button>
-                </div>
-            </header>
-
-            {showDates && (
-                <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/15 rounded-xl border border-border/30 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex items-center gap-2.5">
-                        <span className="text-xs font-black text-muted-foreground/80 uppercase tracking-widest">Desde</span>
-                        <input
-                            type="date"
-                            className="h-9 px-3 bg-background border border-border/40 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-sm"
-                            value={dateFrom}
-                            onChange={e => setDateFrom(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                        <span className="text-xs font-black text-muted-foreground/80 uppercase tracking-widest">Hasta</span>
-                        <input
-                            type="date"
-                            className="h-9 px-3 bg-background border border-border/40 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-sm"
-                            value={dateTo}
-                            onChange={e => setDateTo(e.target.value)}
-                        />
-                    </div>
-                    {(dateFrom || dateTo) && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-3 text-[11px] font-black text-primary hover:bg-primary/5 uppercase tracking-wider"
-                            onClick={() => { setDateFrom(''); setDateTo(''); }}
-                        >
-                            Limpiar fechas
-                        </Button>
-                    )}
-                </div>
-            )}
-
-            <div className="divide-y divide-border/40 border-t border-b border-border/40">
-                {loading ? (
-                    <div className="p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary/60" />
-                        <p className="text-xs">Sincronizando...</p>
-                    </div>
-                ) : logs.length === 0 ? (
-                    <div className="p-12 text-center text-muted-foreground text-xs">
-                        No hay movimientos para mostrar.
-                    </div>
-                ) : (
-                    logs.map((log) => {
-                        const { name, initials } = getActorInfo(log);
-                        return (
-                            <div key={log.id} className="py-5 flex gap-4 items-start hover:bg-muted/10 transition-colors px-2">
-                                <Avatar className="w-9 h-9 border border-border/20 shadow-sm shrink-0">
-                                    <AvatarFallback className={`${name === 'Sistema' ? 'bg-slate-100 text-slate-400' : 'bg-primary/5 text-primary'} text-[10px] font-bold`}>
-                                        {initials}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <div className="text-base text-foreground leading-relaxed">
-                                            {renderEventText(log)}
-                                        </div>
-                                        <time className="text-xs font-bold text-muted-foreground/80 shrink-0 ml-4 tabular-nums">
-                                            {format(new Date(log.created_at), 'HH:mm')}
-                                        </time>
-                                    </div>
-
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-md text-[11px] text-muted-foreground border border-border/30 shadow-sm">
-                                            {getEventIcon(log.action)}
-                                            <span className="font-black uppercase tracking-widest leading-none">{getEventCategory(log.action)}</span>
-                                        </div>
-                                        <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
-                                            {format(new Date(log.created_at), 'dd MMM yyyy')}
-                                        </span>
-                                    </div>
-
-                                     {/* Collapsible detail view for batch stock entry */}
-                                     {log.action === 'INV_ENTRADA_LOTE' && renderBatchLoteDetails(log)}
-                                     {/* Small Preview for other inventory/prices */}
-                                     {log.action !== 'INV_ENTRADA_LOTE' && (log.action.includes('INV') || log.action.includes('PRICE')) && renderPayloadDetails(log.payload)}
-                                </div>
+                    {activeTab === 'logs' && (
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar..."
+                                    className="h-10 pl-9 bg-background border-border/60 rounded-lg text-sm focus-visible:ring-primary/20"
+                                    value={action}
+                                    onChange={e => setAction(e.target.value)}
+                                />
                             </div>
-                        );
-                    })
-                )}
-            </div>
 
-            <footer className="flex items-center justify-between py-4 border-t border-border/20">
-                <p className="text-xs font-black text-muted-foreground/60 uppercase tracking-[0.2em]">
-                    Página {page}
-                </p>
-                <div className="flex gap-3">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page === 1 || loading}
-                        className="h-9 px-5 text-xs font-black uppercase tracking-widest hover:bg-primary/5 hover:text-primary transition-all active:scale-95"
-                    >
-                        Anterior
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPage(p => p + 1)}
-                        disabled={logs.length < limit || loading}
-                        className="h-9 px-5 text-xs font-black uppercase tracking-widest hover:bg-primary/5 hover:text-primary transition-all active:scale-95"
-                    >
-                        Siguiente
-                    </Button>
-                </div>
-            </footer>
+                            <Select
+                                value={targetType || "all"}
+                                onValueChange={(val) => {
+                                    setTargetType(val === "all" ? "" : val);
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="w-[140px] h-10 text-sm rounded-lg border-border/40 focus:ring-primary/20 bg-background font-semibold">
+                                    <SelectValue placeholder="Filtrar" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        <div className="flex items-center gap-2">
+                                            <Layers className="w-3.5 h-3.5 opacity-60" />
+                                            <span>Todo</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="pedido">
+                                        <div className="flex items-center gap-2">
+                                            <ShoppingCart className="w-3.5 h-3.5 text-green-500/70" />
+                                            <span>Pedidos</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="usuario">
+                                        <div className="flex items-center gap-2">
+                                            <User className="w-3.5 h-3.5 text-blue-500/70" />
+                                            <span>Usuarios</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="producto">
+                                        <div className="flex items-center gap-2">
+                                            <Package className="w-3.5 h-3.5 text-orange-500/70" />
+                                            <span>Productos</span>
+                                        </div>
+                                    </SelectItem>
+                                    <SelectItem value="inventario">
+                                        <div className="flex items-center gap-2">
+                                            <Plus className="w-3.5 h-3.5 text-purple-500/70" />
+                                            <span>Inventario</span>
+                                        </div>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={`h-9 w-9 rounded-lg border border-border/40 transition-colors ${showDates ? 'bg-primary/5 text-primary border-primary/20' : 'text-muted-foreground'}`}
+                                onClick={() => setShowDates(!showDates)}
+                                title="Filtrar por fecha"
+                            >
+                                <Calendar className="w-3.5 h-3.5" />
+                            </Button>
+                        </div>
+                    )}
+                </header>
+
+                {activeTab === 'logs' && showDates && (
+                    <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/15 rounded-xl border border-border/30 animate-in fade-in slide-in-from-top-1 duration-200 mb-6">
+                        <div className="flex items-center gap-2.5">
+                            <span className="text-xs font-black text-muted-foreground/80 uppercase tracking-widest">Desde</span>
+                            <input
+                                type="date"
+                                className="h-9 px-3 bg-background border border-border/40 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-sm"
+                                value={dateFrom}
+                                onChange={e => setDateFrom(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                            <span className="text-xs font-black text-muted-foreground/80 uppercase tracking-widest">Hasta</span>
+                            <input
+                                type="date"
+                                className="h-9 px-3 bg-background border border-border/40 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-sm"
+                                value={dateTo}
+                                onChange={e => setDateTo(e.target.value)}
+                            />
+                        </div>
+                        {(dateFrom || dateTo) && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-3 text-[11px] font-black text-primary hover:bg-primary/5 uppercase tracking-wider"
+                                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                            >
+                                Limpiar fechas
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                <TabsContent value="logs" className="mt-0 space-y-6">
+                    <div className="divide-y divide-border/40 border-t border-b border-border/40">
+                        {loading ? (
+                            <div className="p-12 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary/60" />
+                                <p className="text-xs">Sincronizando...</p>
+                            </div>
+                        ) : logs.length === 0 ? (
+                            <div className="p-12 text-center text-muted-foreground text-xs">
+                                No hay movimientos para mostrar.
+                            </div>
+                        ) : (
+                            logs.map((log) => {
+                                const { name, initials } = getActorInfo(log);
+                                return (
+                                    <div key={log.id} className="py-5 flex gap-4 items-start hover:bg-muted/10 transition-colors px-2">
+                                        <Avatar className="w-9 h-9 border border-border/20 shadow-sm shrink-0">
+                                            <AvatarFallback className={`${name === 'Sistema' ? 'bg-slate-100 text-slate-400' : 'bg-primary/5 text-primary'} text-[10px] font-bold`}>
+                                                {initials}
+                                            </AvatarFallback>
+                                        </Avatar>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div className="text-base text-foreground leading-relaxed">
+                                                    {renderEventText(log)}
+                                                </div>
+                                                <time className="text-xs font-bold text-muted-foreground/80 shrink-0 ml-4 tabular-nums">
+                                                    {format(new Date(log.created_at), 'HH:mm')}
+                                                </time>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-md text-[11px] text-muted-foreground border border-border/30 shadow-sm">
+                                                    {getEventIcon(log.action)}
+                                                    <span className="font-black uppercase tracking-widest leading-none">{getEventCategory(log.action)}</span>
+                                                </div>
+                                                <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+                                                    {format(new Date(log.created_at), 'dd MMM yyyy')}
+                                                </span>
+                                            </div>
+
+                                             {/* Collapsible detail view for batch stock entry */}
+                                             {log.action === 'INV_ENTRADA_LOTE' && renderBatchLoteDetails(log)}
+                                             {/* Small Preview for other inventory/prices */}
+                                             {log.action !== 'INV_ENTRADA_LOTE' && (log.action.includes('INV') || log.action.includes('PRICE')) && renderPayloadDetails(log.payload)}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <footer className="flex items-center justify-between py-4 border-t border-border/20">
+                        <p className="text-xs font-black text-muted-foreground/60 uppercase tracking-[0.2em]">
+                            Página {page}
+                        </p>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1 || loading}
+                                className="h-9 px-5 text-xs font-black uppercase tracking-widest hover:bg-primary/5 hover:text-primary transition-all active:scale-95"
+                            >
+                                Anterior
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setPage(p => p + 1)}
+                                disabled={logs.length < limit || loading}
+                                className="h-9 px-5 text-xs font-black uppercase tracking-widest hover:bg-primary/5 hover:text-primary transition-all active:scale-95"
+                            >
+                                Siguiente
+                            </Button>
+                        </div>
+                    </footer>
+                </TabsContent>
+
+                <TabsContent value="requests" className="mt-0">
+                    <AuthorizationRequests />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 };

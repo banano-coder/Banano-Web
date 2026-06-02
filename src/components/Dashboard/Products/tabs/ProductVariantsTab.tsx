@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
-import type { Product, Variant, Almacen } from '@/types';
-import { Loader2, Plus, Trash, Edit, ArrowRightLeft, Copy, AlertTriangle, X } from 'lucide-react';
+import type { Product, Variant } from '@/types';
+import { Loader2, Plus, Trash, Edit, ArrowRightLeft, Copy, AlertTriangle, X, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea'; // For JSON/attributes if needed
 import {
@@ -42,7 +42,18 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
     const [variants, setVariants] = useState<Variant[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const [variantToDelete, setVariantToDelete] = useState<Variant | null>(null);
+
+    // Deletion Request state
+    const [variantToRequestDelete, setVariantToRequestDelete] = useState<Variant | null>(null);
+    const [requestReason, setRequestReason] = useState('');
+    const [requestSubmitting, setRequestSubmitting] = useState(false);
+
+    // Stock Request state
+    const [isStockRequestOpen, setIsStockRequestOpen] = useState(false);
+    const [stockRequestReason, setStockRequestReason] = useState('');
+    const [stockRequestSubmitting, setStockRequestSubmitting] = useState(false);
 
     // Create/Edit Dialog State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -67,7 +78,6 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
     const [warehouseStocks, setWarehouseStocks] = useState<{ id_almacen: number; nombre: string; stock: number }[]>([]);
     const [loadingStocks, setLoadingStocks] = useState(false);
     const [isVendedor, setIsVendedor] = useState(false);
-    const [userWarehouseId, setUserWarehouseId] = useState<string | null>(null);
 
     const handleQuantityChange = (warehouseId: number, val: string) => {
         setQuickStock(prev => ({
@@ -100,11 +110,8 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                 const user = JSON.parse(storedUser);
                 if (user && Array.isArray(user.roles)) {
                     const rolesLower = user.roles.map((r: string) => r.toLowerCase());
-                    const seller = rolesLower.includes('vendedor');
+                    const seller = rolesLower.includes('vendedor') && !rolesLower.includes('admin') && !rolesLower.includes('manager');
                     setIsVendedor(seller);
-                    if (seller && user.id_almacen) {
-                        setUserWarehouseId(String(user.id_almacen));
-                    }
                 }
             } catch (e) {
                 console.error("Error parsing user roles in ProductVariantsTab", e);
@@ -139,6 +146,11 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             return;
         }
 
+        if (isVendedor && quickStock.tipo === 'salida') {
+            setIsStockRequestOpen(true);
+            return;
+        }
+
         setRegisteringStock(true);
         setError(null);
         try {
@@ -164,6 +176,43 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
             console.error("Error registering quick stock", err);
         } finally {
             setRegisteringStock(false);
+        }
+    };
+
+    const handleRequestStockOutput = async () => {
+        if (!editingVariant || !stockRequestReason.trim()) return;
+        setStockRequestSubmitting(true);
+        setError(null);
+        try {
+            const payload = {
+                cantidades: Object.entries(quickStock.cantidades).reduce((acc, [whId, qty]) => {
+                    const num = parseInt(qty);
+                    if (!isNaN(num) && num > 0) acc[whId] = num;
+                    return acc;
+                }, {} as Record<string, number>),
+                motivo: quickStock.motivo || 'Salida de stock'
+            };
+
+            await FetchData(API_ENDPOINTS.SOLICITUDES.CREATE, 'POST', {
+                body: {
+                    tipo_accion: 'REGISTRAR_SALIDA',
+                    target_id: editingVariant.id_variante_producto,
+                    target_nombre: editingVariant.sku,
+                    motivo: stockRequestReason.trim(),
+                    payload
+                }
+            });
+
+            setSuccess("Solicitud de salida de stock enviada a auditoría.");
+            setIsStockRequestOpen(false);
+            setStockRequestReason('');
+            setQuickStock(prev => ({ ...prev, cantidades: {}, motivo: '' }));
+            setIsDialogOpen(false);
+        } catch (err: any) {
+            setError(err.message || "Error al solicitar salida de stock");
+            console.error("Error sending stock output request", err);
+        } finally {
+            setStockRequestSubmitting(false);
         }
     };
 
@@ -242,7 +291,35 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
 
     const handleDeleteVariant = (variant: Variant) => {
         setError(null);
-        setVariantToDelete(variant);
+        if (isVendedor) {
+            setVariantToRequestDelete(variant);
+        } else {
+            setVariantToDelete(variant);
+        }
+    };
+
+    const handleRequestDeleteVariant = async () => {
+        if (!variantToRequestDelete || !requestReason.trim()) return;
+        setRequestSubmitting(true);
+        setError(null);
+        try {
+            await FetchData(API_ENDPOINTS.SOLICITUDES.CREATE, 'POST', {
+                body: {
+                    tipo_accion: 'ELIMINAR_VARIANTE',
+                    target_id: variantToRequestDelete.id_variante_producto,
+                    target_nombre: variantToRequestDelete.sku,
+                    motivo: requestReason.trim()
+                }
+            });
+            setSuccess("Solicitud de eliminación de variante enviada a auditoría.");
+            setVariantToRequestDelete(null);
+            setRequestReason('');
+        } catch (err: any) {
+            setError(err.message || "Error al enviar solicitud de eliminación");
+            console.error("Error sending variant delete request", err);
+        } finally {
+            setRequestSubmitting(false);
+        }
     };
 
     const handleDeleteConfirm = async () => {
@@ -268,6 +345,17 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                         <span className="text-xs font-semibold">{error}</span>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+            {success && (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4.5 w-4.5 text-green-500 flex-shrink-0" />
+                        <span className="text-xs font-semibold">{success}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setSuccess(null)} className="h-6 w-6 text-green-500 hover:bg-green-500/10 flex-shrink-0">
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
@@ -517,14 +605,13 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                                             <Select
                                                 value={quickStock.tipo}
                                                 onValueChange={(val: any) => setQuickStock({ ...quickStock, tipo: val })}
-                                                disabled={isVendedor}
                                             >
                                                 <SelectTrigger className="h-8 text-xs">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="entrada">Entrada (+)</SelectItem>
-                                                    {!isVendedor && <SelectItem value="salida">Salida (-)</SelectItem>}
+                                                    <SelectItem value="salida">Salida (-)</SelectItem>
                                                     {!isVendedor && <SelectItem value="ajuste">Ajuste (Manual)</SelectItem>}
                                                 </SelectContent>
                                             </Select>
@@ -622,6 +709,140 @@ export const ProductVariantsTab: React.FC<ProductVariantsTabProps> = ({ product 
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Request Variant Deletion Dialog */}
+            <Dialog open={!!variantToRequestDelete} onOpenChange={(open) => {
+                if (!open) {
+                    setVariantToRequestDelete(null);
+                    setRequestReason('');
+                }
+            }}>
+                <DialogContent className="sm:max-w-[480px] bg-card border border-border backdrop-blur-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+                            <AlertTriangle className="h-5 w-5 text-primary" />
+                            Solicitar Eliminación de Variante
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-2">
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                            No tienes permisos para eliminar variantes directamente. Se enviará una solicitud al equipo de administración/auditoría.
+                        </p>
+                        <div className="bg-muted/30 p-3.5 rounded-xl border border-border/40 text-xs">
+                            <span className="font-semibold text-muted-foreground">Variante SKU:</span>
+                            <div className="font-mono font-bold text-foreground mt-0.5">{variantToRequestDelete?.sku}</div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-foreground">Motivo / Explicación de la solicitud *</label>
+                            <Textarea 
+                                placeholder="Escribe el motivo detallado de la eliminación de esta variante..."
+                                value={requestReason}
+                                onChange={e => setRequestReason(e.target.value)}
+                                rows={3}
+                                className="text-sm bg-background border-border/60"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-row justify-end gap-2 border-t pt-4">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => {
+                                setVariantToRequestDelete(null);
+                                setRequestReason('');
+                            }}
+                            disabled={requestSubmitting}
+                            className="text-xs"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button 
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-9 text-xs"
+                            disabled={requestSubmitting || !requestReason.trim()}
+                            onClick={handleRequestDeleteVariant}
+                        >
+                            {requestSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Request Stock Output Dialog */}
+            <Dialog open={isStockRequestOpen} onOpenChange={(open) => {
+                if (!open) {
+                    setIsStockRequestOpen(false);
+                    setStockRequestReason('');
+                }
+            }}>
+                <DialogContent className="sm:max-w-[480px] bg-card border border-border backdrop-blur-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+                            <AlertTriangle className="h-5 w-5 text-primary animate-pulse" />
+                            Solicitar Salida de Inventario
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-2">
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                            No tienes permisos para realizar salidas de inventario directamente. Se enviará una solicitud al equipo de administración/auditoría.
+                        </p>
+                        <div className="bg-muted/30 p-3.5 rounded-xl border border-border/40 text-xs space-y-1.5">
+                            <span className="font-semibold text-muted-foreground">Variante SKU:</span>
+                            <div className="font-mono font-bold text-foreground">{editingVariant?.sku}</div>
+                            <div className="border-t border-border/40 pt-1.5 mt-1.5">
+                                <span className="font-semibold text-muted-foreground">Salidas solicitadas:</span>
+                                <div className="mt-1 space-y-1">
+                                    {Object.entries(quickStock.cantidades).map(([whId, qty]) => {
+                                        const num = parseInt(qty);
+                                        if (isNaN(num) || num <= 0) return null;
+                                        const whName = warehouseStocks.find(w => w.id_almacen === parseInt(whId))?.nombre || `Almacén #${whId}`;
+                                        return (
+                                            <div key={whId} className="flex justify-between items-center text-[11px] text-foreground/80">
+                                                <span>{whName}:</span>
+                                                <span className="font-bold text-red-500">-{num} unidades</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-foreground">Motivo / Explicación del retiro de mercancía *</label>
+                            <Textarea 
+                                placeholder="Escribe el motivo detallado (ej: producto defectuoso, vencido, traslado, etc.)...."
+                                value={stockRequestReason}
+                                onChange={e => setStockRequestReason(e.target.value)}
+                                rows={3}
+                                className="text-sm bg-background border-border/60"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-row justify-end gap-2 border-t pt-4">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => {
+                                setIsStockRequestOpen(false);
+                                setStockRequestReason('');
+                            }}
+                            disabled={stockRequestSubmitting}
+                            className="text-xs"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button 
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-9 text-xs"
+                            disabled={stockRequestSubmitting || !stockRequestReason.trim()}
+                            onClick={handleRequestStockOutput}
+                        >
+                            {stockRequestSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

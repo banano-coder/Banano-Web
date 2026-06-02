@@ -26,6 +26,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import type { Product, Category, Brand } from '@/types';
 
 export const ProductList = () => {
@@ -40,6 +42,12 @@ export const ProductList = () => {
     const [productToDelete, setProductToDelete] = useState<Product | null>(null); // For permanent deletion
     const [statusLoading, setStatusLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    // Authorization Request state
+    const [isVendedor, setIsVendedor] = useState(false);
+    const [productToRequestDelete, setProductToRequestDelete] = useState<Product | null>(null);
+    const [requestReason, setRequestReason] = useState('');
+    const [requestSubmitting, setRequestSubmitting] = useState(false);
 
     // Filters state
     const [categories, setCategories] = useState<Category[]>([]);
@@ -85,6 +93,21 @@ export const ProductList = () => {
             return () => clearTimeout(timer);
         }
     }, [message]);
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                if (user && Array.isArray(user.roles)) {
+                    const rolesLower = user.roles.map((r: string) => r.toLowerCase());
+                    setIsVendedor(rolesLower.includes('vendedor') && !rolesLower.includes('admin') && !rolesLower.includes('manager'));
+                }
+            } catch (e) {
+                console.error("Error parsing user roles in ProductList", e);
+            }
+        }
+    }, []);
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -166,6 +189,29 @@ export const ProductList = () => {
             setMessage({ type: 'error', text: error.message || 'No se pudo eliminar el producto. Puede que tenga pedidos asociados.' });
         } finally {
             setStatusLoading(false);
+        }
+    };
+
+    const handleRequestDeleteProduct = async () => {
+        if (!productToRequestDelete || !requestReason.trim()) return;
+        setRequestSubmitting(true);
+        try {
+            await FetchData(API_ENDPOINTS.SOLICITUDES.CREATE, 'POST', {
+                body: {
+                    tipo_accion: 'ELIMINAR_PRODUCTO',
+                    target_id: productToRequestDelete.id_producto,
+                    target_nombre: productToRequestDelete.nombre,
+                    motivo: requestReason.trim()
+                }
+            });
+            setMessage({ type: 'success', text: 'Solicitud de eliminación enviada a auditoría.' });
+            setProductToRequestDelete(null);
+            setRequestReason('');
+        } catch (error: any) {
+            console.error('Error submitting delete request:', error);
+            setMessage({ type: 'error', text: error.message || 'No se pudo enviar la solicitud.' });
+        } finally {
+            setRequestSubmitting(false);
         }
     };
 
@@ -361,8 +407,14 @@ export const ProductList = () => {
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
-                                                    title="Eliminar permanentemente"
-                                                    onClick={() => setProductToDelete(product)}
+                                                    title={isVendedor ? "Solicitar eliminación" : "Eliminar permanentemente"}
+                                                    onClick={() => {
+                                                        if (isVendedor) {
+                                                            setProductToRequestDelete(product);
+                                                        } else {
+                                                            setProductToDelete(product);
+                                                        }
+                                                    }}
                                                 >
                                                     <Trash2 className="h-4 w-4 text-red-600" />
                                                 </Button>
@@ -443,6 +495,65 @@ export const ProductList = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Request Product Deletion Dialog */}
+            <Dialog open={!!productToRequestDelete} onOpenChange={(open) => {
+                if (!open) {
+                    setProductToRequestDelete(null);
+                    setRequestReason('');
+                }
+            }}>
+                <DialogContent className="sm:max-w-[480px] bg-card border border-border backdrop-blur-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+                            <AlertCircle className="h-5 w-5 text-primary animate-pulse" />
+                            Solicitar Eliminación de Producto
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-2">
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                            No tienes permisos para eliminar productos directamente. Se enviará una solicitud al equipo de administración/auditoría.
+                        </p>
+                        <div className="bg-muted/30 p-3.5 rounded-xl border border-border/40 text-xs">
+                            <span className="font-semibold text-muted-foreground">Producto a eliminar:</span>
+                            <div className="font-bold text-foreground mt-0.5">{productToRequestDelete?.nombre}</div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-foreground">Motivo / Explicación del por qué deseas eliminar este producto *</label>
+                            <Textarea 
+                                placeholder="Escribe el motivo detallado de la eliminación..."
+                                value={requestReason}
+                                onChange={e => setRequestReason(e.target.value)}
+                                rows={3}
+                                className="text-sm bg-background border-border/60"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-row justify-end gap-2 border-t pt-4">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => {
+                                setProductToRequestDelete(null);
+                                setRequestReason('');
+                            }}
+                            disabled={requestSubmitting}
+                            className="text-xs"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button 
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-9 text-xs"
+                            disabled={requestSubmitting || !requestReason.trim()}
+                            onClick={handleRequestDeleteProduct}
+                        >
+                            {requestSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

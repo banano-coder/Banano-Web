@@ -244,6 +244,10 @@ This project is a static-first web application built with Astro.js. It is design
 - **Flow**: Adjusting stock creates a record in `movimiento_inventario` and updates `inventario.stock`.
 
 ## Recent Changes
+- **Sales Profitability Query Correction**:
+    - Fixed the backend SQL queries in `reports.routes.js` that calculate overall KPIs and daily chart series.
+    - Previously, joining `pedido` and `pedido_item` multiplied the aggregated total income when orders had multiple items.
+    - Resolved this by calculating `total_ingresos` (overall and daily) on the orders table directly via separate subqueries/CTEs, while keeping item-level cost sums on the joined table structure.
 - **WhatsApp Button Restriction in Layout**:
     - Restricted the floating WhatsApp button visibility inside `Layout.astro` by checking `Astro.url.pathname`.
     - The button is now hidden on all dashboard routes (`/dashboard/*`) and only renders on the public storefront catalog or other non-dashboard pages, as requested.
@@ -782,10 +786,223 @@ This project is a static-first web application built with Astro.js. It is design
 ## Detailed Plan: Seller Stock Entry in Multiple Warehouses
 1. **Backend Route Update**:
    - In backend [inventario.routes.js](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/Proyectobanano/src/routes/inventario.routes.js), modify the `POST /inventario/movimientos` endpoint.
+3. **Card Glassmorphism**: Modify container `<Card>` tags to use `bg-card/85 backdrop-blur-sm shadow-xl` matching the other dashboard sections.
+4. **Input Styles**: Adapt `<Input>` and `<select>` fields to inherit the standard dashboard theme styles.
+5. **Verification**: Confirm visual compliance inside the "Ventas" dashboard tab.
+
+## Detailed Plan: Inventory Filter by Warehouse
+1. **State Addition**: Add `warehouses` listing and `selectedWarehouse` states to `ProductList.tsx`.
+2. **Fetch active warehouses**: Retrieve the list of active warehouses on component initialization from `/api/almacenes?activo=true`.
+3. **Add select filter**: Render a warehouse selector select dropdown in the search/filter row in `ProductList.tsx`.
+4. **Pass parameter to query**: Append `id_almacen` to query parameters in the product listing fetch call, causing the backend to return stock specific to the selected warehouse.
+5. **Verification**: Run `npx astro check` to verify changes.
+
+## Detailed Plan: Multi-Currency Accounts & POS Integration
+1. **Database Migration**: Create `migrate_money_accounts.js` in the backend. Define tables `cuenta` and `transaccion_caja`, and append `id_cuenta`, `moneda_pago`, `tasa_cambio`, `monto_pago_real`, `id_almacen`, and `id_usuario` to the `pedido` table schema.
+2. **Backend Routers**:
+   - Create `cuentas.routes.js` for accounts CRUD.
+   - Create `money.routes.js` for cash flow transactions CRUD and summaries.
+   - Export `aplicarMovimiento` function from `inventario.routes.js` to reuse it during sales checkout.
+   - Create a dedicated `POST /pos/checkout` endpoint inside `pedidos.routes.js` to process cashier physical sales with real-time stock decreases, cliente upserts, transaction balance shifts, and cashier audit logs.
+3. **Astro Proxies**: Create endpoints under `/api/money/cuentas/`, `/api/money/movimientos/`, `/api/money/resumen/`, and `/api/pos/checkout/` to forward requests safely.
+4. **POS Interface Integration**: Update `POSSystem.tsx` to retrieve active financial accounts, render a Target Account dropdown, read its currency, allow Cashiers to input exchange rates for VES/COP, display the converted total in real-time, and call the checkout endpoint upon clicking "Confirmar Venta".
+5. **Money Dashboard module**: Redesign `MoneyManagement.tsx` to let users view, create financial accounts, monitor balance cards per currency, and list/filter cash flow transactions or record manual adjustments.
+
+## Detailed Plan: Header and Sticky Search Bar Optimization
+1. **Header Refinement**: In `src/pages/index.astro`, reduce header vertical padding to `py-2.5 sm:py-4`. Set logo image height to `h-6 sm:h-8 md:h-10` and title font size to `text-base sm:text-xl md:text-2xl`. Shrink "Iniciar Sesión" text size to `text-[10px] sm:text-xs md:text-sm`, padding to `px-2.5 py-1 sm:px-4 sm:py-1.5`, and gap to `gap-1 sm:gap-1.5`. Use `whitespace-nowrap` to guarantee single-line fit on mobile screen widths.
+2. **Sticky Filters**: In `src/components/Shop/ProductGrid.tsx`, add `sticky top-2 sm:top-4 z-30 bg-card/90 backdrop-blur-md shadow-md` class list to the main filters container. Ensure the scrolling catalog cards slide beneath it cleanly.
+3. **User Edit Proxy Fix**: In `src/pages/api/users/[id]/[action].ts`, include `'warehouse'` in the `allowedActions` list to permit proxying patch requests for warehouse associations.
+4. **POS Header & Redundant Button Cleanups**:
+   - In `POSSystem.tsx`, retrieve and store `currentUser` from `localStorage` and fetch active `warehouses` list from the API on component load.
+   - Display cashier details (name) and sucursal (warehouse name) inside the upper header component on both mobile and desktop viewports, using clean glassmorphism styles and icons.
+   - Remove all exit buttons ("SALIR") and back arrow buttons from the POS page layout, since navigation is already handled by the dashboard's persistent sidebar and header.
+5. **Verification**: Run build and inspect responsive scaling.
+
+## Detailed Plan: Multiple Address List in Settings
+1. **Interface Update**: Add `direcciones?: string[];` to `SettingsData['tienda']` interface in `SettingsManager.tsx`.
+2. **Form Field list**:
+   - Replace the address inputs with a dynamic list of text inputs.
+   - Map over `settings.tienda.direcciones` (initializing with `[settings.tienda.direccion]` if undefined/empty).
+   - Provide an "+ Agregar otra dirección" button that appends a new empty string to `direcciones`.
+   - Provide a delete button (using Lucide `Trash`) next to each extra address input.
+   - Update the state and ensure clicking "Guardar Datos de Tienda" persists this array.
+3. **Catalog Footer Rendering**:
+   - Update `src/pages/index.astro` footer.
+   - If `tienda.direcciones` exists and has entries, map over them.
+   - Display a flex layout of address cards:
+     - If only 1 address: label it "Dirección".
+     - If multiple addresses: label the first one "Dirección Principal", and the rest "Dirección Sucursal" or similar.
+     - Fall back to the old `direccion` and `direccion_secundaria` fields if `direcciones` array is empty or undefined.
+4. **Verification**: Run `npm run build` and test that the configuration saves and displays correctly.
+
+## Detailed Plan: Input Focus Preservation in POS System
+1. **Identify Issue**: The input element for Cédula and other customer data (Nombre, Email, etc.) in `POSSystem.tsx` was losing focus on every keystroke because `SidebarContent` was declared as a nested functional component inside `POSSystem`.
+2. **Refactor**: Rename `SidebarContent` to `renderSidebarContent` and change its JSX invocation from `<SidebarContent />` to a direct function execution `{renderSidebarContent()}`. This prevents unmounting and remounting of the sidebar sub-tree on state updates.
+3. **Verify**: Ensure the build runs correctly with 0 compilation errors.
+
+## Detailed Plan: Mobile POS Checkout & API Base Fix
+1. **Environment Configuration**: Trim and remove the trailing space in the frontend `.env` file for `PUBLIC_EXTERNAL_API_BASE` to prevent proxy target encoding issues.
+2. **Backend Route Implementation**: In `Proyectobanano/src/routes/pedidos.routes.js`, require `aplicarMovimiento` from `./inventario.routes`. Implement the `POST /pos/checkout` route using a secure transaction. The route will accept the customer information, selected cash account, payment currency, exchange rate, and items, performing variant stock verification, client upsert, database order insertion, warehouse stock updates, cash account balance updates, cash flow transaction logging, and cashier auditing.
+3. **Sales History Integration**: Add a `hideHeader` prop to `OrdersManager.tsx` and render it inside `SalesManagement.tsx` under the "Historial de Ventas" tab to replace the placeholder with the active transactional sales history list.
+4. **Verification**: Build the application, confirm all routes resolve correctly, and verify transactions and sales history logs from both desktop and mobile viewports.
+
+## Detailed Plan: POS Layout Visual Optimization
+1. **Layout Card Separation**: Extract the Carrito (Cart) and Datos de la Venta (Sales Form) cards into separate helper rendering methods (`renderCarritoCard` and `renderDatosVentaCard`) in `POSSystem.tsx`.
+2. **Main Layout Grid**: Keep the responsive 2-column layout for `lg` and up: `lg:grid-cols-[3fr_2fr] xl:grid-cols-[1.6fr_1fr] 2xl:grid-cols-[2fr_1fr]`.
+3. **Stacked Sidebar**: Render both cards stacked vertically in the right-side column using `renderSidebarContent()`, with the Cart occupying the top (max-h 35%) and the Data Form taking the remaining height.
+4. **Form Grid Alignment**:
+   - Customer details grid: Lay out fields compactly: Cédula (`col-span-3`), Nombre (`col-span-5`), Teléfono (`col-span-4`) on Row 1; Email (`col-span-6`), Observación (`col-span-6`) on Row 2.
+   - Payment list grid: Use spacious grid alignments to prevent text clipping: Cuenta Destino (`col-span-7`) and Método (`col-span-5`) on Row 1; Referencia (`col-span-6`) and Monto USD (`col-span-6`) on Row 2; Monto local (`col-span-6`) and Tasa (`col-span-6`) on Row 3 for non-USD payments.
+5. **Verification**: Run `npm run build` and manually inspect the dashboard to ensure correct rendering.
+
+## Detailed Plan: Independent Reports Module
+1. **Remove Tab in Product Management**: Open `ProductsManagement.tsx` and delete the "Reportes" `<TabsTrigger>` and `<TabsContent>` containing `<InventoryReports />`. Remove the import of `InventoryReports`.
+2. **Create Standalone Astro Page**: Create `src/pages/dashboard/reports.astro`. Embed `Layout`, `Header`, `Sidebar`, `Footer`, `AuthGuard` (allowed roles: admin, manager, vendedor, viewer), and render the `<InventoryReports client:load />` component wrapped in a beautiful title and card layout.
+3. **Update Navigation Menu**: Add a new nav link to `/dashboard/reports` labeled "Reportes" right under "Almacenes" in `Sidebar.astro`.
+4. **Verification**: Run `npm run build` and test the pages in the browser.
+
+## Detailed Plan: Align Reports with Multi-Warehouse Architecture
+1. **Backend Route Parameter**: Update `reports.routes.js` to accept `id_almacen` in query parameters and append `m.id_almacen = $X` to SQL query conditions for `/reports/inventario/top-salidas`, `/reports/inventario/salidas-serie`, `/reports/movimientos/kpis`, and `/reports/movimientos/detalle`.
+2. **Astro Route Proxies**: Update proxy endpoints for reports (`top-salidas.ts`, `movimientos-detalle.ts`, `movimientos-kpis.ts`) to forward `id_almacen` query parameters to the backend.
+3. **Frontend Warehouse Selector**: Fetch active warehouses dynamically in `InventoryReports.tsx` and render a fuchsia-styled `<select>` dropdown at the top of the dashboard.
+4. **PDF/CSV Personalization**: Update PDF subtitles and CSV filenames to dynamically reflect the selected warehouse name.
+5. **Verification**: Verify project compilation with `npm run build`.
+
+## Detailed Plan: Interactive Statistics Dashboard in Reports
+1. **Astro API Proxy**: Add `src/pages/api/reports/salidas-serie.ts` to proxy requests to backend `/reports/inventario/salidas-serie`, forwarding `id_almacen`, `from`, `to`, and `granularity` search parameters along with authorization cookies.
+2. **Filters & State Integration**: Add React states for date ranges (defaulting to the last 30 days), KPIs (`kpiData`), top sales (`topSales`), stock counts (`stockTotal`), critical items count (`criticalCount`), and historical outputs (`seriesData`).
+3. **Layout Rendering**: Render responsive filters card with warehouse select and date range controls. Below it, display 4 glassmorphic KPI cards (Total Stock, Stock Crítico, Despachos, Costo de Salidas) with fuchsia and colored highlights.
+4. **Custom SVG Graphics**:
+   - `LineChart`: Build responsive SVG Area Line Chart with custom path commands (`M` and `L` layout mapping), linear area gradients, glowing stroke, gridlines, axes labels, and dynamic tooltips on mouse hover.
+   - `BarChart`: Build horizontal progress bars with fuchsia-to-pink gradient fills representing the top variants.
+5. **Download Filters Synchronization**: Pass selected `from`, `to`, and `id_almacen` filters in CSV and PDF download fetch requests to make reports match the dashboard view.
+6. **Verification**: Run `npm run build` to verify compiling results.
+
+## Detailed Plan: Cash Flow and Money Movements by Branch (Sucursal)
+1. **Database Schema Integration**: Confirm that financial accounts (`public.cuenta`) contain `id_almacen` references linking them to warehouses/sucursales.
+2. **Backend API Parameter Support**:
+   - Update `GET /cuentas` to parse `id_almacen` and filter active accounts.
+   - Update `GET /money/resumen` to accept `id_almacen` and restrict balance totals and transaction metrics by branch.
+   - Update `GET /money/movimientos` to accept `id_almacen` and join `public.cuenta` to restrict transaction logs to accounts under that warehouse.
+3. **Frontend Unified Selector Filter**: Add `selectedWarehouseId` state and render a dropdown in the `MoneyManagement.tsx` header. Load accounts, summaries, and transactions with the dynamic sucursal query filter in real-time.
+4. **Form Automation**: Default the sucursal select input value in the "Crear Nueva Cuenta" modal to match the active top-level filter.
+
+## Detailed Plan: Product Variant Soft Delete & Active Toggle
+1. **Database Migration Script**: Create and run `migrate_variant_soft_delete.js` adding the `eliminado` column to `public.variante_producto`.
+2. **Backend Deletion Endpoint**: Convert backend `DELETE /variants/:id` to perform soft delete (`SET eliminado = true, activo = false`). Prevent updates or queries on soft-deleted variants in `GET` / `PATCH` variants routes.
+3. **Frontend Deletion Confirmation**: Rename deactivation handler to `handleDeleteVariant`, use proper `DELETE` method call, and confirm variant deletion with `"¿Seguro que deseas eliminar esta variante?"`.
+4. **Frontend Form Active Status**: Add `activo` field to form state and insert an "Activa (Disponible para venta)" checkbox inside the variant edit modal to let users deactivate variants without deleting them.
+
+## Detailed Plan: Label Generator Layout Unification and Rotation (No IVA)
+1. **Revert to Stacked Layout**: Update `LabelGenerator.tsx` so that both the print engine (`handlePrint`) and live preview render the original vertically-stacked layout (Logo Header, Barcode, Barcode Text, Product Title, and Price Line).
+2. **Apply CSS rotation for Vertical format**: Apply `-90deg` rotation and dimensions swap in CSS when vertical orientation is active.
+3. **Keep IVA completely removed**: Ensure only final list price is displayed, with no tax base or IVA percentage references.
+4. **Compile and Verify**: Run `npm run build` to confirm compiling results are clean.
+
+## Detailed Plan: Enlarge Label Details, Split Price, and Persist Settings
+1. **Enlarge Label Typography**: Update sizes in CSS inside `handlePrint` and live preview. Increase logo and shop name heights, SKU code size, and product title fonts. Adjust barcode SVG height to prevent page height overflow.
+2. **Align Price Row (Left/Right)**: Convert price row into a full-width container (`width: 100%`) using flex layout with `justify-content: space-between` and horizontal padding. This ensures "PRECIO:" sits on the far left and the amount on the far right.
+3. **Robust Settings Storage**: Refactor `useState` inside `LabelGenerator.tsx` to load values immediately from `localStorage` using lazy initializers (function state initializers). This prevents lifecycle race conditions from resetting user settings.
+
+## Detailed Plan: Layout Optimization for Single-Variant Products
+1. **Batch Stock Entry Layout Update**:
+   - In `BatchStockEntry.tsx`, modify the table rows rendering logic.
+   - For product groups with **more than 1 variant**, keep the current layout: a header row for the product name and subsequent variant rows starting with `↳`.
+   - For product groups with **exactly 1 variant**, do not render the product header row. Instead, render a single row where the first column ("Producto") contains the product name (styled `font-semibold text-foreground/80`), and the other columns display the variant details directly.
+2. **Inventory Reports Layout Update**:
+   - In `InventoryReports.tsx`, add the "Producto" column as the first column of the table (matching `BatchStockEntry.tsx`).
+   - Modify the table rows rendering logic to behave identically to the Batch Stock Entry layout:
+     - Multi-variant products: Render a header row with `colSpan=9` for the product name, and subsequent variant rows with the `↳` arrow in the "Producto" column.
+     - Single-variant products: Do not render the product header row. Render a single variant row where the "Producto" column displays the product name directly.
+3. **Report Exports Update (PDF/CSV)**:
+   - Update `downloadPDF` in `InventoryReports.tsx` to follow the same visual optimization:
+     - Multi-variant products: Render a group header row (colSpan=9) and subsequent rows with the `↳` prefix in the "Producto" column.
+     - Single-variant products: Omit the group header row and write the product name in the first column of the variant row.
+   - Adjust column headers and widths in PDF generation to accommodate the new "Producto" column.
+4. **Compile and Verify**: Run `npm run build` to verify compiling results are clean.
+
+## Detailed Plan: Remove WhatsApp Button from Internal Dashboard
+1. **Layout Conditional Check**:
+   - Inside `src/layouts/Layout.astro` frontmatter, obtain the current pathname from `Astro.url.pathname`.
+   - Create a boolean helper: `const showWhatsApp = !Astro.url.pathname.startsWith("/dashboard");` to identify if we are outside the dashboard.
+2. **Conditional Render**:
+   - Wrap the `<WhatsAppButton client:load />` component inside the layout template `<body>` tag with `{showWhatsApp && <WhatsAppButton client:load />}`.
+3. **Verification**:
+   - Build the frontend project with `npm run build` to guarantee compilation is successful.
+
+## Detailed Plan: Batch Stock Entry Pagination
+1. **State & Effect Hook Additions**:
+   - Add state `page` initialized to `1` and page size `PAGE_SIZE = 25`.
+   - Add a `useEffect` hook to reset `page` to `1` when filters (`selectedWarehouseId`, `search`, `selectedCategories`, `selectedBrands`) change.
+2. **Paginating Product Groups**:
+   - Inside the render function of `BatchStockEntry.tsx`, group the `filteredRows` array by `id_producto` using a `Map`.
+   - Convert the group map entries to an array: `const groupEntries = Array.from(productGroups.entries());`.
+   - Calculate `totalPages` as `Math.ceil(groupEntries.length / PAGE_SIZE)`.
+   - Slice the array to get only the groups for the current page: `groupEntries.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)`.
+   - Iterate over the sliced page entries to build table rows.
+3. **Pagination Controls UI**:
+   - Render pagination controls (First, Previous, numeric pages with ellipses, Next, Last buttons) inside the table card footer if `totalPages > 1`.
+   - Apply the fuchsia and glassmorphism styling to match the rest of the application.
+4. **Verification**:
+   - Run `npm run build` to verify compiling results are clean.
+
+## Detailed Plan: Mobile Responsive Dashboard and Layout Widescreen Fixes
+1. **Fix Body Background Color in Layout**:
+   - In [Layout.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/layouts/Layout.astro), remove `background-color: #fff;` from the global style block for the body. This ensures that the page background defaults to the Tailwind CSS theme variables, resolving the white background gap on horizontal overflow.
+2. **Apply min-w-0 on Main Flex Children**:
+   - In [products.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/products.astro), [money.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/money.astro), [reports.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/reports.astro), [sales.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/sales.astro), [users.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/users.astro), [almacenes.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/almacenes.astro), [orders.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/orders.astro), and [settings.astro](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/pages/dashboard/settings.astro), add `min-w-0` to the `<main>` wrapper (e.g. `class="flex-1 min-w-0 p-6 md:p-8"`). This tells the flex container that the main section is allowed to shrink below its default content size, letting internal `overflow-x-auto` triggers kick in on mobile viewports.
+3. **Enhance Batch Stock Entry Inputs & Actions Layout**:
+   - In [BatchStockEntry.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Inventory/BatchStockEntry.tsx), refactor the bottom batch config and save bar to use a responsive grid (`grid grid-cols-1 sm:grid-cols-2`) for the "Motivo" and "Referencia" inputs, and wrap the action buttons inside a flex container that scales down and wraps gracefully (`flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full lg:w-auto`).
+4. **Make Dashboard Navigation Tabs Scrollable**:
+   - In [ProductsManagement.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Products/ProductsManagement.tsx), style the `TabsList` container with `w-full flex flex-nowrap overflow-x-auto justify-start h-auto scrollbar-none` classes to allow horizontal swiping/scrolling on mobile.
+5. **Verify**:
+   - Build and run the app to check for compilation issues.
+
+## Detailed Plan: Server-Side Catalog Filtering (Categories, Brands, Price Ranges)
+1. **Enhance Backend Products Catalog Route**:
+   - In backend [catalog.routes.js](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/Proyectobanano/src/routes/catalog.routes.js), update the `GET /catalog/products` endpoint to parse `category`, `brand`, `min`, and `max` parameters.
+   - Build the SQL where clause dynamically so it filters products by category ID (`id_categoria`), brand ID (`id_marca`), and filters by price using an `EXISTS` subquery verifying if the product contains active variants matching the price range (`min`/`max` on `precio_lista`).
+   - Left-join the `public.categoria` and `public.marca` tables in the main SQL SELECT query to retrieve and return `category_name` and `brand_name` in the payload.
+2. **Refactor Frontend Product Grid Component**:
+   - In frontend [ProductGrid.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Shop/ProductGrid.tsx), update the products fetch hook to append `category`, `brand`, `min`, and `max` query parameters to the URLSearchParams.
+   - Add `selectedCategory.id`, `selectedBrand.id`, `priceRange.min`, and `priceRange.max` to the `useEffect` dependency array so the frontend queries the database again whenever the user modifies filters.
+   - Remove client-side filtering logic for categories, brands, and prices in the `filteredProducts` memoization, relying entirely on the server-filtered output instead.
+3. **Verify**:
+   - Compile the frontend and verify filtering behavior on the live catalog interface.
+
+## Detailed Plan: Logo Usage Refinement
+1. **Logo Reversion**:
+   - Restore the original banana cartoon mascot (transparent background) to `public/logo_original.png` from previous commit history.
+2. **Icon Separation**:
+   - Reserve `public/app_icon.png` (with fuchsia/yellow gradient background) exclusively for PWA shortcuts and apple-touch-icon.
+3. **Verify**:
+   - Compile the frontend project with `npm run build` and inspect page layout headers and footers to ensure the transparent banana logo renders properly.
+
+## Detailed Plan: Seller Stock Entry in Multiple Warehouses
+1. **Backend Route Update**:
+   - In backend [inventario.routes.js](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/Proyectobanano/src/routes/inventario.routes.js), modify the `POST /inventario/movimientos` endpoint.
    - Adjust the sucursal constraint check so that if `isVendedor` is `true`, it is bypassed when the movement type (`tipo`) is `'entrada'`.
    - In the `POST /inventario/movimientos/lote` endpoint, remove the sucursal restriction entirely (since batch stock movements are exclusively `'entrada'`).
 2. **Frontend Component Update**:
    - In frontend [ProductVariantsTab.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Products/tabs/ProductVariantsTab.tsx), change `isDisabled` calculation in the quick stock management warehouse list: set `const isDisabled = false;` instead of restricting it based on `isVendedor` and `userWarehouseId`.
 3. **Compile and Verify**:
-   - Run `npm run build` on the frontend project to verify compiling results are clean.
-
+   - Run `npm run build` on ## Detailed Plan: Seller Deletion & Output Restrictions & Audit Request Routing
+1. **Auditoría UI Tabs Integration**:
+    - Update [AuditLogViewer.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Audit/AuditLogViewer.tsx) to import Radix UI Tabs and the new `<AuthorizationRequests />` component.
+    - Restructure layout with a Tabs list: "Historial de Actividad" (logs) and "Solicitudes de Autorización" (requests).
+    - Show/hide filters and dynamically adapt the section title and description according to the active tab.
+    - Update [AuthorizationRequests.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Audit/AuthorizationRequests.tsx) to support `REGISTRAR_SALIDA` request types and display detailed warehouse quantity subtractions in the resolution modal.
+2. **Backend Deletion and Output Requests Handling**:
+    - Update [solicitudes.routes.js](file:///C:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/Proyectobanano/src/routes/solicitudes.routes.js) to support `REGISTRAR_SALIDA` in the `allowedActions` array.
+    - Persist the JSON metadata payload containing warehouse and quantities in the new database column upon request creation.
+    - Execute outputs dynamically on approval by requiring and looping over `inventarioRouter.aplicarMovimiento` inside a transaction.
+3. **Product Deletion Authorization Requests**:
+    - In [ProductList.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Products/ProductList.tsx), detect the logged-in user's roles.
+    - If they are a seller (and not admin or manager), modify the trash button behavior to trigger a custom "Solicitar Eliminación" Dialog instead of the standard confirmation.
+    - Design a premium glassmorphic dialog asking for the deletion reason and call `POST /api/solicitudes-autorizacion` to submit the request.
+4. **Variant Deletion and Output Authorization Requests**:
+    - In [ProductVariantsTab.tsx](file:///c:/Users/aniba/Downloads/TRABAJO%20DE%20GRADO/banano-shop-ft/src/components/Dashboard/Products/tabs/ProductVariantsTab.tsx), refine roles parsing.
+    - If they are a seller (and not admin or manager), intercept the delete action in `handleDeleteVariant` to show a Dialog prompting for a reason.
+    - Enable `Salida (-)` in the quick stock type dropdown for sellers. Intercept quick stock submissions of type `salida` for sellers, opening a dialog prompting for a reason and posting a `REGISTRAR_SALIDA` request with quantities packaged in the payload metadata.
+5. **Compile and Verify**:
+    - Run build and type check to verify type safety and correctness.

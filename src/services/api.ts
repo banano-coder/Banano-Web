@@ -67,5 +67,10 @@ export const API_ENDPOINTS = {
   },
   POS: {
     CHECKOUT: `/api/pos/checkout`
+  },
+  SOLICITUDES: {
+    CREATE: `/api/solicitudes-autorizacion`,
+    LIST: `/api/solicitudes-autorizacion`,
+    RESPOND: (id: string | number) => `/api/solicitudes-autorizacion/${id}/responder`
   }
 };
