@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
   },
   INVENTORY: {
     MOVEMENTS: `/api/inventario/movimientos`,
+    TRANSFER: `/api/inventario/transferencia`,
     STOCK: (id: string | number) => `/api/inventario/stock/${id}`
   },
   BULK: {
@@ -72,5 +73,8 @@ export const API_ENDPOINTS = {
     CREATE: `/api/solicitudes-autorizacion`,
     LIST: `/api/solicitudes-autorizacion`,
     RESPOND: (id: string | number) => `/api/solicitudes-autorizacion/${id}/responder`
+  },
+  PEDIDOS: {
+    VOID: (id: string | number) => `/api/pedidos/${id}/anular`
   }
 };

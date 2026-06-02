@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Product } from './CartConfig';
@@ -11,6 +11,21 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, settings }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const imageList = product.images && product.images.length > 0
+    ? product.images.filter((url): url is string => !!url)
+    : [product.image].filter((url): url is string => !!url);
+
+  useEffect(() => {
+    if (imageList.length <= 1 || isHovered) return;
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % imageList.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [imageList.length, isHovered]);
+
   const handleAction = () => {
     onSelect(product);
   };
@@ -27,14 +42,46 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, set
       onClick={handleAction}
     >
       {/* Contenedor de Imagen Premium */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-[#F8F8F8] dark:bg-slate-800/50 flex items-center justify-center p-4">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
-        />
+      <div 
+        className="relative aspect-[4/5] overflow-hidden bg-[#F8F8F8] dark:bg-slate-800/50 flex items-center justify-center p-4"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {imageList.length > 1 ? (
+          imageList.map((imgUrl, idx) => (
+            <img
+              key={imgUrl + idx}
+              src={imgUrl}
+              alt={`${product.name} - ${idx}`}
+              className={`absolute top-4 left-4 right-4 bottom-4 w-[calc(100%-32px)] h-[calc(100%-32px)] object-contain transition-all duration-700 ease-in-out ${
+                currentImageIndex === idx ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 z-0 pointer-events-none'
+              }`}
+            />
+          ))
+        ) : (
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
+          />
+        )}
+
+        {/* Slide Indicators for multiple images */}
+        {imageList.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 bg-black/10 backdrop-blur-[2px] px-2.5 py-1 rounded-full">
+            {imageList.map((_, idx) => (
+              <span
+                key={idx}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  currentImageIndex === idx ? 'w-3.5 bg-[#df0067]' : 'w-1 bg-white/60'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Badge Flotante (Opcional) */}
-        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
            <div className="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-md text-primary">
               <ShoppingCart className="h-4 w-4" />
            </div>

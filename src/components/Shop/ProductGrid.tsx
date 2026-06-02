@@ -123,6 +123,7 @@ export const ProductGrid: React.FC = () => {
           name: p.nombre,
           price: Number(p.min_price) || Number(p.precio) || 0,
           image: p.imagen_principal || 'https://placehold.co/400x1200/261633/FFF5F7?text=Banano+Product',
+          images: p.imagenes || [],
           description: p.descripcion || '',
           category: p.category_name || p.categoria_nombre || p.marca?.categoria?.nombre || p.categoria || 'General',
           brand: p.brand_name || p.marca_nombre || p.marca?.nombre || p.brand?.name || p.marca || '',

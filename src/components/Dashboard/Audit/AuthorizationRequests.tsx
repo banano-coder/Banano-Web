@@ -32,6 +32,7 @@ export const AuthorizationRequests: React.FC = () => {
     const [requests, setRequests] = useState<RequestItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterEstado, setFilterEstado] = useState<'pendiente' | 'aprobado' | 'rechazado'>('pendiente');
+    const [warehouses, setWarehouses] = useState<any[]>([]);
 
     // Response Modal State
     const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null);
@@ -39,6 +40,22 @@ export const AuthorizationRequests: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    const fetchWarehouses = async () => {
+        try {
+            const res = await FetchData<any>(`${API_ENDPOINTS.ALMACENES.LIST}`);
+            const list = res?.data || res || [];
+            setWarehouses(list);
+        } catch (e) {
+            console.error("Error fetching warehouses in AuthorizationRequests", e);
+        }
+    };
+
+    const getWarehouseName = (id: string | number) => {
+        const idNum = parseInt(String(id), 10);
+        const wh = warehouses.find(w => w.id_almacen === idNum);
+        return wh ? wh.nombre : `Almacén #${id}`;
+    };
 
     const fetchRequests = async () => {
         setLoading(true);
@@ -52,6 +69,10 @@ export const AuthorizationRequests: React.FC = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchWarehouses();
+    }, []);
 
     useEffect(() => {
         fetchRequests();
@@ -90,6 +111,10 @@ export const AuthorizationRequests: React.FC = () => {
                 return <Badge className="bg-orange-500 hover:bg-orange-600 font-bold text-[10px]">Eliminar Variante</Badge>;
             case 'REGISTRAR_SALIDA':
                 return <Badge className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px]">Salida Stock</Badge>;
+            case 'TRANSFERIR_STOCK':
+                return <Badge className="bg-indigo-500 hover:bg-indigo-600 font-bold text-[10px]">Transferir Stock</Badge>;
+            case 'ANULAR_VENTA':
+                return <Badge className="bg-purple-600 hover:bg-purple-700 font-bold text-[10px]">Anular Venta</Badge>;
             default:
                 return <Badge variant="outline">{type}</Badge>;
         }
@@ -285,10 +310,54 @@ export const AuthorizationRequests: React.FC = () => {
                                             <div className="mt-1.5 space-y-1 bg-background border border-border/60 rounded-lg p-2.5">
                                                 {Object.entries(cantidades).map(([whId, qty]) => (
                                                     <div key={whId} className="flex justify-between items-center text-xs">
-                                                        <span className="font-semibold text-foreground/80">Almacén #{whId}:</span>
+                                                        <span className="font-semibold text-foreground/80">{getWarehouseName(whId)}:</span>
                                                         <span className="font-bold text-red-500 font-mono">-{String(qty)} unidades</span>
                                                     </div>
                                                 ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                                {selectedRequest.tipo_accion === 'TRANSFERIR_STOCK' && (() => {
+                                    const payload = typeof selectedRequest.payload === 'string'
+                                        ? JSON.parse(selectedRequest.payload || '{}')
+                                        : (selectedRequest.payload || {});
+                                    const { id_almacen_origen, id_almacen_destino, cantidad } = payload || {};
+                                    return (
+                                        <div className="col-span-2 border-t border-border/40 pt-2.5">
+                                            <span className="text-muted-foreground font-semibold">Detalles de Transferencia:</span>
+                                            <div className="mt-1.5 space-y-2 bg-background border border-border/60 rounded-lg p-2.5">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="font-semibold text-muted-foreground">Origen:</span>
+                                                    <span className="font-bold text-foreground">{getWarehouseName(id_almacen_origen)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="font-semibold text-muted-foreground">Destino:</span>
+                                                    <span className="font-bold text-foreground">{getWarehouseName(id_almacen_destino)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs border-t border-border/40 pt-1.5">
+                                                    <span className="font-semibold text-muted-foreground">Cantidad:</span>
+                                                    <span className="font-bold text-indigo-500 font-mono">{String(cantidad)} unidades</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                                {selectedRequest.tipo_accion === 'ANULAR_VENTA' && (() => {
+                                    const payload = typeof selectedRequest.payload === 'string'
+                                        ? JSON.parse(selectedRequest.payload || '{}')
+                                        : (selectedRequest.payload || {});
+                                    const { descontar_dinero } = payload || {};
+                                    return (
+                                        <div className="col-span-2 border-t border-border/40 pt-2.5">
+                                            <span className="text-muted-foreground font-semibold">Detalles de la Anulación:</span>
+                                            <div className="mt-1.5 space-y-2 bg-background border border-border/60 rounded-lg p-2.5 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-semibold text-muted-foreground">Descontar dinero de caja:</span>
+                                                    <span className={`font-bold uppercase ${descontar_dinero ? 'text-red-500' : 'text-emerald-500'}`}>
+                                                        {descontar_dinero ? 'Sí' : 'No'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     );
