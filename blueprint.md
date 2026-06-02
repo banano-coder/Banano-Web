@@ -37,6 +37,10 @@ This project is a static-first web application built with Astro.js. It is design
 - **Flow**: Adjusting stock creates a record in `movimiento_inventario` and updates `inventario.stock`.
 
 ## Recent Changes
+- **Batch Stock Entry Layout Optimization**:
+    - Converted category and brand filters from horizontal badge/pill list grids into clean, compact `<select>` dropdown lists, matching the warehouse sucursal selector.
+    - Moved the product search bar below the category and brand dropdown selectors.
+    - Repositioned the batch configuration input bar ("Motivo del ingreso", "Referencia", action buttons) to the bottom of the page, underneath the product variants list card.
 - **Auto-Sliding Image Carousel on Product Cards**:
     - Backend: Modified the product catalog query inside `catalog.routes.js` to aggregate all active product image URLs into a JSON array (`imagenes`).
     - Frontend: Added `images?: string[]` to the `Product` interface definition in `CartConfig.tsx`. Mapped `imagenes` array inside `ProductGrid.tsx`. Updated `ProductCard.tsx` to handle auto-sliding, cross-fades, page dots indicators, and mouse hover detection.

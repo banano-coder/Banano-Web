@@ -448,9 +448,9 @@ export const BatchStockEntry: React.FC = () => {
             {/* Header Card */}
             <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg">
                 <CardContent className="p-6">
-                    <div className="flex flex-col xl:flex-row xl:items-start gap-6">
+                    <div className="flex flex-col gap-6">
                         {/* Title */}
-                        <div className="flex-1 space-y-1">
+                        <div className="space-y-1">
                             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                                 <PackagePlus className="h-5 w-5 text-primary" />
                                 Ingreso de Stock por Lote
@@ -460,16 +460,16 @@ export const BatchStockEntry: React.FC = () => {
                             </p>
                         </div>
 
-                        {/* Controls row */}
-                        <div className="flex flex-wrap items-end gap-4">
-                            {/* Warehouse */}
+                        {/* Dropdown Filters Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-border/10 pt-4">
+                            {/* Warehouse Select */}
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-foreground/70 flex items-center gap-1"><Warehouse className="h-3.5 w-3.5" /> Sucursal</label>
                                 <select
                                     value={selectedWarehouseId}
                                     onChange={e => setSelectedWarehouseId(e.target.value)}
                                     disabled={isVendedor}
-                                    className="min-w-[200px] px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium shadow-sm disabled:opacity-80 disabled:cursor-not-allowed"
+                                    className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium shadow-sm disabled:opacity-80 disabled:cursor-not-allowed"
                                 >
                                     {warehouses.map(w => (
                                         <option key={w.id_almacen} value={String(w.id_almacen)} className="bg-card text-foreground">{w.nombre}</option>
@@ -477,119 +477,68 @@ export const BatchStockEntry: React.FC = () => {
                                 </select>
                             </div>
 
-                            {/* Search */}
+                            {/* Category Select */}
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-foreground/70 flex items-center gap-1"><Search className="h-3.5 w-3.5" /> Buscar</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                    <input
-                                        type="text"
-                                        value={search}
-                                        onChange={e => setSearch(e.target.value)}
-                                        placeholder="Producto o SKU..."
-                                        className="pl-8 pr-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all w-52"
-                                    />
-                                </div>
+                                <label className="text-xs font-semibold text-foreground/70 flex items-center gap-1"><Filter className="h-3.5 w-3.5" /> Categoría</label>
+                                <select
+                                    value={selectedCategories.size === 0 ? 'all' : Array.from(selectedCategories)[0]}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === 'all') {
+                                            setSelectedCategories(new Set());
+                                        } else {
+                                            setSelectedCategories(new Set([parseInt(val, 10)]));
+                                        }
+                                    }}
+                                    className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium shadow-sm"
+                                >
+                                    <option value="all">Todas las Categorías</option>
+                                    {categories.map(c => (
+                                        <option key={c.id_categoria} value={c.id_categoria}>{c.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Brand Select */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-foreground/70 flex items-center gap-1"><Filter className="h-3.5 w-3.5" /> Marca</label>
+                                <select
+                                    value={selectedBrands.size === 0 ? 'all' : Array.from(selectedBrands)[0]}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === 'all') {
+                                            setSelectedBrands(new Set());
+                                        } else {
+                                            setSelectedBrands(new Set([parseInt(val, 10)]));
+                                        }
+                                    }}
+                                    className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium shadow-sm"
+                                >
+                                    <option value="all">Todas las Marcas</option>
+                                    {brands.map(b => (
+                                        <option key={b.id_marca} value={b.id_marca}>{b.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Search Bar - Positioned below the dropdown selects */}
+                        <div className="space-y-1 pt-1">
+                            <label className="text-xs font-semibold text-foreground/70 flex items-center gap-1"><Search className="h-3.5 w-3.5" /> Buscar Producto</label>
+                            <div className="relative max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="Buscar por nombre o SKU..."
+                                    className="pl-9 pr-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all w-full"
+                                />
                             </div>
                         </div>
                     </div>
-
-                    {/* Filter pills row */}
-                    <div className="mt-5 space-y-3">
-                        {/* Categories */}
-                        {categories.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mr-1"><Filter className="h-3 w-3" />Categorías:</span>
-                                {categories.map(c => (
-                                    <button
-                                        key={c.id_categoria}
-                                        onClick={() => toggleCategory(c.id_categoria)}
-                                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${selectedCategories.has(c.id_categoria)
-                                            ? 'bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/30'
-                                            : 'border-foreground/15 text-foreground/70 hover:border-primary/40 hover:text-primary'
-                                        }`}
-                                    >
-                                        {c.nombre}
-                                    </button>
-                                ))}
-                                {selectedCategories.size > 0 && (
-                                    <button onClick={() => setSelectedCategories(new Set())} className="text-[11px] text-muted-foreground hover:text-primary flex items-center gap-0.5 ml-1">
-                                        <X className="h-3 w-3" /> limpiar
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Brands */}
-                        {brands.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mr-1"><Filter className="h-3 w-3" />Marcas:</span>
-                                {brands.map(b => (
-                                    <button
-                                        key={b.id_marca}
-                                        onClick={() => toggleBrand(b.id_marca)}
-                                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${selectedBrands.has(b.id_marca)
-                                            ? 'bg-fuchsia-600 text-white border-fuchsia-600 shadow-sm shadow-fuchsia-600/30'
-                                            : 'border-foreground/15 text-foreground/70 hover:border-fuchsia-500/40 hover:text-fuchsia-500'
-                                        }`}
-                                    >
-                                        {b.nombre}
-                                    </button>
-                                ))}
-                                {selectedBrands.size > 0 && (
-                                    <button onClick={() => setSelectedBrands(new Set())} className="text-[11px] text-muted-foreground hover:text-primary flex items-center gap-0.5 ml-1">
-                                        <X className="h-3 w-3" /> limpiar
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
                 </CardContent>
             </Card>
-
-            {/* Batch config + save bar */}
-            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 bg-card/30 border border-foreground/10 p-4 rounded-xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 w-full">
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-foreground/70">Motivo del ingreso</label>
-                        <input
-                            type="text"
-                            value={globalMotivo}
-                            onChange={e => setGlobalMotivo(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            placeholder="Ingreso por lote"
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-foreground/70">Referencia (opcional)</label>
-                        <input
-                            type="text"
-                            value={globalRef}
-                            onChange={e => setGlobalRef(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            placeholder="Nro. factura, orden..."
-                        />
-                    </div>
-                </div>
-                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full xl:w-auto pt-2 xl:pt-0 border-t xl:border-t-0 border-foreground/10">
-                    <span className="text-xs sm:text-sm font-semibold text-foreground/60">
-                        {dirtyRows.length > 0 ? (
-                            <span className="text-primary font-bold">{dirtyRows.length} variante{dirtyRows.length > 1 ? 's' : ''} con cambios</span>
-                        ) : 'Sin cambios pendientes'}
-                    </span>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={handleReset} disabled={dirtyRows.length === 0 || saving}
-                            className="h-9 gap-1.5 text-xs font-semibold border-foreground/15 hover:border-primary/40">
-                            <RotateCcw className="h-3.5 w-3.5" /> Limpiar
-                        </Button>
-                        <Button onClick={handleStartReview} disabled={dirtyRows.length === 0 || saving}
-                            className="h-9 gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20">
-                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            {saving ? 'Revisando...' : `Revisar Lote ${dirtyRows.length > 0 ? `(${dirtyRows.length})` : ''}`}
-                        </Button>
-                    </div>
-                </div>
-            </div>
 
             {/* Product table */}
             <Card className="bg-card/60 backdrop-blur-md border border-foreground/10 shadow-lg overflow-hidden">
@@ -812,6 +761,50 @@ export const BatchStockEntry: React.FC = () => {
                     </div>
                 )}
             </Card>
+
+            {/* Batch config + save bar (repositioned to the bottom) */}
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 bg-card/30 border border-foreground/10 p-4 rounded-xl mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 w-full">
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground/70">Motivo del ingreso</label>
+                        <input
+                            type="text"
+                            value={globalMotivo}
+                            onChange={e => setGlobalMotivo(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="Ingreso por lote"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold text-foreground/70">Referencia (opcional)</label>
+                        <input
+                            type="text"
+                            value={globalRef}
+                            onChange={e => setGlobalRef(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-foreground/10 bg-background/50 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="Nro. factura, orden..."
+                        />
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full xl:w-auto pt-2 xl:pt-0 border-t xl:border-t-0 border-foreground/10">
+                    <span className="text-xs sm:text-sm font-semibold text-foreground/60">
+                        {dirtyRows.length > 0 ? (
+                            <span className="text-primary font-bold">{dirtyRows.length} variante{dirtyRows.length > 1 ? 's' : ''} con cambios</span>
+                        ) : 'Sin cambios pendientes'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleReset} disabled={dirtyRows.length === 0 || saving}
+                            className="h-9 gap-1.5 text-xs font-semibold border-foreground/15 hover:border-primary/40">
+                            <RotateCcw className="h-3.5 w-3.5" /> Limpiar
+                        </Button>
+                        <Button onClick={handleStartReview} disabled={dirtyRows.length === 0 || saving}
+                            className="h-9 gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20">
+                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {saving ? 'Revisando...' : `Revisar Lote ${dirtyRows.length > 0 ? `(${dirtyRows.length})` : ''}`}
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
