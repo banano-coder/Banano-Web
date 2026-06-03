@@ -128,7 +128,8 @@ export const ProductGrid: React.FC = () => {
           category: p.category_name || p.categoria_nombre || p.marca?.categoria?.nombre || p.categoria || 'General',
           brand: p.brand_name || p.marca_nombre || p.marca?.nombre || p.brand?.name || p.marca || '',
           categoryId: String(p.id_categoria),
-          brandId: String(p.id_marca)
+          brandId: String(p.id_marca),
+          variants: p.variantes || []
         }));
 
         setProducts(mappedProducts);

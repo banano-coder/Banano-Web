@@ -247,6 +247,21 @@ export const ProductDetailDialog: React.FC<ProductDetailDialogProps> = ({ produc
                                                                             : Math.round(variant.precio_lista).toLocaleString();
                                                                         return `${currency}${formatted}`;
                                                                     })()}
+                                                                    {(() => {
+                                                                        const tasaBcv = settings?.catalogo?.tasa_bcv ? parseFloat(settings.catalogo.tasa_bcv) : 0;
+                                                                        if (tasaBcv <= 0) return null;
+                                                                        const incrementoPct = settings?.catalogo?.porcentaje_incremento_bcv ? parseFloat(settings.catalogo.porcentaje_incremento_bcv) : 0;
+                                                                        const showDecimals = settings?.catalogo?.mostrar_decimales !== false;
+                                                                        const sinPromoPrice = (variant.precio_lista * tasaBcv) * (1 + (incrementoPct / 100));
+                                                                        const formattedSinPromo = showDecimals
+                                                                            ? sinPromoPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                                            : Math.round(sinPromoPrice).toLocaleString();
+                                                                        return (
+                                                                            <span className="text-[10px] text-muted-foreground ml-2 font-normal block sm:inline">
+                                                                                (Sin promo: {formattedSinPromo} Bs. a bcv)
+                                                                            </span>
+                                                                        );
+                                                                    })()}
                                                                 </span>
                                                                 {getStockLabel(variant)}
                                                             </div>

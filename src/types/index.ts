@@ -14,6 +14,7 @@ export interface Product {
     Marca?: { nombre: string };
     sku_base?: string;
     image?: string;
+    variantes?: any[];
 }
 
 export interface ProductsApiResponse {
