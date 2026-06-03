@@ -11,7 +11,6 @@ interface PublicSettings {
         modo_etiqueta_stock: 'exacto' | 'generico';
         simbolo_moneda: string;
         mostrar_decimales: boolean;
-        tasa_bcv?: number;
         porcentaje_incremento_bcv?: number;
     };
     whatsapp?: {

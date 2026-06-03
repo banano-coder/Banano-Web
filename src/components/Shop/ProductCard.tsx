@@ -67,14 +67,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, set
     : Math.round(product.price).toLocaleString();
 
   // BCV and "SIN PROMO" Price calculations
-  const tasaBcv = settings?.catalogo?.tasa_bcv ? parseFloat(settings.catalogo.tasa_bcv) : 0;
   const incrementoPct = settings?.catalogo?.porcentaje_incremento_bcv ? parseFloat(settings.catalogo.porcentaje_incremento_bcv) : 0;
-  const showBcvBubble = tasaBcv > 0;
+  const showBcvBubble = incrementoPct > 0;
 
   const currentSlide = slides[currentImageIndex] || slides[0];
   const activePrice = currentSlide?.price || product.price;
 
-  const sinPromoPrice = (activePrice * tasaBcv) * (1 + (incrementoPct / 100));
+  const sinPromoPrice = activePrice * (1 + (incrementoPct / 100));
   const formattedSinPromo = showDecimals
     ? sinPromoPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : Math.round(sinPromoPrice).toLocaleString();
@@ -95,7 +94,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect, set
           <div className="absolute top-4 left-4 z-20 max-w-[140px] sm:max-w-none">
             <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-2.5 py-1.5 rounded-2xl shadow-md border border-slate-100 dark:border-white/5 text-left transition-transform duration-300 group-hover:scale-105">
               <p className="text-[9px] sm:text-[10px] font-black text-slate-800 dark:text-slate-100 leading-tight uppercase tracking-wider font-mono">
-                SIN PROMO {formattedSinPromo} (a Bolívares)
+                SIN PROMO {formattedSinPromo}$ a bcv
               </p>
             </div>
           </div>

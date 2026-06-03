@@ -63,7 +63,6 @@ interface SettingsData {
         modo_etiqueta_stock: 'exacto' | 'generico';
         simbolo_moneda: string;
         mostrar_decimales: boolean;
-        tasa_bcv?: number;
         porcentaje_incremento_bcv?: number;
     };
 }
@@ -710,29 +709,16 @@ export const SettingsManager: React.FC = () => {
                                         Tip: Si tus precios son enteros, desactiva los decimales para una vista más limpia.
                                     </p>
                                     
-                                    <div className="grid grid-cols-2 gap-4 border-t border-border/50 pt-4 mt-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-bold uppercase text-muted-foreground">Tasa BCV (Bs/$)</Label>
-                                            <Input
-                                                type="number"
-                                                step="any"
-                                                placeholder="Ej: 36.50"
-                                                value={settings.catalogo?.tasa_bcv ?? ''}
-                                                onChange={e => setSettings(s => ({ ...s, catalogo: { ...(s.catalogo || { ocultar_sin_stock: false, modo_etiqueta_stock: 'exacto', mostrar_decimales: true, simbolo_moneda: '$' }), tasa_bcv: e.target.value ? parseFloat(e.target.value) : undefined } }))}
-                                                className="bg-background/50 font-bold"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-bold uppercase text-muted-foreground">Incremento Sin Promo (%)</Label>
-                                            <Input
-                                                type="number"
-                                                step="any"
-                                                placeholder="Ej: 15"
-                                                value={settings.catalogo?.porcentaje_incremento_bcv ?? ''}
-                                                onChange={e => setSettings(s => ({ ...s, catalogo: { ...(s.catalogo || { ocultar_sin_stock: false, modo_etiqueta_stock: 'exacto', mostrar_decimales: true, simbolo_moneda: '$' }), porcentaje_incremento_bcv: e.target.value ? parseFloat(e.target.value) : undefined } }))}
-                                                className="bg-background/50 font-bold"
-                                            />
-                                        </div>
+                                    <div className="border-t border-border/50 pt-4 mt-4 space-y-2">
+                                        <Label className="text-xs font-bold uppercase text-muted-foreground">Incremento Sin Promo (%)</Label>
+                                        <Input
+                                            type="number"
+                                            step="any"
+                                            placeholder="Ej: 15"
+                                            value={settings.catalogo?.porcentaje_incremento_bcv ?? ''}
+                                            onChange={e => setSettings(s => ({ ...s, catalogo: { ...(s.catalogo || { ocultar_sin_stock: false, modo_etiqueta_stock: 'exacto', mostrar_decimales: true, simbolo_moneda: '$' }), porcentaje_incremento_bcv: e.target.value ? parseFloat(e.target.value) : undefined } }))}
+                                            className="bg-background/50 font-bold max-w-xs"
+                                        />
                                     </div>
                                 </div>
                             </div>
