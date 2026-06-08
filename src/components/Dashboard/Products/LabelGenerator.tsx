@@ -84,6 +84,10 @@ export const LabelGenerator: React.FC = () => {
         const saved = localStorage.getItem('label_print_scale');
         return saved ? parseFloat(saved) : 1.0;
     });
+    const [verticalOffset, setVerticalOffset] = useState<number>(() => {
+        const saved = localStorage.getItem('label_print_v_offset');
+        return saved ? parseInt(saved, 10) : -10;
+    });
 
     // Persist settings to localStorage whenever they change
     useEffect(() => {
@@ -105,6 +109,10 @@ export const LabelGenerator: React.FC = () => {
     useEffect(() => {
         localStorage.setItem('label_print_scale', scale.toString());
     }, [scale]);
+
+    useEffect(() => {
+        localStorage.setItem('label_print_v_offset', verticalOffset.toString());
+    }, [verticalOffset]);
 
     // Load all active variants at once
     const loadAllVariantsData = async () => {
@@ -441,7 +449,7 @@ export const LabelGenerator: React.FC = () => {
                          }
                          .label-page {
                              width: ${labelWidth}mm;
-                             height: ${labelHeight}mm;
+                             height: ${labelHeight - 0.5}mm;
                              box-sizing: border-box;
                              background: white;
                              color: black;
@@ -468,7 +476,7 @@ export const LabelGenerator: React.FC = () => {
                              justify-content: center;
                              text-align: center;
                              padding: 1.2mm 1.5mm;
-                             transform: rotate(${printRotation}) scale(${effectiveScale});
+                             transform: translateY(${verticalOffset}mm) rotate(${printRotation}) scale(${effectiveScale});
                              transform-origin: center center;
                              flex-shrink: 0;
                          }
@@ -979,6 +987,24 @@ export const LabelGenerator: React.FC = () => {
                             </p>
                         </div>
 
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="v-offset-input">Desplazamiento Vertical (mm)</Label>
+                                <span className="text-xs font-bold text-primary">{verticalOffset} mm</span>
+                            </div>
+                            <Input 
+                                id="v-offset-input"
+                                type="number"
+                                step="1"
+                                className="bg-background border-border text-foreground font-medium"
+                                value={verticalOffset}
+                                onChange={(e) => setVerticalOffset(parseInt(e.target.value, 10) || 0)}
+                            />
+                            <p className="text-[10px] text-muted-foreground italic">
+                                Valores negativos suben la impresión (ej. -10), valores positivos la bajan.
+                            </p>
+                        </div>
+
                         {/* Print Button */}
                         <Button 
                             onClick={handlePrint}
@@ -1014,7 +1040,7 @@ export const LabelGenerator: React.FC = () => {
                                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                                         }}
                                     >
-                                                                        <div 
+                                        <div 
                                             style={{
                                                 position: 'absolute',
                                                 left: '50%',
@@ -1022,8 +1048,8 @@ export const LabelGenerator: React.FC = () => {
                                                 width: `${labelWidth * 5}px`,
                                                 height: `${labelHeight * 5}px`,
                                                 transform: orientation === 'horizontal' 
-                                                    ? `translate(-50%, -50%) scale(${scale})` 
-                                                    : `translate(-50%, -50%) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
+                                                    ? `translate(-50%, calc(-50% + ${verticalOffset * 5}px)) scale(${scale})` 
+                                                    : `translate(-50%, calc(-50% + ${verticalOffset * 5}px)) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
                                                 transformOrigin: 'center center',
                                                 display: 'flex',
                                                 flexDirection: 'column',
