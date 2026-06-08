@@ -421,7 +421,7 @@ export const LabelGenerator: React.FC = () => {
                 `);
             }
             return copiesList;
-        }).join('<div class="page-break"></div>');
+        }).join('');
 
         printWindow.document.write(`
             <html>
@@ -451,12 +451,12 @@ export const LabelGenerator: React.FC = () => {
                              justify-content: center;
                              page-break-inside: avoid;
                              break-inside: avoid;
-                         }
-                         .page-break {
                              page-break-after: always;
                              break-after: page;
-                             height: 0;
-                             overflow: hidden;
+                         }
+                         .label-page:last-of-type {
+                             page-break-after: avoid;
+                             break-after: avoid;
                          }
                          .label-wrapper {
                              width: ${labelWidth}mm;
