@@ -429,7 +429,7 @@ export const LabelGenerator: React.FC = () => {
                     <title>Imprimir Etiquetas</title>
                     <style>
                         @page {
-                            size: ${orientation === 'vertical' ? `${labelHeight}mm ${labelWidth}mm portrait` : `${labelWidth}mm ${labelHeight}mm landscape`};
+                            size: ${labelWidth}mm ${labelHeight}mm;
                             margin: 0;
                         }
                         body {
@@ -440,8 +440,8 @@ export const LabelGenerator: React.FC = () => {
                              -webkit-print-color-adjust: exact;
                          }
                          .label-page {
-                             width: ${orientation === 'vertical' ? labelHeight : labelWidth}mm;
-                             height: ${orientation === 'vertical' ? labelWidth : labelHeight}mm;
+                             width: ${labelWidth}mm;
+                             height: ${labelHeight}mm;
                              box-sizing: border-box;
                              background: white;
                              color: black;
