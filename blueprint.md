@@ -373,7 +373,8 @@ This project is a static-first web application built with Astro.js. It is design
 2. **Dynamic Page Size & Dimensions**:
    - Change the print `@page` rule to use dynamic size: landscape layout for horizontal (`${labelWidth}mm ${labelHeight}mm landscape`), and portrait layout for vertical (`${labelHeight}mm ${labelWidth}mm portrait`).
    - Match `.label-page` width and height to these dynamic page sizes.
-3. **Prevent Empty Trailing Label**:
-   - Add `.label-page:last-of-type { page-break-after: avoid; break-after: avoid; }` to the print stylesheet to prevent the printer from feeding an extra blank label at the end of the batch print.
+3. **Prevent Height Collapse & Empty Trailing Label (Page Break Refactoring)**:
+   - Decouple the `page-break-after` rule from the `.label-page` element itself to prevent print engine height collapse on earlier labels in a multi-label queue.
+   - Generate independent `.page-break` spacer elements (`<div class="page-break"></div>`) strictly *between* printed labels using `.join('<div class="page-break"></div>')` to avoid trailing blank pages.
 4. **Verification**:
    - Run `npm run build` and manually check formatting of the print output.
