@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -50,7 +51,8 @@ export const MoneyManagement: React.FC = () => {
     nombre: '',
     moneda: 'USD',
     saldo_inicial: '0.00',
-    id_almacen: ''
+    id_almacen: '',
+    es_cashea: false
   });
 
   // Formulario Nuevo Movimiento Manual
@@ -167,7 +169,8 @@ export const MoneyManagement: React.FC = () => {
           nombre: newAccountData.nombre.trim(),
           moneda: newAccountData.moneda,
           saldo_inicial: parseFloat(newAccountData.saldo_inicial || '0'),
-          id_almacen: newAccountData.id_almacen ? parseInt(newAccountData.id_almacen, 10) : null
+          id_almacen: newAccountData.id_almacen ? parseInt(newAccountData.id_almacen, 10) : null,
+          es_cashea: !!newAccountData.es_cashea
         })
       });
 
@@ -182,7 +185,8 @@ export const MoneyManagement: React.FC = () => {
         nombre: '',
         moneda: 'USD',
         saldo_inicial: '0.00',
-        id_almacen: ''
+        id_almacen: '',
+        es_cashea: false
       });
       await fetchAllData();
     } catch (err: any) {
@@ -277,26 +281,26 @@ export const MoneyManagement: React.FC = () => {
   return (
     <div className="space-y-6 text-foreground pb-12">
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+        <div className="fixed top-6 right-6 z-[9999] bg-red-600 text-white border border-red-700 shadow-2xl p-4 rounded-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300 max-w-md w-full md:w-auto">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+            <AlertTriangle className="h-5 w-5 animate-pulse flex-shrink-0" />
             <span className="text-xs font-semibold">{error}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+          <button type="button" onClick={() => setError(null)} className="h-6 w-6 hover:bg-white/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+        <div className="fixed top-6 right-6 z-[9999] bg-emerald-600 text-white border border-emerald-700 shadow-2xl p-4 rounded-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300 max-w-md w-full md:w-auto">
           <div className="flex items-center gap-2">
-            <Coins className="h-4.5 w-4.5 text-green-500 flex-shrink-0" />
+            <Coins className="h-5 w-5 flex-shrink-0" />
             <span className="text-xs font-semibold">{success}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setSuccess(null)} className="h-6 w-6 text-green-500 hover:bg-green-500/10 flex-shrink-0">
+          <button type="button" onClick={() => setSuccess(null)} className="h-6 w-6 hover:bg-white/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
@@ -389,6 +393,11 @@ export const MoneyManagement: React.FC = () => {
                         {c.almacen_nombre && (
                           <Badge className="bg-muted text-muted-foreground border-none text-[9px] font-bold py-0.5 px-1.5 flex items-center gap-1">
                             <Building2 className="h-2.5 w-2.5" /> {c.almacen_nombre}
+                          </Badge>
+                        )}
+                        {c.es_cashea && (
+                          <Badge className="bg-amber-500/10 text-amber-500 border-none text-[9px] font-bold py-0.5 px-1.5 uppercase">
+                            Cashea (4%)
                           </Badge>
                         )}
                       </div>
@@ -668,6 +677,17 @@ export const MoneyManagement: React.FC = () => {
                     ))}
                   </select>
                   <p className="text-[10px] text-muted-foreground italic">Permite organizar el dinero según el punto de venta física.</p>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                  <Checkbox 
+                    id="es_cashea" 
+                    checked={newAccountData.es_cashea} 
+                    onCheckedChange={(checked) => setNewAccountData(prev => ({ ...prev, es_cashea: !!checked }))}
+                    className="border-border text-primary focus-visible:ring-primary"
+                  />
+                  <label htmlFor="es_cashea" className="text-xs font-bold text-foreground cursor-pointer select-none">
+                    ¿Es cuenta de Cashea? (Aplica 4% de comisión)
+                  </label>
                 </div>
               </CardContent>
               <div className="p-4 border-t border-border flex gap-2 justify-end bg-muted/20">

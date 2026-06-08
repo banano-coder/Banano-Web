@@ -58,6 +58,11 @@ export const API_ENDPOINTS = {
     MOVIMIENTOS: `/api/money/movimientos`,
     RESUMEN: `/api/money/resumen`
   },
+  CASHEA: {
+    STATS: `/api/cashea/stats`,
+    TRANSACTIONS: `/api/cashea/transactions`,
+    LIQUIDAR: `/api/cashea/liquidar`
+  },
   EXPENSES: {
     LIST: `/api/expenses`,
     CREATE: `/api/expenses`,

@@ -383,8 +383,8 @@ export const LabelGenerator: React.FC = () => {
         }
 
         const autoScale = Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight);
-        const effectiveScale = orientation === 'horizontal' ? scale : scale * autoScale;
-        const printRotation = orientation === 'horizontal' ? '-90deg' : '0deg';
+        const effectiveScale = orientation === 'vertical' ? scale * autoScale : scale;
+        const printRotation = orientation === 'vertical' ? '-90deg' : '0deg';
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
@@ -403,20 +403,18 @@ export const LabelGenerator: React.FC = () => {
                 copiesList.push(`
                     <div class="label-page ${orientation}">
                         <div class="label-wrapper">
-                            <div class="label-content">
-                                <div class="label-header">
-                                    <img src="/logo_original.png" class="shop-logo" />
-                                    <span class="shop-name">BANANO</span>
-                                </div>
-                                <div class="barcode-container">
-                                    ${barcodeHtml}
-                                </div>
-                                <div class="barcode-text">${item.sku}</div>
-                                <div class="product-title" title="${titleFull}">${titleFull}</div>
-                                <div class="price-display">
-                                    <span class="price-label">PRECIO:</span>
-                                    <span class="price-amount">${currencySign}${item.price.toFixed(2)}</span>
-                                </div>
+                            <div class="label-header">
+                                <img src="/logo_original.png" class="shop-logo" />
+                                <span class="shop-name">BANANO</span>
+                            </div>
+                            <div class="barcode-container">
+                                ${barcodeHtml}
+                            </div>
+                            <div class="barcode-text">${item.sku}</div>
+                            <div class="product-title" title="${titleFull}">${titleFull}</div>
+                            <div class="price-display">
+                                <span class="price-label">PRECIO:</span>
+                                <span class="price-amount">${currencySign}${item.price.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
@@ -431,7 +429,7 @@ export const LabelGenerator: React.FC = () => {
                     <title>Imprimir Etiquetas</title>
                     <style>
                         @page {
-                            size: ${labelHeight}mm ${labelWidth}mm portrait;
+                            size: ${orientation === 'vertical' ? `${labelHeight}mm ${labelWidth}mm portrait` : `${labelWidth}mm ${labelHeight}mm landscape`};
                             margin: 0;
                         }
                         body {
@@ -442,17 +440,16 @@ export const LabelGenerator: React.FC = () => {
                              -webkit-print-color-adjust: exact;
                          }
                          .label-page {
-                             width: ${labelHeight}mm;
-                             height: ${labelWidth}mm;
+                             width: ${orientation === 'vertical' ? labelHeight : labelWidth}mm;
+                             height: ${orientation === 'vertical' ? labelWidth : labelHeight}mm;
                              box-sizing: border-box;
                              background: white;
                              color: black;
                              overflow: hidden;
                              page-break-after: always;
-                             break-after: page;
                              position: relative;
                          }
-                         .label-page:last-child {
+                         .label-page:last-of-type {
                              page-break-after: avoid;
                              break-after: avoid;
                          }
@@ -469,26 +466,6 @@ export const LabelGenerator: React.FC = () => {
                              justify-content: center;
                              text-align: center;
                              padding: 1.2mm 1.5mm;
-                         }
-                         .label-content {
-                             display: flex;
-                             flex-direction: column;
-                             align-items: center;
-                             justify-content: center;
-                             width: 100%;
-                             height: 100%;
-                             transform: translateY(-1.5mm);
-                             box-sizing: border-box;
-                         }
-                         
-                         /* VERTICAL LAYOUT (ROTATED STACKED) */
-                         .label-page.vertical .label-wrapper {
-                             transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
-                             transform-origin: center center;
-                         }
-                         
-                         /* HORIZONTAL LAYOUT */
-                         .label-page.horizontal .label-wrapper {
                              transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
                              transform-origin: center center;
                          }
@@ -499,6 +476,7 @@ export const LabelGenerator: React.FC = () => {
                               justify-content: center;
                               gap: 1.5mm;
                               height: 8.5mm;
+                              margin-top: -1.5mm;
                               margin-bottom: 0.8mm;
                               flex-shrink: 0;
                           }
@@ -579,11 +557,12 @@ export const LabelGenerator: React.FC = () => {
                 </head>
                 <body>
                     ${labelsHtml}
-                    <div style="height: 0; overflow: hidden; page-break-after: avoid; break-after: avoid;"></div>
                     <script>
                         window.onload = function() {
                             window.print();
-                            setTimeout(function() { window.close(); }, 500);
+                            window.onafterprint = function() {
+                                window.close();
+                            };
                         };
                     </script>
                 </body>
@@ -1051,44 +1030,31 @@ export const LabelGenerator: React.FC = () => {
                                                 padding: '6px 8px'
                                             }}
                                         >
-                                            <div 
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    transform: 'translateY(-7.5px)',
-                                                    boxSizing: 'border-box'
-                                                }}
-                                            >
-                                                {/* Header */}
-                                                <div className="flex items-center justify-center gap-2 w-full h-[20%] shrink-0 mb-1">
-                                                    <img src="/logo_original.png" alt="Logo" className="h-full w-auto object-contain" />
-                                                    <span className="text-[15px] font-extrabold tracking-wider text-gray-900 leading-none">
-                                                        BANANO
-                                                    </span>
-                                                </div>
-                                                {/* Barcode svg */}
-                                                <div className="w-full h-[28%] flex justify-center items-center shrink-0">
-                                                    <Barcode value={previewItem.sku} height={32} width={130} />
-                                                </div>
-                                                {/* Barcode Value */}
-                                                <div className="text-[10px] font-medium text-center font-mono mt-1.5 mb-1 leading-none tracking-[0.2em] text-gray-600 uppercase shrink-0">
-                                                    {previewItem.sku}
-                                                </div>
-                                                {/* Product Title */}
-                                                <div className="text-[13px] font-bold uppercase text-center truncate w-full mb-1.5 leading-none text-gray-900 tracking-wide shrink-0">
-                                                    {titleFull}
-                                                </div>
-                                                {/* Prices block */}
-                                                <div className="w-full mt-1 border-t border-dashed border-gray-300 pt-1.5 flex justify-between items-center px-1.5 font-bold box-border shrink-0">
-                                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">PRECIO:</span>
-                                                    <span className="text-[15px] font-light text-gray-950 leading-none">
-                                                        {currencySign}{previewItem.price.toFixed(2)}
-                                                    </span>
-                                                </div>
+                                            {/* Header */}
+                                            <div className="flex items-center justify-center gap-2 w-full h-[20%] shrink-0 mb-1" style={{ marginTop: '-7.5px' }}>
+                                                <img src="/logo_original.png" alt="Logo" className="h-full w-auto object-contain" />
+                                                <span className="text-[15px] font-extrabold tracking-wider text-gray-900 leading-none">
+                                                    BANANO
+                                                </span>
+                                            </div>
+                                            {/* Barcode svg */}
+                                            <div className="w-full h-[28%] flex justify-center items-center shrink-0">
+                                                <Barcode value={previewItem.sku} height={32} width={130} />
+                                            </div>
+                                            {/* Barcode Value */}
+                                            <div className="text-[10px] font-medium text-center font-mono mt-1.5 mb-1 leading-none tracking-[0.2em] text-gray-600 uppercase shrink-0">
+                                                {previewItem.sku}
+                                            </div>
+                                            {/* Product Title */}
+                                            <div className="text-[13px] font-bold uppercase text-center truncate w-full mb-1.5 leading-none text-gray-900 tracking-wide shrink-0">
+                                                {titleFull}
+                                            </div>
+                                            {/* Prices block */}
+                                            <div className="w-full mt-1 border-t border-dashed border-gray-300 pt-1.5 flex justify-between items-center px-1.5 font-bold box-border shrink-0">
+                                                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">PRECIO:</span>
+                                                <span className="text-[15px] font-light text-gray-950 leading-none">
+                                                    {currencySign}{previewItem.price.toFixed(2)}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

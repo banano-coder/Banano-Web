@@ -11,8 +11,12 @@ import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Product } from '@/types';
+import { useSettings } from '@/hooks/useSettings';
 
 export const POSSystem = () => {
+    const { settings } = useSettings();
+    const incrementoPct = settings?.catalogo?.porcentaje_incremento_bcv ? parseFloat(settings.catalogo.porcentaje_incremento_bcv as any) : 0;
+
     const [searchTerm, setSearchTerm] = useState('');
     const [showOutOfStock, setShowOutOfStock] = useState(false);
     const [products, setProducts] = useState<any[]>([]);
@@ -61,6 +65,10 @@ export const POSSystem = () => {
         }
     ]);
 
+    const hasVesPayment = pagos.some(p => {
+        const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
+        return acc?.moneda === 'VES';
+    });
     const subtotal = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
     const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
@@ -156,6 +164,21 @@ export const POSSystem = () => {
         });
     }, [subtotal]);
 
+    // Sincronizar precios de ítems del carrito según el estado del pago VES (Bs)
+    useEffect(() => {
+        setCart(prev => prev.map(item => {
+            const basePrice = item.precio_base ?? item.precio;
+            const targetPrice = hasVesPayment && incrementoPct > 0
+                ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
+                : basePrice;
+            return {
+                ...item,
+                precio_base: basePrice,
+                precio: targetPrice
+            };
+        }));
+    }, [hasVesPayment, incrementoPct]);
+
     const addPago = () => {
         const currentPaidUsd = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
         const remainingUsd = Math.max(0, subtotal - currentPaidUsd);
@@ -205,6 +228,29 @@ export const POSSystem = () => {
                     let defaultRate = '1.00';
                     if (acc.moneda === 'COP') defaultRate = '4000';
                     else if (acc.moneda === 'VES') defaultRate = '36';
+                    
+                    updated.tasa_cambio = defaultRate;
+                    const usdVal = parseFloat(updated.monto_usd || '0');
+                    updated.monto_real = usdVal > 0 ? (usdVal * parseFloat(defaultRate)).toFixed(2) : '';
+
+                    // Auto-detect Cashea accounts and select Cashea method
+                    if (acc.es_cashea) {
+                        updated.metodo = 'Cashea';
+                    } else if (updated.metodo === 'Cashea') {
+                        // Reset method if we switched to a non-Cashea account from Cashea
+                        updated.metodo = 'Efectivo';
+                    }
+                }
+            }
+
+            if (field === 'metodo' && value === 'Cashea') {
+                // Look for the first Cashea account to auto-select
+                const casheaAcc = cuentas.find(c => c.es_cashea);
+                if (casheaAcc) {
+                    updated.id_cuenta = String(casheaAcc.id_cuenta);
+                    let defaultRate = '1.00';
+                    if (casheaAcc.moneda === 'COP') defaultRate = '4000';
+                    else if (casheaAcc.moneda === 'VES') defaultRate = '36';
                     
                     updated.tasa_cambio = defaultRate;
                     const usdVal = parseFloat(updated.monto_usd || '0');
@@ -285,6 +331,15 @@ export const POSSystem = () => {
         for (const p of pagos) {
             if (!p.id_cuenta) {
                 setError("Por favor, seleccione una cuenta de destino para todos los pagos.");
+                return;
+            }
+            const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
+            if (p.metodo === 'Cashea' && (!acc || !acc.es_cashea)) {
+                setError("El método Cashea solo se puede registrar con una cuenta marcada como Cashea.");
+                return;
+            }
+            if (acc && acc.es_cashea && p.metodo !== 'Cashea') {
+                setError(`Para la cuenta "${acc.nombre}", el método de pago debe ser obligatoriamente 'Cashea'.`);
                 return;
             }
             const usdVal = parseFloat(p.monto_usd);
@@ -443,6 +498,11 @@ export const POSSystem = () => {
     const addToCart = (product: any) => {
         const variantId = product.default_variant_id || product.id_producto;
         const existing = cart.find(item => item.id === variantId);
+        const basePrice = Number(product.min_price) || Number(product.precio) || 0;
+        const finalPrice = hasVesPayment && incrementoPct > 0
+            ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
+            : basePrice;
+
         if (existing) {
             setCart(cart.map(item => 
                 item.id === variantId 
@@ -453,7 +513,8 @@ export const POSSystem = () => {
             setCart([...cart, {
                 id: variantId,
                 nombre: product.nombre,
-                precio: product.displayPrice,
+                precio_base: basePrice,
+                precio: finalPrice,
                 cantidad: 1,
                 imagen: product.displayImage
             }]);
@@ -487,7 +548,7 @@ export const POSSystem = () => {
                     )}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-3 lg:p-4">
+            <CardContent className="max-h-[220px] overflow-y-auto p-3 lg:p-4">
                 {cart.length === 0 ? (
                     <div className="h-full flex items-center justify-center py-8">
                         <div className="text-center space-y-2">
@@ -525,13 +586,13 @@ export const POSSystem = () => {
     );
 
     const renderDatosVentaCard = () => (
-        <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex flex-col h-full overflow-hidden text-foreground">
+        <Card className="border border-border shadow-xl bg-card/85 backdrop-blur-sm flex flex-col text-foreground">
             <CardHeader className="py-3 lg:py-4 border-b border-border bg-muted/40 flex-shrink-0">
                 <CardTitle className="text-sm lg:text-md flex items-center gap-2 text-foreground font-semibold">
                     <LayoutGrid className="h-4 w-4 text-primary" /> Datos de la Venta
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-3 lg:p-4 space-y-3 lg:space-y-4 overflow-y-auto flex-1">
+            <CardContent className="p-3 lg:p-4 space-y-3 lg:space-y-4">
                 <div className="grid grid-cols-12 gap-2 lg:gap-3">
                     {/* Cédula */}
                     <div className="col-span-12 sm:col-span-4 space-y-1">
@@ -649,7 +710,7 @@ export const POSSystem = () => {
                                                 <option value="" disabled>Seleccione Cuenta</option>
                                                 {cuentas.map((c: any) => (
                                                     <option key={c.id_cuenta} value={c.id_cuenta}>
-                                                        {c.nombre} ({c.moneda})
+                                                        {c.nombre} ({c.moneda}){c.es_cashea ? ' - [Cashea]' : ''}
                                                     </option>
                                                 ))}
                                             </select>
@@ -667,6 +728,7 @@ export const POSSystem = () => {
                                                 <option value="Pago Móvil">Pago Móvil</option>
                                                 <option value="Zelle">Zelle</option>
                                                 <option value="Transferencia">Transferencia</option>
+                                                <option value="Cashea">Cashea</option>
                                             </select>
                                         </div>
                                         
@@ -735,6 +797,13 @@ export const POSSystem = () => {
                         })}
                     </div>
 
+                    {hasVesPayment && incrementoPct > 0 && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-in fade-in duration-300">
+                            <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
+                            <span>Venta en Bs: Recargo del {incrementoPct}% aplicado automáticamente (Precios Sin Promo BCV)</span>
+                        </div>
+                    )}
+
                     {/* Desglose de Totales */}
                     <div className="p-3 bg-muted/40 border border-border rounded-xl space-y-1.5 text-xs text-foreground font-inter">
                         <div className="flex justify-between font-medium">
@@ -797,10 +866,10 @@ export const POSSystem = () => {
 
     const renderSidebarContent = () => (
         <>
-            <div className="max-h-[35%] flex flex-col">
+            <div className="flex flex-col">
                 {renderCarritoCard()}
             </div>
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex flex-col">
                 {renderDatosVentaCard()}
             </div>
         </>
@@ -809,26 +878,26 @@ export const POSSystem = () => {
     const warehouseName = userWarehouse ? userWarehouse.nombre : (currentUser?.id_almacen ? `Almacén #${currentUser.id_almacen}` : 'Todas (Admin/Central)');
 
     return (
-        <div className="flex flex-col h-[calc(100vh-240px)] bg-transparent overflow-hidden text-foreground">
+        <div className="flex flex-col bg-transparent text-foreground">
             {error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300 mb-4 flex-shrink-0">
+                <div className="fixed top-6 right-6 z-[9999] bg-red-600 text-white border border-red-700 shadow-2xl p-4 rounded-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300 max-w-md w-full md:w-auto">
                     <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+                        <AlertTriangle className="h-5 w-5 animate-pulse flex-shrink-0" />
                         <span className="text-xs font-semibold">{error}</span>
                     </div>
-                    <button type="button" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
+                    <button type="button" onClick={() => setError(null)} className="h-6 w-6 hover:bg-white/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
                         <X className="h-4 w-4" />
                     </button>
                 </div>
             )}
 
             {success && (
-                <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300 mb-4 flex-shrink-0">
+                <div className="fixed top-6 right-6 z-[9999] bg-emerald-600 text-white border border-emerald-700 shadow-2xl p-4 rounded-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300 max-w-md w-full md:w-auto">
                     <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4.5 w-4.5 text-green-500 flex-shrink-0" />
+                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
                         <span className="text-xs font-semibold">{success}</span>
                     </div>
-                    <button type="button" onClick={() => setSuccess(null)} className="h-6 w-6 text-green-500 hover:bg-green-500/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
+                    <button type="button" onClick={() => setSuccess(null)} className="h-6 w-6 hover:bg-white/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
                         <X className="h-4 w-4" />
                     </button>
                 </div>
@@ -851,9 +920,9 @@ export const POSSystem = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] xl:grid-cols-[1.6fr_1fr] 2xl:grid-cols-[2fr_1fr] gap-6 pb-0 lg:pb-6 overflow-hidden flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] xl:grid-cols-[1.6fr_1fr] 2xl:grid-cols-[2fr_1fr] gap-6 pb-0 lg:pb-6">
                 {/* ═══════════════════════ Contenido Principal (Catálogo) ═══════════════════════ */}
-                <div className={`flex flex-col gap-3 lg:gap-6 overflow-hidden ${mobileView === 'cart' ? 'hidden lg:flex' : 'flex'}`}>
+                <div className={`flex flex-col gap-3 lg:gap-6 ${mobileView === 'cart' ? 'hidden lg:flex' : 'flex'}`}>
                     {/* Desktop-only title row */}
                     <div className="hidden lg:block flex-shrink-0">
                         <h1 className="text-3xl font-extrabold text-foreground drop-shadow-sm font-outfit">Registrar Venta</h1>
@@ -885,7 +954,7 @@ export const POSSystem = () => {
                     </div>
 
                     {/* Grid de Productos — responsive columns */}
-                    <div className="flex-1 overflow-y-auto pb-20 lg:pb-2 pr-0 lg:pr-2 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-3 lg:gap-6 auto-rows-max">
+                    <div className="pb-20 lg:pb-2 pr-0 lg:pr-2 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-3 lg:gap-6 auto-rows-max">
                         {loading ? (
                             Array.from({ length: 8 }).map((_, i) => (
                                 <div key={i} className="bg-card/40 backdrop-blur-sm h-[240px] lg:h-[400px] rounded-xl border border-border animate-pulse"></div>
@@ -913,7 +982,14 @@ export const POSSystem = () => {
                                             <p className="text-[9px] lg:text-[10px] text-muted-foreground/60 font-mono tracking-tighter">REF-{prod.id_producto}</p>
                                         </div>
                                         <div className="mt-auto pt-1.5 lg:pt-2 border-t border-border">
-                                            <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3">${prod.displayPrice.toFixed(2)}</div>
+                                            {hasVesPayment && incrementoPct > 0 ? (
+                                                <div className="mb-1.5 lg:mb-3">
+                                                    <span className="text-[10px] text-muted-foreground line-through block font-medium">${prod.displayPrice.toFixed(2)}</span>
+                                                    <span className="text-base lg:text-xl font-black text-amber-500">${(prod.displayPrice * (1 + (incrementoPct / 100))).toFixed(2)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3">${prod.displayPrice.toFixed(2)}</div>
+                                            )}
                                             <Button 
                                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1.5 lg:py-2.5 rounded-lg flex items-center justify-center gap-1 lg:gap-2 shadow-sm active:scale-95 transition-transform text-[11px] lg:text-sm h-8 lg:h-auto"
                                                 onClick={() => addToCart(prod)}
@@ -930,7 +1006,7 @@ export const POSSystem = () => {
 
                 {/* ═══════════════════════ Barra Lateral / Mobile Cart View ═══════════════════════ */}
                 {/* Desktop sidebar */}
-                <div className="hidden lg:flex flex-col gap-4 overflow-hidden h-full">
+                <div className="hidden lg:flex flex-col gap-4 sticky top-6 max-h-[calc(100vh-120px)] overflow-y-auto pr-1">
                     {renderSidebarContent()}
                 </div>
 

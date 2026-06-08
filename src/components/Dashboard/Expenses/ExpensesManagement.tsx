@@ -8,7 +8,7 @@ import {
   ShoppingBag, Coffee, DollarSign, HelpCircle, Plus, PlusCircle, Trash, 
   ArrowUpRight, ArrowDownLeft, Calendar, User, Wallet, Banknote, Building2, 
   Loader2, Filter, ChevronLeft, ChevronRight, RefreshCw, X, AlertTriangle, 
-  List, Tags, Info, Edit, Check
+  List, Tags, Info, Edit, Check, CheckCircle
 } from 'lucide-react';
 import { FetchData } from '@/services/fetch';
 import { API_ENDPOINTS } from '@/services/api';
@@ -435,26 +435,26 @@ export const ExpensesManagement: React.FC = () => {
   return (
     <div className="space-y-6 text-foreground pb-12">
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+        <div className="fixed top-6 right-6 z-[9999] bg-red-600 text-white border border-red-700 shadow-2xl p-4 rounded-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300 max-w-md w-full md:w-auto">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4.5 w-4.5 animate-pulse flex-shrink-0" />
+            <AlertTriangle className="h-5 w-5 animate-pulse flex-shrink-0" />
             <span className="text-xs font-semibold">{error}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-red-500 hover:bg-red-500/10 flex-shrink-0">
+          <button type="button" onClick={() => setError(null)} className="h-6 w-6 hover:bg-white/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3.5 rounded-xl flex justify-between items-center animate-in fade-in duration-300">
+        <div className="fixed top-6 right-6 z-[9999] bg-emerald-600 text-white border border-emerald-700 shadow-2xl p-4 rounded-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300 max-w-md w-full md:w-auto">
           <div className="flex items-center gap-2">
-            <Check className="h-4.5 w-4.5 text-green-500 flex-shrink-0" />
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
             <span className="text-xs font-semibold">{success}</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setSuccess(null)} className="h-6 w-6 text-green-500 hover:bg-green-500/10 flex-shrink-0">
+          <button type="button" onClick={() => setSuccess(null)} className="h-6 w-6 hover:bg-white/10 rounded-md flex items-center justify-center transition-colors flex-shrink-0">
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
