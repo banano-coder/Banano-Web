@@ -446,7 +446,9 @@ export const LabelGenerator: React.FC = () => {
                              background: white;
                              color: black;
                              overflow: hidden;
-                             position: relative;
+                             display: flex;
+                             align-items: center;
+                             justify-content: center;
                              page-break-inside: avoid;
                              break-inside: avoid;
                          }
@@ -457,9 +459,6 @@ export const LabelGenerator: React.FC = () => {
                              overflow: hidden;
                          }
                          .label-wrapper {
-                             position: absolute;
-                             left: 50%;
-                             top: 50%;
                              width: ${labelWidth}mm;
                              height: ${labelHeight}mm;
                              display: flex;
@@ -469,8 +468,9 @@ export const LabelGenerator: React.FC = () => {
                              justify-content: center;
                              text-align: center;
                              padding: 1.2mm 1.5mm;
-                             transform: translate(-50%, -50%) rotate(${printRotation}) scale(${effectiveScale});
+                             transform: rotate(${printRotation}) scale(${effectiveScale});
                              transform-origin: center center;
+                             flex-shrink: 0;
                          }
                          
                          .label-header {
