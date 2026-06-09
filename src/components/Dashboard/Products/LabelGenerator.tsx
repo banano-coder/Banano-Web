@@ -88,6 +88,10 @@ export const LabelGenerator: React.FC = () => {
         const saved = localStorage.getItem('label_print_v_offset');
         return saved ? parseInt(saved, 10) : -10;
     });
+    const [horizontalOffset, setHorizontalOffset] = useState<number>(() => {
+        const saved = localStorage.getItem('label_print_h_offset');
+        return saved ? parseInt(saved, 10) : 0;
+    });
 
     // Persist settings to localStorage whenever they change
     useEffect(() => {
@@ -113,6 +117,10 @@ export const LabelGenerator: React.FC = () => {
     useEffect(() => {
         localStorage.setItem('label_print_v_offset', verticalOffset.toString());
     }, [verticalOffset]);
+
+    useEffect(() => {
+        localStorage.setItem('label_print_h_offset', horizontalOffset.toString());
+    }, [horizontalOffset]);
 
     // Load all active variants at once
     const loadAllVariantsData = async () => {
@@ -394,8 +402,8 @@ export const LabelGenerator: React.FC = () => {
         const effectiveScale = orientation === 'vertical' ? scale * autoScale : scale;
         const printRotation = orientation === 'vertical' ? '-90deg' : '0deg';
         const printTranslation = orientation === 'vertical' 
-            ? `translateX(${verticalOffset}mm)` 
-            : `translateY(${verticalOffset}mm)`;
+            ? `translateX(${verticalOffset}mm) translateY(${horizontalOffset}mm)` 
+            : `translateY(${verticalOffset}mm) translateX(${horizontalOffset}mm)`;
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
@@ -990,23 +998,39 @@ export const LabelGenerator: React.FC = () => {
                             </p>
                         </div>
 
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <Label htmlFor="v-offset-input">Desplazamiento Vertical (mm)</Label>
-                                <span className="text-xs font-bold text-primary">{verticalOffset} mm</span>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <Label htmlFor="v-offset-input" className="text-xs font-semibold">Desplazamiento Vert. (mm)</Label>
+                                    <span className="text-[11px] font-bold text-primary">{verticalOffset} mm</span>
+                                </div>
+                                <Input 
+                                    id="v-offset-input"
+                                    type="number"
+                                    step="1"
+                                    className="bg-background border-border text-foreground font-medium h-9 text-xs"
+                                    value={verticalOffset}
+                                    onChange={(e) => setVerticalOffset(parseInt(e.target.value, 10) || 0)}
+                                />
                             </div>
-                            <Input 
-                                id="v-offset-input"
-                                type="number"
-                                step="1"
-                                className="bg-background border-border text-foreground font-medium"
-                                value={verticalOffset}
-                                onChange={(e) => setVerticalOffset(parseInt(e.target.value, 10) || 0)}
-                            />
-                            <p className="text-[10px] text-muted-foreground italic">
-                                Valores negativos suben la impresión (ej. -10), valores positivos la bajan.
-                            </p>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <Label htmlFor="h-offset-input" className="text-xs font-semibold">Desplazamiento Horiz. (mm)</Label>
+                                    <span className="text-[11px] font-bold text-primary">{horizontalOffset} mm</span>
+                                </div>
+                                <Input 
+                                    id="h-offset-input"
+                                    type="number"
+                                    step="1"
+                                    className="bg-background border-border text-foreground font-medium h-9 text-xs"
+                                    value={horizontalOffset}
+                                    onChange={(e) => setHorizontalOffset(parseInt(e.target.value, 10) || 0)}
+                                />
+                            </div>
                         </div>
+                        <p className="text-[10px] text-muted-foreground italic">
+                            Valores negativos suben/mueven a la izquierda, valores positivos bajan/mueven a la derecha.
+                        </p>
 
                         {/* Print Button */}
                         <Button 
@@ -1036,10 +1060,10 @@ export const LabelGenerator: React.FC = () => {
                                     : `${previewItem.productName} (${previewItem.attributesText})`;
                                 return (
                                     <div 
-                                        className="border border-border/70 rounded bg-white text-black shadow-lg relative overflow-hidden select-none"
+                                        className="border border-border/70 rounded bg-white text-black shadow-lg relative overflow-hidden select-none transition-all duration-300"
                                         style={{ 
-                                            width: `${labelWidth * 5}px`, // Always match physical dimensions
-                                            height: `${labelHeight * 5}px`, 
+                                            width: `${labelWidth * 5 * scale}px`, 
+                                            height: `${labelHeight * 5 * scale}px`, 
                                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                                         }}
                                     >
@@ -1051,8 +1075,8 @@ export const LabelGenerator: React.FC = () => {
                                                 width: `${labelWidth * 5}px`,
                                                 height: `${labelHeight * 5}px`,
                                                 transform: orientation === 'horizontal' 
-                                                    ? `translate(-50%, calc(-50% + ${verticalOffset * 5}px)) scale(${scale})` 
-                                                    : `translate(calc(-50% + ${verticalOffset * 5}px), -50%) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
+                                                    ? `translate(calc(-50% + ${horizontalOffset * 5}px), calc(-50% + ${verticalOffset * 5}px)) scale(${scale})` 
+                                                    : `translate(calc(-50% + ${verticalOffset * 5}px), calc(-50% + ${horizontalOffset * 5}px)) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
                                                 transformOrigin: 'center center',
                                                 display: 'flex',
                                                 flexDirection: 'column',

@@ -386,3 +386,11 @@ This project is a static-first web application built with Astro.js. It is design
 2. **Product catalog pricing**: Locate the default variant in `p.variantes` corresponding to `default_variant_id`, get its `precio_lista` as `actualPrice`, and set `displayPrice: actualPrice`. Append its attributes (if any) to the product's `nombre`.
 3. **Cart pricing**: Update `addToCart` to compute `basePrice` using `product.displayPrice` instead of `product.min_price`.
 4. **Verify and build**: Verify compilation with `npm run build` and test checkout.
+
+## Detailed Plan: Label Generator 2D Alignment & Preview Scaling Fix
+1. **State variables**: Add `horizontalOffset` state variable and sync it with `localStorage` (default to `0` mm).
+2. **Print layout**: Update `printTranslation` in `handlePrint` to combine vertical (X/Y) and horizontal (Y/X) offsets based on horizontal/vertical layout orientations.
+3. **Screen preview**: Scale the visual width/height of the card container dynamically by multiplying by `scale` to prevent boundary clipping. Update translation transforms to apply both `verticalOffset` and `horizontalOffset`.
+4. **Control input**: Place vertical and horizontal offset controls in a two-column grid inside the settings panel.
+5. **Verify and build**: Compile using `npm run build` and test offset and scaling adjustments.
+
