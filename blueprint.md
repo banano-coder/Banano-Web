@@ -394,3 +394,11 @@ This project is a static-first web application built with Astro.js. It is design
 4. **Control input**: Place vertical and horizontal offset controls in a two-column grid inside the settings panel.
 5. **Verify and build**: Compile using `npm run build` and test offset and scaling adjustments.
 
+## Detailed Plan: Label Generator Sucursal (Warehouse) Stock Filter
+1. **State variables**: Add `warehouses` and `selectedWarehouseId` state variables. Initialize `selectedWarehouseId` from user object in `localStorage` or default to `""` (Consolidated).
+2. **Fetch warehouses**: Fetch active warehouses from `/api/almacenes?activo=true` on component mount.
+3. **Filter queries & list**: Append `?id_almacen=${selectedWarehouseId}` to the `/api/reports/stock-actual` query when selected. If a warehouse is selected, filter retrieved variants list to only retain records where `stock > 0`. Update variants reload trigger to listen to changes on `selectedWarehouseId`.
+4. **Layout dropdown select**: Update filters row to `grid-cols-1 md:grid-cols-4 gap-4` and render a sucursal dropdown selector inside it.
+5. **Verify and build**: Verify compilation with `npm run build` and test sucursal filtering.
+
+

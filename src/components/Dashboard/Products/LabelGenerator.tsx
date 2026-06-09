@@ -92,6 +92,21 @@ export const LabelGenerator: React.FC = () => {
         const saved = localStorage.getItem('label_print_h_offset');
         return saved ? parseInt(saved, 10) : 0;
     });
+    const [warehouses, setWarehouses] = useState<any[]>([]);
+    const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            try {
+                const parsed = JSON.parse(storedUser);
+                if (parsed && parsed.id_almacen != null) {
+                    return String(parsed.id_almacen);
+                }
+            } catch (e) {
+                console.error("Error parsing user from localStorage in LabelGenerator:", e);
+            }
+        }
+        return '';
+    });
 
     // Persist settings to localStorage whenever they change
     useEffect(() => {
@@ -122,13 +137,32 @@ export const LabelGenerator: React.FC = () => {
         localStorage.setItem('label_print_h_offset', horizontalOffset.toString());
     }, [horizontalOffset]);
 
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            try {
+                const res = await FetchData<any[]>(`${API_ENDPOINTS.ALMACENES.LIST}?activo=true`, 'GET');
+                const list = Array.isArray(res) ? res : (res as any).data || [];
+                setWarehouses(list);
+            } catch (e) {
+                console.error("Error fetching warehouses in LabelGenerator:", e);
+            }
+        };
+        fetchWarehouses();
+    }, []);
+
     // Load all active variants at once
     const loadAllVariantsData = async () => {
         setLoadingProducts(true);
         setError(null);
         try {
-            const res = await FetchData<any>('/api/reports/stock-actual');
-            const list = Array.isArray(res) ? res : res.data || [];
+            const url = selectedWarehouseId 
+                ? `/api/reports/stock-actual?id_almacen=${selectedWarehouseId}` 
+                : '/api/reports/stock-actual';
+            const res = await FetchData<any>(url);
+            let list = Array.isArray(res) ? res : res.data || [];
+            if (selectedWarehouseId) {
+                list = list.filter((r: any) => (r.stock || 0) > 0);
+            }
             setAllVariants(list.map((r: any) => ({
                 id_variante_producto: r.id_variante_producto,
                 id_producto: r.id_producto,
@@ -153,7 +187,7 @@ export const LabelGenerator: React.FC = () => {
 
     useEffect(() => {
         loadAllVariantsData();
-    }, []);
+    }, [selectedWarehouseId]);
 
     // Click outside handler for dropdown
     useEffect(() => {
@@ -620,7 +654,7 @@ export const LabelGenerator: React.FC = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {/* Filters Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="search-product" className="font-semibold text-foreground/80">Buscar Producto</Label>
                                 <div className="relative">
@@ -629,11 +663,28 @@ export const LabelGenerator: React.FC = () => {
                                         id="search-product"
                                         type="text"
                                         placeholder="Nombre, marca o categoría..."
-                                        className="pl-10 bg-background border-border text-foreground"
+                                        className="pl-10 bg-background border-border text-foreground text-xs h-10"
                                         value={productSearch}
                                         onChange={(e) => setProductSearch(e.target.value.replace(/'/g, '-'))}
                                     />
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="filter-warehouse" className="font-semibold text-foreground/80">Filtrar por Sucursal</Label>
+                                <select 
+                                    id="filter-warehouse"
+                                    value={selectedWarehouseId}
+                                    onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer"
+                                >
+                                    <option value="">Consolidado (Todas)</option>
+                                    {warehouses.map(w => (
+                                        <option key={w.id_almacen} value={String(w.id_almacen)}>
+                                            {w.nombre}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="space-y-2">
@@ -642,7 +693,7 @@ export const LabelGenerator: React.FC = () => {
                                     id="filter-category"
                                     value={selectedCategoryFilter}
                                     onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer"
                                 >
                                     <option value="">Todas las categorías</option>
                                     {availableCategories.map(cat => (
@@ -657,7 +708,7 @@ export const LabelGenerator: React.FC = () => {
                                     id="filter-brand"
                                     value={selectedBrandFilter}
                                     onChange={(e) => setSelectedBrandFilter(e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 appearance-none cursor-pointer"
                                 >
                                     <option value="">Todas las marcas</option>
                                     {availableBrands.map(brand => (
