@@ -13,6 +13,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { Product } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 
+const formatVariantLabel = (atributos: any): string => {
+    if (!atributos || typeof atributos !== 'object') return '';
+    const entries = Object.entries(atributos);
+    if (entries.length === 0) return '';
+    return entries.map(([k, v]) => {
+        const key = k.trim().toLowerCase();
+        if (key === 'tipo') return String(v);
+        return `${k}: ${v}`;
+    }).join(' / ');
+};
+
 export const POSSystem = () => {
     const { settings } = useSettings();
     const incrementoPct = settings?.catalogo?.porcentaje_incremento_bcv ? parseFloat(settings.catalogo.porcentaje_incremento_bcv as any) : 0;
@@ -471,14 +482,22 @@ export const POSSystem = () => {
                     const found = brands.find(b => b.id === String(p.id_marca));
                     if (found) brandName = found.name;
                 }
+
+                const defaultVariantId = adminMatch?.default_variant_id || p.default_variant_id || p.id_producto;
+                const defaultVar = p.variantes?.find((v: any) => String(v.id_variante_producto) === String(defaultVariantId)) || p.variantes?.[0];
+                const actualPrice = defaultVar ? (Number(defaultVar.precio_lista) || 0) : (Number(p.min_price) || Number(p.precio) || 0);
+
+                const variantLabel = defaultVar ? formatVariantLabel(defaultVar.atributos_json) : '';
+                const displayName = variantLabel ? `${p.nombre} (${variantLabel})` : p.nombre;
                 
                 return {
                     ...p,
+                    nombre: displayName,
                     displayBrand: brandName || adminMatch?.brand_name || 'Particular',
-                    displayPrice: Number(p.min_price) || Number(p.precio) || 0,
+                    displayPrice: actualPrice,
                     displayImage: p.imagen_principal || p.image || adminMatch?.image || 'https://placehold.co/400x400/261633/FFF?text=Banano',
                     displayStock: adminMatch?.total_stock !== undefined ? adminMatch.total_stock : (p.stock || 0),
-                    default_variant_id: adminMatch?.default_variant_id || p.default_variant_id || p.id_producto
+                    default_variant_id: defaultVariantId
                 };
             });
             
@@ -498,7 +517,7 @@ export const POSSystem = () => {
     const addToCart = (product: any) => {
         const variantId = product.default_variant_id || product.id_producto;
         const existing = cart.find(item => item.id === variantId);
-        const basePrice = Number(product.min_price) || Number(product.precio) || 0;
+        const basePrice = Number(product.displayPrice) || 0;
         const finalPrice = hasVesPayment && incrementoPct > 0
             ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
             : basePrice;

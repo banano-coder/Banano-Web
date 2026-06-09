@@ -380,3 +380,9 @@ This project is a static-first web application built with Astro.js. It is design
    - Apply `page-break-after: always;` on `.label-page` with a `:last-of-type` override to handle page transitions cleanly.
 4. **Verification**:
    - Run `npm run build` and manually check formatting of the print output.
+
+## Detailed Plan: POS Checkout Default Variant Price Matching Fix
+1. **Helper function**: Place `formatVariantLabel` in `POSSystem.tsx` to parse variant attributes.
+2. **Product catalog pricing**: Locate the default variant in `p.variantes` corresponding to `default_variant_id`, get its `precio_lista` as `actualPrice`, and set `displayPrice: actualPrice`. Append its attributes (if any) to the product's `nombre`.
+3. **Cart pricing**: Update `addToCart` to compute `basePrice` using `product.displayPrice` instead of `product.min_price`.
+4. **Verify and build**: Verify compilation with `npm run build` and test checkout.
