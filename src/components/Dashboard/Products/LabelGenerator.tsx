@@ -393,6 +393,9 @@ export const LabelGenerator: React.FC = () => {
         const autoScale = Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight);
         const effectiveScale = orientation === 'vertical' ? scale * autoScale : scale;
         const printRotation = orientation === 'vertical' ? '-90deg' : '0deg';
+        const printTranslation = orientation === 'vertical' 
+            ? `translateX(${verticalOffset}mm)` 
+            : `translateY(${verticalOffset}mm)`;
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
@@ -476,7 +479,7 @@ export const LabelGenerator: React.FC = () => {
                              justify-content: center;
                              text-align: center;
                              padding: 1.2mm 1.5mm;
-                             transform: translateY(${verticalOffset}mm) rotate(${printRotation}) scale(${effectiveScale});
+                             transform: ${printTranslation} rotate(${printRotation}) scale(${effectiveScale});
                              transform-origin: center center;
                              flex-shrink: 0;
                          }
@@ -1049,7 +1052,7 @@ export const LabelGenerator: React.FC = () => {
                                                 height: `${labelHeight * 5}px`,
                                                 transform: orientation === 'horizontal' 
                                                     ? `translate(-50%, calc(-50% + ${verticalOffset * 5}px)) scale(${scale})` 
-                                                    : `translate(-50%, calc(-50% + ${verticalOffset * 5}px)) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
+                                                    : `translate(calc(-50% + ${verticalOffset * 5}px), -50%) rotate(-90deg) scale(${scale * (Math.min(labelWidth, labelHeight) / Math.max(labelWidth, labelHeight))})`,
                                                 transformOrigin: 'center center',
                                                 display: 'flex',
                                                 flexDirection: 'column',
