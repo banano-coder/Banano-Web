@@ -108,6 +108,8 @@ This project is a static-first web application built with Astro.js. It is design
 - **Catalog Home Link & Mobile Search Bar Space**: Add home navigation buttons.
 - **User-Warehouse Association**: Associate user accounts with specific sucursales.
 - **POS/Sales Interface Aesthetic Redesign**: Redesign the POS panel to align with the global fuchsia/glassmorphism design theme.
+- **POS Variant Selection**: Introduce a dialog/modal inside the POS panel to select product variants when a product has multiple variants.
+
 
 ## Detailed Plan: Bulk Product Creation
 1. **API Integration**: Added `/api/bulk/parse-file` and `/api/bulk/create` to `api.ts`.
@@ -400,5 +402,16 @@ This project is a static-first web application built with Astro.js. It is design
 3. **Filter queries & list**: Append `?id_almacen=${selectedWarehouseId}` to the `/api/reports/stock-actual` query when selected. If a warehouse is selected, filter retrieved variants list to only retain records where `stock > 0`. Update variants reload trigger to listen to changes on `selectedWarehouseId`.
 4. **Layout dropdown select**: Update filters row to `grid-cols-1 md:grid-cols-4 gap-4` and render a sucursal dropdown selector inside it.
 5. **Verify and build**: Verify compilation with `npm run build` and test sucursal filtering.
+
+## Detailed Plan: POS Variant Selection Dialog
+1. **State variables**: Add `selectedProductForVariants`, `variantsForSelectedProduct`, and `loadingVariants` states to `POSSystem.tsx`.
+2. **Product Catalog Mapping**: Preserve the original product name (`rawNombre`) when mapping catalog products to prevent duplicate variant name appends.
+3. **Card UI Conditional Button**: If a product has multiple variants (e.g., `prod.variantes?.length > 1`), render a "Ver Variantes" button instead of "Agregar".
+4. **Variant Fetching & Dialog**:
+   - Create a Dialog / Modal inside `POSSystem.tsx`.
+   - When a cashier clicks "Ver Variantes", open this dialog, set the active product, and fetch variant-level stock from the cashier's warehouse: `/api/products/${prod.id_producto}/variants?id_almacen=${userWarehouseId}`.
+5. **Cart Checkout Item Handling**: Add a helper `addVariantToCart` to append the selected variant (with formatted attribute name and actual variant ID) to the checkout cart state.
+6. **Verify and build**: Compile with `npm run build` and verify.
+
 
 

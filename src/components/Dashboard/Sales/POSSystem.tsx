@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
     Search, ShoppingCart, User, Phone, Mail, Hash, 
     ArrowLeft, ArrowRight, Plus, Minus, CheckCircle, Package, Info, Loader2, LayoutGrid, X, DollarSign, AlertTriangle
@@ -36,6 +37,11 @@ export const POSSystem = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    // Seleccionar variante states
+    const [selectedProductForVariants, setSelectedProductForVariants] = useState<any | null>(null);
+    const [variantsForSelectedProduct, setVariantsForSelectedProduct] = useState<any[]>([]);
+    const [loadingVariants, setLoadingVariants] = useState(false);
 
     useEffect(() => {
         if (success) {
@@ -492,6 +498,7 @@ export const POSSystem = () => {
                 
                 return {
                     ...p,
+                    rawNombre: p.nombre,
                     nombre: displayName,
                     displayBrand: brandName || adminMatch?.brand_name || 'Particular',
                     displayPrice: actualPrice,
@@ -513,6 +520,66 @@ export const POSSystem = () => {
         const timer = setTimeout(fetchProducts, 400);
         return () => clearTimeout(timer);
     }, [searchTerm, brands]);
+
+    const openVariantSelector = async (product: any) => {
+        setSelectedProductForVariants(product);
+        setLoadingVariants(true);
+        setVariantsForSelectedProduct([]);
+        try {
+            let warehouseId = null;
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                try {
+                    const parsed = JSON.parse(storedUser);
+                    warehouseId = parsed?.id_almacen;
+                } catch (e) {
+                    console.error("Error parsing user warehouse for variant selection:", e);
+                }
+            }
+
+            const baseUrl = API_ENDPOINTS.PRODUCTS.VARIANTS(product.id_producto);
+            const url = warehouseId ? `${baseUrl}?id_almacen=${warehouseId}` : baseUrl;
+
+            const res = await FetchData<any>(url);
+            const list = Array.isArray(res) ? res : res.data || [];
+            setVariantsForSelectedProduct(list);
+        } catch (e) {
+            console.error("Error fetching variants for POS:", e);
+            setError("No se pudieron cargar las variantes del producto.");
+        } finally {
+            setLoadingVariants(false);
+        }
+    };
+
+    const addVariantToCart = (product: any, variant: any, quantity: number) => {
+        const variantId = variant.id_variante_producto || variant.id;
+        const existing = cart.find(item => item.id === variantId);
+        const basePrice = Number(variant.precio_lista) || 0;
+        const finalPrice = hasVesPayment && incrementoPct > 0
+            ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
+            : basePrice;
+
+        const variantLabel = formatVariantLabel(variant.atributos_json);
+        const displayName = variantLabel ? `${product.rawNombre || product.nombre} (${variantLabel})` : (product.rawNombre || product.nombre);
+        const displayImage = variant.url_imagen || product.displayImage;
+
+        if (existing) {
+            setCart(cart.map(item => 
+                item.id === variantId 
+                ? { ...item, cantidad: item.cantidad + quantity }
+                : item
+            ));
+        } else {
+            setCart([...cart, {
+                id: variantId,
+                nombre: displayName,
+                precio_base: basePrice,
+                precio: finalPrice,
+                cantidad: quantity,
+                imagen: displayImage
+            }]);
+        }
+    };
 
     const addToCart = (product: any) => {
         const variantId = product.default_variant_id || product.id_producto;
@@ -893,6 +960,98 @@ export const POSSystem = () => {
             </div>
         </>
     );
+
+    const renderVariantSelectorDialog = () => {
+        if (!selectedProductForVariants) return null;
+
+        return (
+            <Dialog 
+                open={!!selectedProductForVariants} 
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedProductForVariants(null);
+                        setVariantsForSelectedProduct([]);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-[500px] bg-card border border-border text-foreground">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                            <Package className="h-5 w-5 text-primary" />
+                            Seleccionar Variante
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="py-4 space-y-4">
+                        <div className="bg-muted/40 p-3 rounded-xl border border-border/60">
+                            <h3 className="font-bold text-foreground text-sm">{selectedProductForVariants.rawNombre || selectedProductForVariants.nombre}</h3>
+                            <p className="text-xs text-muted-foreground/80 mt-1">Marca: {selectedProductForVariants.displayBrand} | Ref: REF-{selectedProductForVariants.id_producto}</p>
+                        </div>
+
+                        {loadingVariants ? (
+                            <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <span className="text-xs font-semibold">Cargando variantes y stock...</span>
+                            </div>
+                        ) : variantsForSelectedProduct.length === 0 ? (
+                            <div className="py-8 text-center text-xs text-muted-foreground">
+                                No se encontraron variantes activas para este producto.
+                            </div>
+                        ) : (
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                {variantsForSelectedProduct.map((variant) => {
+                                    const attrs = variant.atributos_json || {};
+                                    const attrString = formatVariantLabel(attrs) || variant.sku;
+                                    const stock = variant.stock_actual ?? 0;
+                                    const outOfStock = stock <= 0 || !variant.activo;
+                                    const basePrice = Number(variant.precio_lista) || 0;
+                                    const priceWithTax = hasVesPayment && incrementoPct > 0
+                                        ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
+                                        : basePrice;
+
+                                    return (
+                                        <div 
+                                            key={variant.id_variante_producto}
+                                            className={`p-3 border rounded-xl flex justify-between items-center transition-all bg-card/40 hover:border-primary/30 ${
+                                                outOfStock ? 'opacity-50 bg-muted/20' : ''
+                                            }`}
+                                        >
+                                            <div className="flex flex-col min-w-0 flex-1 mr-4">
+                                                <span className="font-bold text-sm truncate text-foreground">{attrString}</span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="font-black text-primary text-xs">${priceWithTax.toFixed(2)}</span>
+                                                    <Badge variant={stock > 0 ? "outline" : "destructive"} className={`text-[10px] py-0.5 px-1.5 ${
+                                                        stock > 0 ? 'text-green-600 border-green-500/20 bg-green-500/5' : 'text-red-600 bg-red-500/5'
+                                                    }`}>
+                                                        {stock > 0 ? `${stock} disp.` : 'Agotado'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+
+                                            <Button 
+                                                size="sm"
+                                                className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold px-3 py-1.5 h-8 text-xs gap-1 rounded-lg"
+                                                disabled={outOfStock}
+                                                onClick={() => {
+                                                    addVariantToCart(selectedProductForVariants, variant, 1);
+                                                    setSuccess(`¡${selectedProductForVariants.rawNombre || selectedProductForVariants.nombre} (${attrString}) agregado!`);
+                                                    setSelectedProductForVariants(null);
+                                                    setVariantsForSelectedProduct([]);
+                                                }}
+                                            >
+                                                <Plus className="h-3 w-3" /> Agregar
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    };
+
     const userWarehouse = warehouses.find(w => w.id_almacen === currentUser?.id_almacen);
     const warehouseName = userWarehouse ? userWarehouse.nombre : (currentUser?.id_almacen ? `Almacén #${currentUser.id_almacen}` : 'Todas (Admin/Central)');
 
@@ -1009,12 +1168,21 @@ export const POSSystem = () => {
                                             ) : (
                                                 <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3">${prod.displayPrice.toFixed(2)}</div>
                                             )}
-                                            <Button 
-                                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1.5 lg:py-2.5 rounded-lg flex items-center justify-center gap-1 lg:gap-2 shadow-sm active:scale-95 transition-transform text-[11px] lg:text-sm h-8 lg:h-auto"
-                                                onClick={() => addToCart(prod)}
-                                            >
-                                                <Plus className="h-3.5 w-3.5 lg:h-4 lg:w-4" /> Agregar
-                                            </Button>
+                                            {prod.variantes && prod.variantes.length > 1 ? (
+                                                <Button 
+                                                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1.5 lg:py-2.5 rounded-lg flex items-center justify-center gap-1 lg:gap-2 shadow-sm active:scale-95 transition-transform text-[11px] lg:text-sm h-8 lg:h-auto"
+                                                    onClick={() => openVariantSelector(prod)}
+                                                >
+                                                    <LayoutGrid className="h-3.5 w-3.5 lg:h-4 lg:w-4" /> Ver Variantes
+                                                </Button>
+                                            ) : (
+                                                <Button 
+                                                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1.5 lg:py-2.5 rounded-lg flex items-center justify-center gap-1 lg:gap-2 shadow-sm active:scale-95 transition-transform text-[11px] lg:text-sm h-8 lg:h-auto"
+                                                    onClick={() => addToCart(prod)}
+                                                >
+                                                    <Plus className="h-3.5 w-3.5 lg:h-4 lg:w-4" /> Agregar
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1088,6 +1256,9 @@ export const POSSystem = () => {
                     )}
                 </div>
             </div>
+
+            {/* Variant selector dialog popup */}
+            {renderVariantSelectorDialog()}
         </div>
     );
 };
