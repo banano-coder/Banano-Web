@@ -367,7 +367,7 @@ export const CartDrawer: React.FC = () => {
 
                         <Button
                             onClick={handleCheckout}
-                            disabled={isSubmitting || !customerName.trim() || customerCedula.length < 5 || !customerEmail.trim() || !customerPhone.trim()}
+                            disabled={isSubmitting || !customerName.trim() || customerCedula.length < 5 || !customerPhone.trim()}
                             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-6 text-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
                         >
                             {isSubmitting ? (
@@ -377,7 +377,7 @@ export const CartDrawer: React.FC = () => {
                             )}
                             Pedir por WhatsApp <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
-                        {(!customerName.trim() || customerCedula.length < 5 || !customerEmail.trim() || !customerPhone.trim()) && (
+                        {(!customerName.trim() || customerCedula.length < 5 || !customerPhone.trim()) && (
                             <p className="text-[14px] text-center text-red-700 font-bold mt-2">
                                 Por favor completa todos los campos para continuar.
                             </p>

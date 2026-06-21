@@ -465,8 +465,8 @@ export const POSSystem = () => {
                 : `${API_ENDPOINTS.CATALOG.PRODUCTS}?limit=100`;
             
             let adminUrl = searchTerm 
-                ? `${API_ENDPOINTS.PRODUCTS.LIST}?search=${searchTerm}`
-                : API_ENDPOINTS.PRODUCTS.LIST;
+                ? `${API_ENDPOINTS.PRODUCTS.LIST}?search=${searchTerm}&limit=100`
+                : `${API_ENDPOINTS.PRODUCTS.LIST}?limit=100`;
 
             if (userWarehouseId != null) {
                 adminUrl += (adminUrl.includes('?') ? '&' : '?') + `id_almacen=${userWarehouseId}`;

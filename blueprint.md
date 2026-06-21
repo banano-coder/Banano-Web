@@ -30,6 +30,9 @@ This project is a static-first web application built with Astro.js. It is design
     *   Dynamic dot indicators at the bottom indicating active slide status.
     *   Pause-on-hover logic preventing slides from changing while users interact.
 *   **Dashboard Floating Toasts**: Converted inline alert banners in key modules (POS, Money, Expenses, Cashea) to floating overlay toasts on the top-right corner, improving visibility and layout consistency.
+*   **Default Report Date Ranges**: Set the default date range in the Reports views ("Reporte de Rentabilidad" and "Reporte de Inventario") to always default to the first day of the current month up to the current day, using local timezone dates.
+*   **Optional Customer Email**: Made the customer email optional in storefront checkout and orders. Disabled email validation requirements in the frontend cart drawer and removed the required check in the backend checkout routes. Altered the database schema to drop the `NOT NULL` constraint on the `email` column of the `public.cliente` table.
+*   **POS Search Stock Mapping Fix**: Fixed a bug where searching in the POS panel returned products with 0 stock due to pagination limit mismatch between the public catalog endpoint (limit 100) and the admin products endpoint (default limit 20). Synchronized both requests to use `limit=100`.
 
 ## Current Architecture: Inventory
 - **Table `producto`**: Logical unit. Aggregates `total_stock` and `variants_count`.
@@ -109,6 +112,8 @@ This project is a static-first web application built with Astro.js. It is design
 - **User-Warehouse Association**: Associate user accounts with specific sucursales.
 - **POS/Sales Interface Aesthetic Redesign**: Redesign the POS panel to align with the global fuchsia/glassmorphism design theme.
 - **POS Variant Selection**: Introduce a dialog/modal inside the POS panel to select product variants when a product has multiple variants.
+- **Sales Profitability Table Pagination**: Paginate the sales profitability report table and keep the summation footer locked at the bottom.
+
 
 
 ## Detailed Plan: Bulk Product Creation
@@ -412,6 +417,31 @@ This project is a static-first web application built with Astro.js. It is design
    - When a cashier clicks "Ver Variantes", open this dialog, set the active product, and fetch variant-level stock from the cashier's warehouse: `/api/products/${prod.id_producto}/variants?id_almacen=${userWarehouseId}`.
 5. **Cart Checkout Item Handling**: Add a helper `addVariantToCart` to append the selected variant (with formatted attribute name and actual variant ID) to the checkout cart state.
 6. **Verify and build**: Compile with `npm run build` and verify.
+
+## Detailed Plan: Sales Profitability Table Pagination
+1. **State variables**: Add `currentPage` (number, default to 1) and `pageSize` (number, default to 10) state variables to `SalesProfitReports.tsx`.
+2. **Chevron Imports**: Import `ChevronLeft` and `ChevronRight` from `lucide-react`.
+3. **Array Slicing**: Render a paginated slice of the `salesReport` array in the `tbody` based on the current page and page size.
+4. **Pagination Controls**: Render pagination action buttons and information labels at the bottom of the table card.
+5. **Totals Summation Footer**: Keep the existing `tfoot` totals summation unchanged, so that the total for the entire active filter remains visible at the bottom of the table.
+6. **Filter Reset Hook**: Reset the `currentPage` state variable to 1 whenever the active filters (selected warehouse, dates) change.
+7. **Verify and build**: Verify compilation and check that the table paginates correctly.
+
+## Detailed Plan: Default Report Date Ranges
+1. **Identify date filters**: Locate date range initializers in `InventoryReports.tsx` and `SalesProfitReports.tsx`.
+2. **Implement local timezone logic**: Update the useState initializers for `fromDate` and `toDate` to dynamically construct local timezone string representations (`YYYY-MM-01` and `YYYY-MM-DD`).
+3. **Verify compilation**: Run the Astro build command to verify correctness.
+
+## Detailed Plan: Optional Customer Email
+1. **Frontend Validation Update**: Modify `CartDrawer.tsx` to remove email from list of required checkout field validations.
+2. **Backend Validation Update**: Modify `pedidos.routes.js` to remove the email required block checks in the guest checkout route.
+3. **Database Schema Update**: Execute the SQL statement `ALTER TABLE public.cliente ALTER COLUMN email DROP NOT NULL` to drop the required constraint on the customer table.
+
+## Detailed Plan: POS Search Stock Mapping Fix
+1. **Locate fetchProducts**: Find the parallel endpoints logic inside `POSSystem.tsx`.
+2. **Synchronize limits**: Modify `adminUrl` construction to include `limit=100` so that it retrieves up to 100 matching products, preventing metadata and stock mismatches.
+3. **Verify compilation**: Run the build script to ensure correctness.
+
 
 
 

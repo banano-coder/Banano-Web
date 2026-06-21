@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Download, FileText, Loader2, FileDown, Warehouse, TrendingUp, 
-  DollarSign, Activity, ShoppingCart, Percent, ArrowUpRight, ArrowDownRight, Info, X 
+  DollarSign, Activity, ShoppingCart, Percent, ArrowUpRight, ArrowDownRight, Info, X,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -179,14 +180,23 @@ export const SalesProfitReports = () => {
     const [orderDetails, setOrderDetails] = useState<any | null>(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
-    // Date range defaults to last 30 days
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    // Date range default: first day of current month to today's local date
     const [fromDate, setFromDate] = useState(() => {
         const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d.toISOString().split('T')[0];
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}-01`;
     });
     const [toDate, setToDate] = useState(() => {
-        return new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     });
 
     useEffect(() => {
@@ -235,6 +245,7 @@ export const SalesProfitReports = () => {
                 setKpiData(res.kpis || { total_ingresos: 0, total_costo: 0, ganancia_bruta: 0, total_gastos: 0, ganancia_neta: 0 });
                 setSalesReport(res.sales || []);
                 setSeriesData(res.series || []);
+                setCurrentPage(1);
             }
         } catch (error) {
             console.error("Error fetching sales profit report:", error);
@@ -286,6 +297,11 @@ export const SalesProfitReports = () => {
             (weeklySalesSummary.week4_total || 0)
         );
     }, [weeklySalesSummary]);
+
+    const totalPages = Math.ceil(salesReport.length / pageSize) || 1;
+    const paginatedSales = React.useMemo(() => {
+        return salesReport.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    }, [salesReport, currentPage, pageSize]);
 
     // Export CSV Report
     const handleDownloadCSV = () => {
@@ -800,7 +816,7 @@ export const SalesProfitReports = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    salesReport.map(r => (
+                                    paginatedSales.map(r => (
                                         <tr key={r.id_pedido} className="hover:bg-muted/10 transition-colors font-medium">
                                             <td className="p-4 font-bold text-foreground">
                                                 #{r.id_pedido}
@@ -863,6 +879,37 @@ export const SalesProfitReports = () => {
                             )}
                         </table>
                     </div>
+
+                    {salesReport.length > pageSize && (
+                        <div className="flex items-center justify-between py-4 px-6 border-t border-border/80 bg-muted/10 font-bold text-xs text-muted-foreground select-none">
+                            <div className="flex items-center gap-1">
+                                Mostrando <span className="text-foreground">{Math.min(salesReport.length, (currentPage - 1) * pageSize + 1)}</span> a <span className="text-foreground">{Math.min(salesReport.length, currentPage * pageSize)}</span> de <span className="text-foreground">{salesReport.length}</span> registros
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1 || loading}
+                                    className="h-8 border-border text-foreground hover:bg-muted font-bold gap-1 rounded-lg text-xs"
+                                >
+                                    <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+                                </Button>
+                                <span className="text-xs font-semibold px-2">
+                                    Página {currentPage} de {totalPages || 1}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage >= totalPages || loading}
+                                    className="h-8 border-border text-foreground hover:bg-muted font-bold gap-1 rounded-lg text-xs"
+                                >
+                                    Siguiente <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

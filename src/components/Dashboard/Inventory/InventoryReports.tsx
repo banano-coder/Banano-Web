@@ -229,14 +229,19 @@ export const InventoryReports = () => {
     // Reset page when warehouse or data changes
     useEffect(() => { setStockPage(1); }, [selectedWarehouseId, stockReport.length]);
 
-    // Date range default: last 30 days
+    // Date range default: first day of current month to today's local date
     const [fromDate, setFromDate] = useState(() => {
         const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d.toISOString().split('T')[0];
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}-01`;
     });
     const [toDate, setToDate] = useState(() => {
-        return new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     });
 
     const fetchStats = async () => {
