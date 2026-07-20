@@ -82,7 +82,7 @@ export const POSSystem = () => {
         }
     ]);
 
-    const hasVesPayment = pagos.some(p => {
+    const isOnlyVesPayment = pagos.length > 0 && pagos.every(p => {
         const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
         return acc?.moneda === 'VES';
     });
@@ -185,7 +185,7 @@ export const POSSystem = () => {
     useEffect(() => {
         setCart(prev => prev.map(item => {
             const basePrice = item.precio_base ?? item.precio;
-            const targetPrice = hasVesPayment && incrementoPct > 0
+            const targetPrice = isOnlyVesPayment && incrementoPct > 0
                 ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
                 : basePrice;
             return {
@@ -194,7 +194,7 @@ export const POSSystem = () => {
                 precio: targetPrice
             };
         }));
-    }, [hasVesPayment, incrementoPct]);
+    }, [isOnlyVesPayment, incrementoPct]);
 
     const addPago = () => {
         const currentPaidUsd = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
@@ -555,7 +555,7 @@ export const POSSystem = () => {
         const variantId = variant.id_variante_producto || variant.id;
         const existing = cart.find(item => item.id === variantId);
         const basePrice = Number(variant.precio_lista) || 0;
-        const finalPrice = hasVesPayment && incrementoPct > 0
+        const finalPrice = isOnlyVesPayment && incrementoPct > 0
             ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
             : basePrice;
 
@@ -585,7 +585,7 @@ export const POSSystem = () => {
         const variantId = product.default_variant_id || product.id_producto;
         const existing = cart.find(item => item.id === variantId);
         const basePrice = Number(product.displayPrice) || 0;
-        const finalPrice = hasVesPayment && incrementoPct > 0
+        const finalPrice = isOnlyVesPayment && incrementoPct > 0
             ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
             : basePrice;
 
@@ -883,7 +883,7 @@ export const POSSystem = () => {
                         })}
                     </div>
 
-                    {hasVesPayment && incrementoPct > 0 && (
+                    {isOnlyVesPayment && incrementoPct > 0 && (
                         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-in fade-in duration-300">
                             <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
                             <span>Venta en Bs: Recargo del {incrementoPct}% aplicado automáticamente (Precios Sin Promo BCV)</span>
@@ -1005,7 +1005,7 @@ export const POSSystem = () => {
                                     const stock = variant.stock_actual ?? 0;
                                     const outOfStock = stock <= 0 || !variant.activo;
                                     const basePrice = Number(variant.precio_lista) || 0;
-                                    const priceWithTax = hasVesPayment && incrementoPct > 0
+                                    const priceWithTax = isOnlyVesPayment && incrementoPct > 0
                                         ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
                                         : basePrice;
 
@@ -1160,7 +1160,7 @@ export const POSSystem = () => {
                                             <p className="text-[9px] lg:text-[10px] text-muted-foreground/60 font-mono tracking-tighter">REF-{prod.id_producto}</p>
                                         </div>
                                         <div className="mt-auto pt-1.5 lg:pt-2 border-t border-border">
-                                            {hasVesPayment && incrementoPct > 0 ? (
+                                            {isOnlyVesPayment && incrementoPct > 0 ? (
                                                 <div className="mb-1.5 lg:mb-3">
                                                     <span className="text-[10px] text-muted-foreground line-through block font-medium">${prod.displayPrice.toFixed(2)}</span>
                                                     <span className="text-base lg:text-xl font-black text-amber-500">${(prod.displayPrice * (1 + (incrementoPct / 100))).toFixed(2)}</span>
