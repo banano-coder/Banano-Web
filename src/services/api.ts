@@ -81,5 +81,8 @@ export const API_ENDPOINTS = {
   },
   PEDIDOS: {
     VOID: (id: string | number) => `/api/pedidos/${id}/anular`
+  },
+  REPORTS: {
+    COMMISSIONS: `/api/reports/commissions`
   }
 };

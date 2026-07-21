@@ -3,7 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/Dashboard/Header.astro";
 import Sidebar from "../../components/Dashboard/Sidebar.astro";
 import Footer from "../../components/Dashboard/Footer.astro";
-import { UserList } from "../../components/Dashboard/Users/UserList";
+import { UsersManager } from "../../components/Dashboard/Users/UsersManager";
 import { AuthGuard } from "../../components/Dashboard/AuthGuard";
 ---
 
@@ -14,7 +14,7 @@ import { AuthGuard } from "../../components/Dashboard/AuthGuard";
       <Sidebar />
       <main class="flex-1 min-w-0 p-6 md:p-8">
         <AuthGuard client:load allowedRoles={['admin', 'manager']} panelName="Usuarios">
-          <UserList client:load />  
+          <UsersManager client:load />  
         </AuthGuard>
       </main>
     </div>
