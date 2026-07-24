@@ -20,20 +20,7 @@ const isActive = (path: string) => {
     return pathname === path || pathname === path + '/';
 };
 
-const navItems = [
-    { name: 'Principal', path: '/dashboard', icon: Home, color: 'text-blue-500' },
-    { name: 'Usuarios', path: '/dashboard/users', icon: Users, color: 'text-purple-500' },
-    { name: 'Ventas', path: '/dashboard/sales', icon: ShoppingCart, color: 'text-green-500' },
-    { name: 'Inventario', path: '/dashboard/products', icon: Package, color: 'text-orange-500' },
-    { name: 'Almacenes', path: '/dashboard/almacenes', icon: Warehouse, color: 'text-amber-600' },
-    { name: 'Reportes', path: '/dashboard/reports', icon: BarChart3, color: 'text-indigo-500' },
-    { name: 'Pedidos', path: '/dashboard/orders', icon: ClipboardList, color: 'text-pink-500' },
-    { name: 'Dinero y Caja', path: '/dashboard/money', icon: Wallet, color: 'text-emerald-500' },
-    { name: 'Gastos', path: '/dashboard/expenses', icon: Receipt, color: 'text-red-500' },
-    { name: 'Cashea', path: '/dashboard/cashea', icon: CreditCard, color: 'text-sky-500' },
-    { name: 'Auditoría', path: '/dashboard/audit', icon: ShieldCheck, color: 'text-slate-500' },
-    { name: 'Configuración', path: '/dashboard/settings', icon: Settings, color: 'text-gray-500' },
-];
+
 ---
 <!-- Mobile Overlay -->
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden md:hidden transition-opacity"></div>
@@ -50,25 +37,78 @@ const navItems = [
     </div>
     <nav>
         <ul class="space-y-1">
-            {navItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.path);
-                return (
-                    <li>
-                        <a 
-                            href={item.path} 
-                            class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${
-                                active 
-                                ? 'bg-primary text-primary-foreground font-bold shadow-md' 
-                                : 'text-foreground hover:bg-secondary hover:translate-x-1'
-                            }`}
-                        >
-                            <Icon className={`w-5 h-5 ${active ? 'text-primary-foreground' : item.color}`} />
-                            <span class="text-sm">{item.name}</span>
-                        </a>
-                    </li>
-                );
-            })}
+            <li>
+                <a href="/dashboard" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Home className={`w-5 h-5 ${isActive('/dashboard') ? 'text-primary-foreground' : 'text-blue-500'}`} />
+                    <span class="text-sm">Principal</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/users" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/users') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Users className={`w-5 h-5 ${isActive('/dashboard/users') ? 'text-primary-foreground' : 'text-purple-500'}`} />
+                    <span class="text-sm">Usuarios</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/sales" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/sales') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <ShoppingCart className={`w-5 h-5 ${isActive('/dashboard/sales') ? 'text-primary-foreground' : 'text-green-500'}`} />
+                    <span class="text-sm">Ventas</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/products" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/products') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Package className={`w-5 h-5 ${isActive('/dashboard/products') ? 'text-primary-foreground' : 'text-orange-500'}`} />
+                    <span class="text-sm">Inventario</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/almacenes" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/almacenes') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Warehouse className={`w-5 h-5 ${isActive('/dashboard/almacenes') ? 'text-primary-foreground' : 'text-amber-600'}`} />
+                    <span class="text-sm">Almacenes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/reports" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/reports') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <BarChart3 className={`w-5 h-5 ${isActive('/dashboard/reports') ? 'text-primary-foreground' : 'text-indigo-500'}`} />
+                    <span class="text-sm">Reportes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/orders" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/orders') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <ClipboardList className={`w-5 h-5 ${isActive('/dashboard/orders') ? 'text-primary-foreground' : 'text-pink-500'}`} />
+                    <span class="text-sm">Pedidos</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/money" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/money') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Wallet className={`w-5 h-5 ${isActive('/dashboard/money') ? 'text-primary-foreground' : 'text-emerald-500'}`} />
+                    <span class="text-sm">Dinero y Caja</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/expenses" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/expenses') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Receipt className={`w-5 h-5 ${isActive('/dashboard/expenses') ? 'text-primary-foreground' : 'text-red-500'}`} />
+                    <span class="text-sm">Gastos</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/cashea" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/cashea') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <CreditCard className={`w-5 h-5 ${isActive('/dashboard/cashea') ? 'text-primary-foreground' : 'text-sky-500'}`} />
+                    <span class="text-sm">Cashea</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/audit" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/audit') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <ShieldCheck className={`w-5 h-5 ${isActive('/dashboard/audit') ? 'text-primary-foreground' : 'text-slate-500'}`} />
+                    <span class="text-sm">Auditoría</span>
+                </a>
+            </li>
+            <li>
+                <a href="/dashboard/settings" class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${isActive('/dashboard/settings') ? 'bg-primary text-primary-foreground font-bold shadow-md' : 'text-foreground hover:bg-secondary hover:translate-x-1'}`}>
+                    <Settings className={`w-5 h-5 ${isActive('/dashboard/settings') ? 'text-primary-foreground' : 'text-gray-500'}`} />
+                    <span class="text-sm">Configuración</span>
+                </a>
+            </li>
         </ul>
     </nav>
 </aside>
