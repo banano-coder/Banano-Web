@@ -1,9 +1,39 @@
 ---
+import { 
+    Home, 
+    Users, 
+    ShoppingCart, 
+    Package, 
+    Warehouse, 
+    BarChart3, 
+    ClipboardList, 
+    Wallet, 
+    Receipt, 
+    CreditCard, 
+    ShieldCheck, 
+    Settings 
+} from 'lucide-react';
+
 const { pathname } = Astro.url;
 const isActive = (path: string) => {
     // Exact match or match with trailing slash
     return pathname === path || pathname === path + '/';
 };
+
+const navItems = [
+    { name: 'Principal', path: '/dashboard', icon: Home, color: 'text-blue-500' },
+    { name: 'Usuarios', path: '/dashboard/users', icon: Users, color: 'text-purple-500' },
+    { name: 'Ventas', path: '/dashboard/sales', icon: ShoppingCart, color: 'text-green-500' },
+    { name: 'Inventario', path: '/dashboard/products', icon: Package, color: 'text-orange-500' },
+    { name: 'Almacenes', path: '/dashboard/almacenes', icon: Warehouse, color: 'text-amber-600' },
+    { name: 'Reportes', path: '/dashboard/reports', icon: BarChart3, color: 'text-indigo-500' },
+    { name: 'Pedidos', path: '/dashboard/orders', icon: ClipboardList, color: 'text-pink-500' },
+    { name: 'Dinero y Caja', path: '/dashboard/money', icon: Wallet, color: 'text-emerald-500' },
+    { name: 'Gastos', path: '/dashboard/expenses', icon: Receipt, color: 'text-red-500' },
+    { name: 'Cashea', path: '/dashboard/cashea', icon: CreditCard, color: 'text-sky-500' },
+    { name: 'Auditoría', path: '/dashboard/audit', icon: ShieldCheck, color: 'text-slate-500' },
+    { name: 'Configuración', path: '/dashboard/settings', icon: Settings, color: 'text-gray-500' },
+];
 ---
 <!-- Mobile Overlay -->
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden md:hidden transition-opacity"></div>
@@ -20,66 +50,25 @@ const isActive = (path: string) => {
     </div>
     <nav>
         <ul class="space-y-1">
-            <li>
-                <a href="/dashboard" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Principal
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/users" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/users') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Usuarios
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/sales" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/sales') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Ventas
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/products" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/products') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Inventario
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/almacenes" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/almacenes') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Almacenes
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/reports" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/reports') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Reportes
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/orders" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/orders') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Pedidos
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/money" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/money') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Dinero y Caja
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/expenses" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/expenses') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Gastos
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/cashea" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/cashea') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Cashea
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/audit" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/audit') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Auditoría
-                </a>
-            </li>
-            <li>
-                <a href="/dashboard/settings" class={`block px-4 py-2 rounded-md transition-colors ${isActive('/dashboard/settings') ? 'bg-secondary text-secondary-foreground font-bold' : 'text-foreground hover:bg-secondary/50'}`}>
-                    Configuración
-                </a>
-            </li>
+            {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                return (
+                    <li>
+                        <a 
+                            href={item.path} 
+                            class={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all duration-200 ${
+                                active 
+                                ? 'bg-primary text-primary-foreground font-bold shadow-md' 
+                                : 'text-foreground hover:bg-secondary hover:translate-x-1'
+                            }`}
+                        >
+                            <Icon className={`w-5 h-5 ${active ? 'text-primary-foreground' : item.color}`} />
+                            <span class="text-sm">{item.name}</span>
+                        </a>
+                    </li>
+                );
+            })}
         </ul>
     </nav>
 </aside>

@@ -126,7 +126,7 @@ export const CommissionsReport = () => {
                             ${totalCommissions.toFixed(2)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 font-semibold">
-                            Basado en ${totalProfit.toFixed(2)} de ganancia neta
+                            Basado en ${totalProfit.toFixed(2)} de ganancia bruta
                         </p>
                     </CardContent>
                 </Card>
@@ -149,7 +149,7 @@ export const CommissionsReport = () => {
                             <tr>
                                 <th className="px-6 py-4">Vendedor</th>
                                 <th className="px-6 py-4 text-right">Ventas Totales</th>
-                                <th className="px-6 py-4 text-right text-emerald-600">Ganancia Neta</th>
+                                <th className="px-6 py-4 text-right text-emerald-600">Ganancia Bruta</th>
                                 <th className="px-6 py-4 text-right text-primary">Comisión Calculada ({pct}%)</th>
                             </tr>
                         </thead>
