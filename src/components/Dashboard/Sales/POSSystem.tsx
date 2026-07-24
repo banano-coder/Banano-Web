@@ -248,7 +248,14 @@ export const POSSystem = () => {
                     
                     updated.tasa_cambio = defaultRate;
                     const usdVal = parseFloat(updated.monto_usd || '0');
-                    updated.monto_real = usdVal > 0 ? (usdVal * parseFloat(defaultRate)).toFixed(2) : '';
+                    if (usdVal > 0) {
+                        const baseVes = usdVal * parseFloat(defaultRate);
+                        updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && acc.moneda === 'VES')
+                            ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
+                            : baseVes.toFixed(2);
+                    } else {
+                        updated.monto_real = '';
+                    }
 
                     // Auto-detect Cashea accounts and select Cashea method
                     if (acc.es_cashea) {
@@ -271,7 +278,14 @@ export const POSSystem = () => {
                     
                     updated.tasa_cambio = defaultRate;
                     const usdVal = parseFloat(updated.monto_usd || '0');
-                    updated.monto_real = usdVal > 0 ? (usdVal * parseFloat(defaultRate)).toFixed(2) : '';
+                    if (usdVal > 0) {
+                        const baseVes = usdVal * parseFloat(defaultRate);
+                        updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && casheaAcc.moneda === 'VES')
+                            ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
+                            : baseVes.toFixed(2);
+                    } else {
+                        updated.monto_real = '';
+                    }
                 }
             }
             
@@ -279,7 +293,11 @@ export const POSSystem = () => {
                 const rate = parseFloat(value);
                 const usdVal = parseFloat(updated.monto_usd || '0');
                 if (Number.isFinite(rate) && rate > 0 && usdVal > 0) {
-                    updated.monto_real = (usdVal * rate).toFixed(2);
+                    const acc = cuentas.find(c => String(c.id_cuenta) === updated.id_cuenta);
+                    const baseVes = usdVal * rate;
+                    updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && acc?.moneda === 'VES')
+                        ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
+                        : baseVes.toFixed(2);
                 }
             }
             
@@ -287,7 +305,11 @@ export const POSSystem = () => {
                 const usdVal = parseFloat(value);
                 const rate = parseFloat(updated.tasa_cambio || '1');
                 if (Number.isFinite(usdVal) && Number.isFinite(rate) && rate > 0) {
-                    updated.monto_real = (usdVal * rate).toFixed(2);
+                    const acc = cuentas.find(c => String(c.id_cuenta) === updated.id_cuenta);
+                    const baseVes = usdVal * rate;
+                    updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && acc?.moneda === 'VES')
+                        ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
+                        : baseVes.toFixed(2);
                 } else if (value === '') {
                     updated.monto_real = '';
                 }
@@ -297,7 +319,11 @@ export const POSSystem = () => {
                 const realVal = parseFloat(value);
                 const rate = parseFloat(updated.tasa_cambio || '1');
                 if (Number.isFinite(realVal) && Number.isFinite(rate) && rate > 0) {
-                    updated.monto_usd = (realVal / rate).toFixed(2);
+                    const acc = cuentas.find(c => String(c.id_cuenta) === updated.id_cuenta);
+                    const effectiveRate = (isOnlyVesPayment && incrementoPct > 0 && acc?.moneda === 'VES') 
+                        ? rate * (1 + (incrementoPct / 100))
+                        : rate;
+                    updated.monto_usd = (realVal / effectiveRate).toFixed(2);
                 } else if (value === '') {
                     updated.monto_usd = '';
                 }
@@ -555,9 +581,6 @@ export const POSSystem = () => {
         const variantId = variant.id_variante_producto || variant.id;
         const existing = cart.find(item => item.id === variantId);
         const basePrice = Number(variant.precio_lista) || 0;
-        const finalPrice = isOnlyVesPayment && incrementoPct > 0
-            ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
-            : basePrice;
 
         const variantLabel = formatVariantLabel(variant.atributos_json);
         const displayName = variantLabel ? `${product.rawNombre || product.nombre} (${variantLabel})` : (product.rawNombre || product.nombre);
@@ -574,7 +597,7 @@ export const POSSystem = () => {
                 id: variantId,
                 nombre: displayName,
                 precio_base: basePrice,
-                precio: finalPrice,
+                precio: basePrice,
                 cantidad: quantity,
                 imagen: displayImage
             }]);
@@ -585,9 +608,6 @@ export const POSSystem = () => {
         const variantId = product.default_variant_id || product.id_producto;
         const existing = cart.find(item => item.id === variantId);
         const basePrice = Number(product.displayPrice) || 0;
-        const finalPrice = isOnlyVesPayment && incrementoPct > 0
-            ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
-            : basePrice;
 
         if (existing) {
             setCart(cart.map(item => 
@@ -600,7 +620,7 @@ export const POSSystem = () => {
                 id: variantId,
                 nombre: product.nombre,
                 precio_base: basePrice,
-                precio: finalPrice,
+                precio: basePrice,
                 cantidad: 1,
                 imagen: product.displayImage
             }]);
@@ -886,7 +906,7 @@ export const POSSystem = () => {
                     {isOnlyVesPayment && incrementoPct > 0 && (
                         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-in fade-in duration-300">
                             <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
-                            <span>Venta en Bs: Recargo del {incrementoPct}% aplicado automáticamente (Precios Sin Promo BCV)</span>
+                            <span>Venta en Bs: Recargo del {incrementoPct}% aplicado al total en Bolívares (El subtotal en USD refleja el precio base real).</span>
                         </div>
                     )}
 
