@@ -26,7 +26,7 @@ export const CommissionsReport = () => {
         setError(null);
         try {
             const url = `${API_ENDPOINTS.REPORTS.COMMISSIONS}?from=${fromDate}&to=${toDate}`;
-            const res = await FetchData<any[]>(url, 'GET');
+            const res = await FetchData<any>(url, 'GET');
             setData(Array.isArray(res) ? res : res.data || []);
         } catch (err: any) {
             console.error("Error fetching commissions:", err);
