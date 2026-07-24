@@ -42,9 +42,9 @@ export const CommissionsReport = () => {
 
     const pct = parseFloat(commissionPct) || 0;
     
-    // Totals
     const totalRevenue = data.reduce((sum, item) => sum + (item.total_ventas || 0), 0);
-    const totalCommissions = totalRevenue * (pct / 100);
+    const totalProfit = data.reduce((sum, item) => sum + (item.ganancia_neta || 0), 0);
+    const totalCommissions = totalProfit * (pct / 100);
 
     return (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -126,7 +126,7 @@ export const CommissionsReport = () => {
                             ${totalCommissions.toFixed(2)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 font-semibold">
-                            Basado en ${totalRevenue.toFixed(2)} de ingresos totales
+                            Basado en ${totalProfit.toFixed(2)} de ganancia neta
                         </p>
                     </CardContent>
                 </Card>
@@ -148,7 +148,8 @@ export const CommissionsReport = () => {
                         <thead className="text-xs text-muted-foreground uppercase bg-muted/40 font-bold tracking-wider border-b border-border">
                             <tr>
                                 <th className="px-6 py-4">Vendedor</th>
-                                <th className="px-6 py-4 text-right">Ingreso Generado (Ventas)</th>
+                                <th className="px-6 py-4 text-right">Ventas Totales</th>
+                                <th className="px-6 py-4 text-right text-emerald-600">Ganancia Neta</th>
                                 <th className="px-6 py-4 text-right text-primary">Comisión Calculada ({pct}%)</th>
                             </tr>
                         </thead>
@@ -169,7 +170,8 @@ export const CommissionsReport = () => {
                             ) : (
                                 data.map((item, i) => {
                                     const revenue = item.total_ventas || 0;
-                                    const commission = revenue * (pct / 100);
+                                    const profit = item.ganancia_neta || 0;
+                                    const commission = profit * (pct / 100);
                                     
                                     return (
                                         <tr key={item.id_usuario || i} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
@@ -178,6 +180,9 @@ export const CommissionsReport = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right font-medium text-muted-foreground">
                                                 ${revenue.toFixed(2)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                                                ${profit.toFixed(2)}
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-primary text-base">
                                                 ${commission.toFixed(2)}
@@ -191,7 +196,8 @@ export const CommissionsReport = () => {
                             <tfoot className="bg-muted/40 border-t border-border font-bold">
                                 <tr>
                                     <td className="px-6 py-4 text-foreground text-right uppercase text-xs tracking-wider">Totales</td>
-                                    <td className="px-6 py-4 text-right text-foreground">${totalRevenue.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-right text-muted-foreground">${totalRevenue.toFixed(2)}</td>
+                                    <td className="px-6 py-4 text-right text-emerald-600">${totalProfit.toFixed(2)}</td>
                                     <td className="px-6 py-4 text-right text-primary text-lg">${totalCommissions.toFixed(2)}</td>
                                 </tr>
                             </tfoot>
