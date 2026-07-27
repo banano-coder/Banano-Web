@@ -169,17 +169,13 @@ export const POSSystem = () => {
     // Sincronizar monto cuando cambia el subtotal o el estado de pago (isOnlyVesPayment)
     useEffect(() => {
         setPagos(prev => {
+            const targetAmount = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
             if (prev.length === 1) {
                 const row = prev[0];
                 const rate = parseFloat(row.tasa_cambio || '1');
-                const acc = cuentas.find(c => String(c.id_cuenta) === row.id_cuenta);
-                const isVes = acc?.moneda === 'VES';
-                const effectiveRate = (isOnlyVesPayment && incrementoPct > 0 && isVes) 
-                    ? rate * (1 + (incrementoPct / 100)) 
-                    : rate;
 
-                const newUsd = subtotal > 0 ? subtotal.toFixed(2) : '';
-                const newReal = subtotal > 0 ? (subtotal * effectiveRate).toFixed(2) : '';
+                const newUsd = targetAmount > 0 ? targetAmount.toFixed(2) : '';
+                const newReal = targetAmount > 0 ? (targetAmount * rate).toFixed(2) : '';
                 
                 if (row.monto_usd === newUsd && row.monto_real === newReal) {
                     return prev;
@@ -194,7 +190,6 @@ export const POSSystem = () => {
                 let changed = false;
                 const newPagos = prev.map(row => {
                     const rate = parseFloat(row.tasa_cambio || '1');
-                    const acc = cuentas.find(c => String(c.id_cuenta) === row.id_cuenta);
                     const usdVal = parseFloat(row.monto_usd || '0');
                     
                     if (usdVal > 0) {
@@ -270,9 +265,7 @@ export const POSSystem = () => {
                     const usdVal = parseFloat(updated.monto_usd || '0');
                     if (usdVal > 0) {
                         const baseVes = usdVal * parseFloat(defaultRate);
-                        updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && acc.moneda === 'VES')
-                            ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
-                            : baseVes.toFixed(2);
+                        updated.monto_real = baseVes.toFixed(2);
                     } else {
                         updated.monto_real = '';
                     }
@@ -300,9 +293,7 @@ export const POSSystem = () => {
                     const usdVal = parseFloat(updated.monto_usd || '0');
                     if (usdVal > 0) {
                         const baseVes = usdVal * parseFloat(defaultRate);
-                        updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && casheaAcc.moneda === 'VES')
-                            ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
-                            : baseVes.toFixed(2);
+                        updated.monto_real = baseVes.toFixed(2);
                     } else {
                         updated.monto_real = '';
                     }
@@ -313,11 +304,8 @@ export const POSSystem = () => {
                 const rate = parseFloat(value);
                 const usdVal = parseFloat(updated.monto_usd || '0');
                 if (Number.isFinite(rate) && rate > 0 && usdVal > 0) {
-                    const acc = cuentas.find(c => String(c.id_cuenta) === updated.id_cuenta);
                     const baseVes = usdVal * rate;
-                    updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && acc?.moneda === 'VES')
-                        ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
-                        : baseVes.toFixed(2);
+                    updated.monto_real = baseVes.toFixed(2);
                 }
             }
             
@@ -325,11 +313,8 @@ export const POSSystem = () => {
                 const usdVal = parseFloat(value);
                 const rate = parseFloat(updated.tasa_cambio || '1');
                 if (Number.isFinite(usdVal) && Number.isFinite(rate) && rate > 0) {
-                    const acc = cuentas.find(c => String(c.id_cuenta) === updated.id_cuenta);
                     const baseVes = usdVal * rate;
-                    updated.monto_real = (isOnlyVesPayment && incrementoPct > 0 && acc?.moneda === 'VES')
-                        ? (baseVes * (1 + (incrementoPct / 100))).toFixed(2)
-                        : baseVes.toFixed(2);
+                    updated.monto_real = baseVes.toFixed(2);
                 } else if (value === '') {
                     updated.monto_real = '';
                 }
@@ -339,11 +324,7 @@ export const POSSystem = () => {
                 const realVal = parseFloat(value);
                 const rate = parseFloat(updated.tasa_cambio || '1');
                 if (Number.isFinite(realVal) && Number.isFinite(rate) && rate > 0) {
-                    const acc = cuentas.find(c => String(c.id_cuenta) === updated.id_cuenta);
-                    const effectiveRate = (isOnlyVesPayment && incrementoPct > 0 && acc?.moneda === 'VES') 
-                        ? rate * (1 + (incrementoPct / 100))
-                        : rate;
-                    updated.monto_usd = (realVal / effectiveRate).toFixed(2);
+                    updated.monto_usd = (realVal / rate).toFixed(2);
                 } else if (value === '') {
                     updated.monto_usd = '';
                 }
@@ -943,17 +924,7 @@ export const POSSystem = () => {
                     {/* Desglose de Totales */}
                     <div className="p-3 bg-muted/40 border border-border rounded-xl space-y-1.5 text-xs text-foreground font-inter">
                         <div className="flex justify-between font-medium">
-                            <span className="text-muted-foreground">Total Base (USD):</span>
-                            <span className="font-bold">${subtotal.toFixed(2)}</span>
-                        </div>
-                        {isOnlyVesPayment && incrementoPct > 0 && (
-                            <div className="flex justify-between font-medium text-amber-600 dark:text-amber-500">
-                                <span className="">Recargo Bs ({incrementoPct}%):</span>
-                                <span className="font-bold">+${(subtotal * (incrementoPct / 100)).toFixed(2)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between font-medium">
-                            <span className="text-muted-foreground">Total a Cobrar:</span>
+                            <span className="text-muted-foreground">Total Venta:</span>
                             <span className="font-bold">${targetSubtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between font-medium">
