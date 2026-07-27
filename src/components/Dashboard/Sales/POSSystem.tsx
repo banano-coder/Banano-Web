@@ -87,6 +87,7 @@ export const POSSystem = () => {
         return acc?.moneda === 'VES';
     });
     const subtotal = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+    const targetSubtotal = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
     const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
     // Metadata for brand mapping
@@ -194,14 +195,10 @@ export const POSSystem = () => {
                 const newPagos = prev.map(row => {
                     const rate = parseFloat(row.tasa_cambio || '1');
                     const acc = cuentas.find(c => String(c.id_cuenta) === row.id_cuenta);
-                    const isVes = acc?.moneda === 'VES';
-                    const effectiveRate = (isOnlyVesPayment && incrementoPct > 0 && isVes) 
-                        ? rate * (1 + (incrementoPct / 100)) 
-                        : rate;
                     const usdVal = parseFloat(row.monto_usd || '0');
                     
                     if (usdVal > 0) {
-                        const expectedReal = (usdVal * effectiveRate).toFixed(2);
+                        const expectedReal = (usdVal * rate).toFixed(2);
                         if (row.monto_real !== expectedReal) {
                             changed = true;
                             return { ...row, monto_real: expectedReal };
@@ -220,7 +217,8 @@ export const POSSystem = () => {
 
     const addPago = () => {
         const currentPaidUsd = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
-        const remainingUsd = Math.max(0, subtotal - currentPaidUsd);
+        const targetAmount = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
+        const remainingUsd = Math.max(0, targetAmount - currentPaidUsd);
         
         const defaultAcc = cuentas.find((c: any) => c.moneda === 'USD') || cuentas[0];
         if (!defaultAcc) return;
@@ -386,10 +384,11 @@ export const POSSystem = () => {
             return;
         }
 
+        const targetAmount = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
         const paidTotal = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
-        const diff = subtotal - paidTotal;
+        const diff = targetAmount - paidTotal;
         if (Math.abs(diff) >= 0.01) {
-            setError(`El total de los pagos registrados ($${paidTotal.toFixed(2)}) debe coincidir exactamente con el total de la venta ($${subtotal.toFixed(2)}).`);
+            setError(`El total de los pagos registrados ($${paidTotal.toFixed(2)}) debe coincidir exactamente con el total de la venta ($${targetAmount.toFixed(2)}).`);
             return;
         }
 
@@ -435,7 +434,7 @@ export const POSSystem = () => {
                     moneda_pago: cuentas.find(c => String(c.id_cuenta) === p.id_cuenta)?.moneda || 'USD',
                     tasa_cambio: parseFloat(p.tasa_cambio || '1'),
                     monto_real: parseFloat(parseFloat(p.monto_real || '0').toFixed(2)),
-                    monto_usd: parseFloat(parseFloat(p.monto_usd || '0').toFixed(2)),
+                    monto_usd: parseFloat((isOnlyVesPayment && incrementoPct > 0 ? (parseFloat(p.monto_usd || '0') / (1 + (incrementoPct / 100))) : parseFloat(p.monto_usd || '0')).toFixed(2)),
                     metodo: p.metodo,
                     referencia: p.referencia || ''
                 }))
@@ -691,7 +690,16 @@ export const POSSystem = () => {
                                 <img src={item.imagen} className="w-10 h-10 lg:w-12 lg:h-12 rounded object-contain border border-border bg-white dark:bg-black/20 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[11px] lg:text-xs font-bold text-foreground truncate">{item.nombre}</p>
-                                    <p className="text-[10px] text-primary font-bold">${item.precio}</p>
+                                    <div className="text-[10px] font-bold">
+                                        {isOnlyVesPayment && incrementoPct > 0 ? (
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-muted-foreground/60 line-through">${item.precio.toFixed(2)}</span>
+                                                <span className="text-amber-500">${(item.precio * (1 + (incrementoPct / 100))).toFixed(2)}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-primary">${item.precio.toFixed(2)}</span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center border border-border rounded-md overflow-hidden bg-background flex-shrink-0">
                                     <Button variant="ghost" size="icon" className="h-7 w-7 lg:h-6 lg:w-6 hover:bg-muted text-foreground" onClick={() => updateQuantity(item.id, -1)}>
@@ -935,8 +943,18 @@ export const POSSystem = () => {
                     {/* Desglose de Totales */}
                     <div className="p-3 bg-muted/40 border border-border rounded-xl space-y-1.5 text-xs text-foreground font-inter">
                         <div className="flex justify-between font-medium">
-                            <span className="text-muted-foreground">Total Venta:</span>
+                            <span className="text-muted-foreground">Total Base (USD):</span>
                             <span className="font-bold">${subtotal.toFixed(2)}</span>
+                        </div>
+                        {isOnlyVesPayment && incrementoPct > 0 && (
+                            <div className="flex justify-between font-medium text-amber-600 dark:text-amber-500">
+                                <span className="">Recargo Bs ({incrementoPct}%):</span>
+                                <span className="font-bold">+${(subtotal * (incrementoPct / 100)).toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between font-medium">
+                            <span className="text-muted-foreground">Total a Cobrar:</span>
+                            <span className="font-bold">${targetSubtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between font-medium">
                             <span className="text-muted-foreground">Total Registrado:</span>
@@ -946,7 +964,7 @@ export const POSSystem = () => {
                         </div>
                         {(() => {
                             const paid = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
-                            const diff = subtotal - paid;
+                            const diff = targetSubtotal - paid;
                             if (Math.abs(diff) < 0.01) {
                                 return (
                                     <div className="flex justify-between font-bold text-green-600 bg-green-500/10 p-1.5 rounded mt-1 text-[11px] items-center">
@@ -1061,7 +1079,14 @@ export const POSSystem = () => {
                                             <div className="flex flex-col min-w-0 flex-1 mr-4">
                                                 <span className="font-bold text-sm truncate text-foreground">{attrString}</span>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <span className="font-black text-primary text-xs">${priceWithTax.toFixed(2)}</span>
+                                                    {isOnlyVesPayment && incrementoPct > 0 ? (
+                                                        <>
+                                                            <span className="font-bold text-muted-foreground/60 line-through text-[10px]">${basePrice.toFixed(2)}</span>
+                                                            <span className="font-black text-amber-500 text-xs">${priceWithTax.toFixed(2)}</span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="font-black text-primary text-xs">${basePrice.toFixed(2)}</span>
+                                                    )}
                                                     <Badge variant={stock > 0 ? "outline" : "destructive"} className={`text-[10px] py-0.5 px-1.5 ${
                                                         stock > 0 ? 'text-green-600 border-green-500/20 bg-green-500/5' : 'text-red-600 bg-red-500/5'
                                                     }`}>
@@ -1202,7 +1227,16 @@ export const POSSystem = () => {
                                             <p className="text-[9px] lg:text-[10px] text-muted-foreground/60 font-mono tracking-tighter">REF-{prod.id_producto}</p>
                                         </div>
                                         <div className="mt-auto pt-1.5 lg:pt-2 border-t border-border">
-                                            <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3">${prod.displayPrice.toFixed(2)}</div>
+                                            <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3 flex items-center gap-2">
+                                                {isOnlyVesPayment && incrementoPct > 0 ? (
+                                                    <>
+                                                        <span className="text-muted-foreground/60 line-through text-xs lg:text-sm">${prod.displayPrice.toFixed(2)}</span>
+                                                        <span className="text-amber-500">${(prod.displayPrice * (1 + (incrementoPct / 100))).toFixed(2)}</span>
+                                                    </>
+                                                ) : (
+                                                    <span>${prod.displayPrice.toFixed(2)}</span>
+                                                )}
+                                            </div>
                                             {prod.variantes && prod.variantes.length > 1 ? (
                                                 <Button 
                                                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1.5 lg:py-2.5 rounded-lg flex items-center justify-center gap-1 lg:gap-2 shadow-sm active:scale-95 transition-transform text-[11px] lg:text-sm h-8 lg:h-auto"
@@ -1286,7 +1320,7 @@ export const POSSystem = () => {
                             className="flex-1 flex flex-col items-center justify-center h-full gap-0.5 bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
                         >
                             <CheckCircle className="h-5 w-5" />
-                            <span className="text-[10px] font-bold">${subtotal.toFixed(2)}</span>
+                            <span className="text-[10px] font-bold">${targetSubtotal.toFixed(2)}</span>
                         </button>
                     )}
                 </div>
