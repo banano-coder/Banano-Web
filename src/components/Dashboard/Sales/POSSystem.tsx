@@ -927,10 +927,17 @@ export const POSSystem = () => {
                             <span className="text-muted-foreground">Total Venta:</span>
                             <span className="font-bold">${targetSubtotal.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-medium">
-                            <span className="text-muted-foreground">Total Registrado:</span>
+                        <div className="flex justify-between font-medium items-center">
+                            <span className="text-muted-foreground flex flex-col">
+                                Total Registrado 
+                                {isOnlyVesPayment && incrementoPct > 0 && <span className="text-[9px] text-muted-foreground/70">(Precio Base)</span>}
+                            </span>
                             <span className="font-bold text-primary">
-                                ${pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0).toFixed(2)}
+                                ${pagos.reduce((acc, p) => {
+                                    const usdVal = parseFloat(p.monto_usd || '0');
+                                    const baseVal = (isOnlyVesPayment && incrementoPct > 0) ? usdVal / (1 + (incrementoPct / 100)) : usdVal;
+                                    return acc + baseVal;
+                                }, 0).toFixed(2)}
                             </span>
                         </div>
                         {(() => {
