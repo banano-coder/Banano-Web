@@ -165,36 +165,58 @@ export const POSSystem = () => {
         fetchCuentas();
     }, []);
 
-    // Sincronizar monto cuando cambia el subtotal (si solo hay 1 fila de pago)
+    // Sincronizar monto cuando cambia el subtotal o el estado de pago (isOnlyVesPayment)
     useEffect(() => {
         setPagos(prev => {
             if (prev.length === 1) {
                 const row = prev[0];
                 const rate = parseFloat(row.tasa_cambio || '1');
+                const acc = cuentas.find(c => String(c.id_cuenta) === row.id_cuenta);
+                const isVes = acc?.moneda === 'VES';
+                const effectiveRate = (isOnlyVesPayment && incrementoPct > 0 && isVes) 
+                    ? rate * (1 + (incrementoPct / 100)) 
+                    : rate;
+
+                const newUsd = subtotal > 0 ? subtotal.toFixed(2) : '';
+                const newReal = subtotal > 0 ? (subtotal * effectiveRate).toFixed(2) : '';
+                
+                if (row.monto_usd === newUsd && row.monto_real === newReal) {
+                    return prev;
+                }
+                
                 return [{
                     ...row,
-                    monto_usd: subtotal > 0 ? subtotal.toFixed(2) : '',
-                    monto_real: subtotal > 0 ? (subtotal * rate).toFixed(2) : ''
+                    monto_usd: newUsd,
+                    monto_real: newReal
                 }];
+            } else if (prev.length > 1) {
+                let changed = false;
+                const newPagos = prev.map(row => {
+                    const rate = parseFloat(row.tasa_cambio || '1');
+                    const acc = cuentas.find(c => String(c.id_cuenta) === row.id_cuenta);
+                    const isVes = acc?.moneda === 'VES';
+                    const effectiveRate = (isOnlyVesPayment && incrementoPct > 0 && isVes) 
+                        ? rate * (1 + (incrementoPct / 100)) 
+                        : rate;
+                    const usdVal = parseFloat(row.monto_usd || '0');
+                    
+                    if (usdVal > 0) {
+                        const expectedReal = (usdVal * effectiveRate).toFixed(2);
+                        if (row.monto_real !== expectedReal) {
+                            changed = true;
+                            return { ...row, monto_real: expectedReal };
+                        }
+                    }
+                    return row;
+                });
+                return changed ? newPagos : prev;
             }
             return prev;
         });
-    }, [subtotal]);
+    }, [subtotal, isOnlyVesPayment, incrementoPct, cuentas]);
 
-    // Sincronizar precios de ítems del carrito según el estado del pago VES (Bs)
-    useEffect(() => {
-        setCart(prev => prev.map(item => {
-            const basePrice = item.precio_base ?? item.precio;
-            const targetPrice = isOnlyVesPayment && incrementoPct > 0
-                ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
-                : basePrice;
-            return {
-                ...item,
-                precio_base: basePrice,
-                precio: targetPrice
-            };
-        }));
-    }, [isOnlyVesPayment, incrementoPct]);
+    // (Eliminado: Sincronizar precios de ítems del carrito según el estado del pago VES (Bs))
+    // Los precios en USD deben mantenerse como base, el recargo del 30% solo se aplica al monto_real en Bs.
 
     const addPago = () => {
         const currentPaidUsd = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
@@ -1180,14 +1202,7 @@ export const POSSystem = () => {
                                             <p className="text-[9px] lg:text-[10px] text-muted-foreground/60 font-mono tracking-tighter">REF-{prod.id_producto}</p>
                                         </div>
                                         <div className="mt-auto pt-1.5 lg:pt-2 border-t border-border">
-                                            {isOnlyVesPayment && incrementoPct > 0 ? (
-                                                <div className="mb-1.5 lg:mb-3">
-                                                    <span className="text-[10px] text-muted-foreground line-through block font-medium">${prod.displayPrice.toFixed(2)}</span>
-                                                    <span className="text-base lg:text-xl font-black text-amber-500">${(prod.displayPrice * (1 + (incrementoPct / 100))).toFixed(2)}</span>
-                                                </div>
-                                            ) : (
-                                                <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3">${prod.displayPrice.toFixed(2)}</div>
-                                            )}
+                                            <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3">${prod.displayPrice.toFixed(2)}</div>
                                             {prod.variantes && prod.variantes.length > 1 ? (
                                                 <Button 
                                                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1.5 lg:py-2.5 rounded-lg flex items-center justify-center gap-1 lg:gap-2 shadow-sm active:scale-95 transition-transform text-[11px] lg:text-sm h-8 lg:h-auto"
