@@ -52,7 +52,8 @@ export const MoneyManagement: React.FC = () => {
     moneda: 'USD',
     saldo_inicial: '0.00',
     id_almacen: '',
-    es_cashea: false
+    es_cashea: false,
+    es_efectivo: false
   });
 
   // Formulario Nuevo Movimiento Manual
@@ -170,7 +171,8 @@ export const MoneyManagement: React.FC = () => {
           moneda: newAccountData.moneda,
           saldo_inicial: parseFloat(newAccountData.saldo_inicial || '0'),
           id_almacen: newAccountData.id_almacen ? parseInt(newAccountData.id_almacen, 10) : null,
-          es_cashea: !!newAccountData.es_cashea
+          es_cashea: !!newAccountData.es_cashea,
+          es_efectivo: !!newAccountData.es_efectivo
         })
       });
 
@@ -186,7 +188,8 @@ export const MoneyManagement: React.FC = () => {
         moneda: 'USD',
         saldo_inicial: '0.00',
         id_almacen: '',
-        es_cashea: false
+        es_cashea: false,
+        es_efectivo: false
       });
       await fetchAllData();
     } catch (err: any) {
@@ -398,6 +401,11 @@ export const MoneyManagement: React.FC = () => {
                         {c.es_cashea && (
                           <Badge className="bg-amber-500/10 text-amber-500 border-none text-[9px] font-bold py-0.5 px-1.5 uppercase">
                             Cashea (4%)
+                          </Badge>
+                        )}
+                        {c.es_efectivo && (
+                          <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[9px] font-bold py-0.5 px-1.5 uppercase flex items-center gap-1">
+                            <Banknote className="h-2.5 w-2.5" /> Efectivo
                           </Badge>
                         )}
                       </div>
@@ -682,11 +690,23 @@ export const MoneyManagement: React.FC = () => {
                   <Checkbox 
                     id="es_cashea" 
                     checked={newAccountData.es_cashea} 
-                    onCheckedChange={(checked) => setNewAccountData(prev => ({ ...prev, es_cashea: !!checked }))}
+                    onCheckedChange={(checked) => setNewAccountData(prev => ({ ...prev, es_cashea: !!checked, es_efectivo: !!checked ? false : prev.es_efectivo }))}
                     className="border-border text-primary focus-visible:ring-primary"
                   />
                   <label htmlFor="es_cashea" className="text-xs font-bold text-foreground cursor-pointer select-none">
                     ¿Es cuenta de Cashea? (Aplica 4% de comisión)
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <Checkbox 
+                    id="es_efectivo" 
+                    checked={newAccountData.es_efectivo}
+                    disabled={newAccountData.es_cashea}
+                    onCheckedChange={(checked) => setNewAccountData(prev => ({ ...prev, es_efectivo: !!checked }))}
+                    className="border-border text-primary focus-visible:ring-primary"
+                  />
+                  <label htmlFor="es_efectivo" className={`text-xs font-bold cursor-pointer select-none ${newAccountData.es_cashea ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    ¿Es caja de efectivo de la sede? (Pagos efectivo POS se registran aquí)
                   </label>
                 </div>
               </CardContent>

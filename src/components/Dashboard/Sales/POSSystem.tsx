@@ -86,7 +86,13 @@ export const POSSystem = () => {
         const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
         return acc?.moneda === 'VES';
     });
+    const hasCasheaPayment = pagos.some(p => {
+        const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
+        return acc?.es_cashea === true;
+    });
     const subtotal = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+    // El total esperado: si solo es VES aplica incremento completo al total;
+    // si hay Cashea, el backend lo infla por cuenta — en el frontend mostramos el total base
     const targetSubtotal = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
     const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
@@ -365,7 +371,13 @@ export const POSSystem = () => {
             return;
         }
 
-        const targetAmount = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
+        // Calcular total esperado:
+        // - Solo VES: el incremento va sobre el total completo
+        // - Cashea: el backend infla, el frontend valida contra el total base
+        // - Mixto no-VES/no-Cashea: precio base
+        const targetAmount = (isOnlyVesPayment && incrementoPct > 0)
+            ? subtotal * (1 + (incrementoPct / 100))
+            : subtotal;
         const paidTotal = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
         const diff = targetAmount - paidTotal;
         if (Math.abs(diff) >= 0.01) {
@@ -374,11 +386,12 @@ export const POSSystem = () => {
         }
 
         for (const p of pagos) {
-            if (!p.id_cuenta) {
-                setError("Por favor, seleccione una cuenta de destino para todos los pagos.");
+            const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
+            // Efectivo sin cuenta: el backend resuelve automáticamente por sede
+            if (!p.id_cuenta && p.metodo !== 'Efectivo') {
+                setError("Por favor, seleccione una cuenta de destino para todos los pagos que no son efectivo.");
                 return;
             }
-            const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
             if (p.metodo === 'Cashea' && (!acc || !acc.es_cashea)) {
                 setError("El método Cashea solo se puede registrar con una cuenta marcada como Cashea.");
                 return;
@@ -410,15 +423,23 @@ export const POSSystem = () => {
                 moneda_pago: cuentas.find(c => String(c.id_cuenta) === pagos[0].id_cuenta)?.moneda || 'USD',
                 tasa_cambio: parseFloat(pagos[0].tasa_cambio || '1'),
                 monto_pago_real: parseFloat(parseFloat(pagos[0].monto_real || '0').toFixed(2)),
-                pagos: pagos.map(p => ({
-                    id_cuenta: parseInt(p.id_cuenta, 10),
-                    moneda_pago: cuentas.find(c => String(c.id_cuenta) === p.id_cuenta)?.moneda || 'USD',
-                    tasa_cambio: parseFloat(p.tasa_cambio || '1'),
-                    monto_real: parseFloat(parseFloat(p.monto_real || '0').toFixed(2)),
-                    monto_usd: parseFloat((isOnlyVesPayment && incrementoPct > 0 ? (parseFloat(p.monto_usd || '0') / (1 + (incrementoPct / 100))) : parseFloat(p.monto_usd || '0')).toFixed(2)),
-                    metodo: p.metodo,
-                    referencia: p.referencia || ''
-                }))
+                pagos: pagos.map(p => {
+                    const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
+                    // Para pagos VES-only se devuelve el monto base (sin incremento) porque el backend lo calcula
+                    // Para Cashea: el backend aplica el incremento internamente, enviamos el monto base
+                    const baseUsd = isOnlyVesPayment && incrementoPct > 0
+                        ? parseFloat((parseFloat(p.monto_usd || '0') / (1 + (incrementoPct / 100))).toFixed(2))
+                        : parseFloat(parseFloat(p.monto_usd || '0').toFixed(2));
+                    return {
+                        id_cuenta: p.id_cuenta ? parseInt(p.id_cuenta, 10) : 0,
+                        moneda_pago: acc?.moneda || 'USD',
+                        tasa_cambio: parseFloat(p.tasa_cambio || '1'),
+                        monto_real: parseFloat(parseFloat(p.monto_real || '0').toFixed(2)),
+                        monto_usd: baseUsd,
+                        metodo: p.metodo,
+                        referencia: p.referencia || ''
+                    };
+                })
             };
 
             const response = await fetch(API_ENDPOINTS.POS.CHECKOUT, {
