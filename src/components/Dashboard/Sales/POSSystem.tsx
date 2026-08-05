@@ -82,7 +82,7 @@ export const POSSystem = () => {
         }
     ]);
 
-    const isOnlyVesPayment = pagos.length > 0 && pagos.every(p => {
+    const isOnlyVes = pagos.length > 0 && pagos.every(p => {
         const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
         return acc?.moneda === 'VES';
     });
@@ -90,10 +90,11 @@ export const POSSystem = () => {
         const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
         return acc?.es_cashea === true;
     });
+    const appliesMarkup = isOnlyVes || hasCasheaPayment;
     const subtotal = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
     // El total esperado: si solo es VES aplica incremento completo al total;
     // si hay Cashea, el backend lo infla por cuenta — en el frontend mostramos el total base
-    const targetSubtotal = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
+    const targetSubtotal = (appliesMarkup && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
     const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
     // Metadata for brand mapping
@@ -172,10 +173,10 @@ export const POSSystem = () => {
         fetchCuentas();
     }, []);
 
-    // Sincronizar monto cuando cambia el subtotal o el estado de pago (isOnlyVesPayment)
+    // Sincronizar monto cuando cambia el subtotal o el estado de pago (appliesMarkup)
     useEffect(() => {
         setPagos(prev => {
-            const targetAmount = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
+            const targetAmount = (appliesMarkup && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
             if (prev.length === 1) {
                 const row = prev[0];
                 const rate = parseFloat(row.tasa_cambio || '1');
@@ -211,14 +212,14 @@ export const POSSystem = () => {
             }
             return prev;
         });
-    }, [subtotal, isOnlyVesPayment, incrementoPct, cuentas]);
+    }, [subtotal, appliesMarkup, incrementoPct, cuentas]);
 
     // (Eliminado: Sincronizar precios de ítems del carrito según el estado del pago VES (Bs))
     // Los precios en USD deben mantenerse como base, el recargo del 30% solo se aplica al monto_real en Bs.
 
     const addPago = () => {
         const currentPaidUsd = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
-        const targetAmount = (isOnlyVesPayment && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
+        const targetAmount = (appliesMarkup && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
         const remainingUsd = Math.max(0, targetAmount - currentPaidUsd);
         
         const defaultAcc = cuentas.find((c: any) => c.moneda === 'USD') || cuentas[0];
@@ -375,7 +376,7 @@ export const POSSystem = () => {
         // - Solo VES: el incremento va sobre el total completo
         // - Cashea: el backend infla, el frontend valida contra el total base
         // - Mixto no-VES/no-Cashea: precio base
-        const targetAmount = (isOnlyVesPayment && incrementoPct > 0)
+        const targetAmount = (appliesMarkup && incrementoPct > 0)
             ? subtotal * (1 + (incrementoPct / 100))
             : subtotal;
         const paidTotal = pagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || '0'), 0);
@@ -427,7 +428,7 @@ export const POSSystem = () => {
                     const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
                     // Para pagos VES-only se devuelve el monto base (sin incremento) porque el backend lo calcula
                     // Para Cashea: el backend aplica el incremento internamente, enviamos el monto base
-                    const baseUsd = isOnlyVesPayment && incrementoPct > 0
+                    const baseUsd = appliesMarkup && incrementoPct > 0
                         ? parseFloat((parseFloat(p.monto_usd || '0') / (1 + (incrementoPct / 100))).toFixed(2))
                         : parseFloat(parseFloat(p.monto_usd || '0').toFixed(2));
                     return {
@@ -693,7 +694,7 @@ export const POSSystem = () => {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[11px] lg:text-xs font-bold text-foreground truncate">{item.nombre}</p>
                                     <div className="text-[10px] font-bold">
-                                        {isOnlyVesPayment && incrementoPct > 0 ? (
+                                        {appliesMarkup && incrementoPct > 0 ? (
                                             <div className="flex items-center gap-1.5">
                                                 <span className="text-muted-foreground/60 line-through">${item.precio.toFixed(2)}</span>
                                                 <span className="text-amber-500">${(item.precio * (1 + (incrementoPct / 100))).toFixed(2)}</span>
@@ -935,7 +936,7 @@ export const POSSystem = () => {
                         })}
                     </div>
 
-                    {isOnlyVesPayment && incrementoPct > 0 && (
+                    {appliesMarkup && incrementoPct > 0 && (
                         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-in fade-in duration-300">
                             <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
                             <span>Venta en Bs: Recargo del {incrementoPct}% aplicado al total en Bolívares (El subtotal en USD refleja el precio base real).</span>
@@ -951,12 +952,12 @@ export const POSSystem = () => {
                         <div className="flex justify-between font-medium items-center">
                             <span className="text-muted-foreground flex flex-col">
                                 Total Registrado 
-                                {isOnlyVesPayment && incrementoPct > 0 && <span className="text-[9px] text-muted-foreground/70">(Precio Base)</span>}
+                                {appliesMarkup && incrementoPct > 0 && <span className="text-[9px] text-muted-foreground/70">(Precio Base)</span>}
                             </span>
                             <span className="font-bold text-primary">
                                 ${pagos.reduce((acc, p) => {
                                     const usdVal = parseFloat(p.monto_usd || '0');
-                                    const baseVal = (isOnlyVesPayment && incrementoPct > 0) ? usdVal / (1 + (incrementoPct / 100)) : usdVal;
+                                    const baseVal = (appliesMarkup && incrementoPct > 0) ? usdVal / (1 + (incrementoPct / 100)) : usdVal;
                                     return acc + baseVal;
                                 }, 0).toFixed(2)}
                             </span>
@@ -1064,7 +1065,7 @@ export const POSSystem = () => {
                                     const stock = variant.stock_actual ?? 0;
                                     const outOfStock = stock <= 0 || !variant.activo;
                                     const basePrice = Number(variant.precio_lista) || 0;
-                                    const priceWithTax = isOnlyVesPayment && incrementoPct > 0
+                                    const priceWithTax = appliesMarkup && incrementoPct > 0
                                         ? +(basePrice * (1 + (incrementoPct / 100))).toFixed(2)
                                         : basePrice;
 
@@ -1078,7 +1079,7 @@ export const POSSystem = () => {
                                             <div className="flex flex-col min-w-0 flex-1 mr-4">
                                                 <span className="font-bold text-sm truncate text-foreground">{attrString}</span>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    {isOnlyVesPayment && incrementoPct > 0 ? (
+                                                    {appliesMarkup && incrementoPct > 0 ? (
                                                         <>
                                                             <span className="font-bold text-muted-foreground/60 line-through text-[10px]">${basePrice.toFixed(2)}</span>
                                                             <span className="font-black text-amber-500 text-xs">${priceWithTax.toFixed(2)}</span>
@@ -1227,7 +1228,7 @@ export const POSSystem = () => {
                                         </div>
                                         <div className="mt-auto pt-1.5 lg:pt-2 border-t border-border">
                                             <div className="text-base lg:text-xl font-black text-foreground mb-1.5 lg:mb-3 flex items-center gap-2">
-                                                {isOnlyVesPayment && incrementoPct > 0 ? (
+                                                {appliesMarkup && incrementoPct > 0 ? (
                                                     <>
                                                         <span className="text-muted-foreground/60 line-through text-xs lg:text-sm">${prod.displayPrice.toFixed(2)}</span>
                                                         <span className="text-amber-500">${(prod.displayPrice * (1 + (incrementoPct / 100))).toFixed(2)}</span>
