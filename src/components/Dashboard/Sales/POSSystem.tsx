@@ -424,19 +424,15 @@ export const POSSystem = () => {
                 moneda_pago: cuentas.find(c => String(c.id_cuenta) === pagos[0].id_cuenta)?.moneda || 'USD',
                 tasa_cambio: parseFloat(pagos[0].tasa_cambio || '1'),
                 monto_pago_real: parseFloat(parseFloat(pagos[0].monto_real || '0').toFixed(2)),
+                incremento_pct: appliesMarkup ? incrementoPct : 0,
                 pagos: pagos.map(p => {
                     const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
-                    // Para pagos VES-only se devuelve el monto base (sin incremento) porque el backend lo calcula
-                    // Para Cashea: el backend aplica el incremento internamente, enviamos el monto base
-                    const baseUsd = appliesMarkup && incrementoPct > 0
-                        ? parseFloat((parseFloat(p.monto_usd || '0') / (1 + (incrementoPct / 100))).toFixed(2))
-                        : parseFloat(parseFloat(p.monto_usd || '0').toFixed(2));
                     return {
                         id_cuenta: p.id_cuenta ? parseInt(p.id_cuenta, 10) : 0,
                         moneda_pago: acc?.moneda || 'USD',
                         tasa_cambio: parseFloat(p.tasa_cambio || '1'),
                         monto_real: parseFloat(parseFloat(p.monto_real || '0').toFixed(2)),
-                        monto_usd: baseUsd,
+                        monto_usd: parseFloat(parseFloat(p.monto_usd || '0').toFixed(2)),
                         metodo: p.metodo,
                         referencia: p.referencia || ''
                     };
