@@ -82,18 +82,12 @@ export const POSSystem = () => {
         }
     ]);
 
-    const isOnlyVes = pagos.length > 0 && pagos.every(p => {
-        const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
-        return acc?.moneda === 'VES';
-    });
-    const hasCasheaPayment = pagos.some(p => {
-        const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
-        return acc?.es_cashea === true;
-    });
-    const appliesMarkup = isOnlyVes || hasCasheaPayment;
+    const [aplicarPorcentaje, setAplicarPorcentaje] = useState(false);
+
+    const appliesMarkup = aplicarPorcentaje;
     const subtotal = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-    // El total esperado: si solo es VES aplica incremento completo al total;
-    // si hay Cashea, el backend lo infla por cuenta — en el frontend mostramos el total base
+    // El total esperado: si appliesMarkup es true, aplica incremento completo al total;
+    // el backend inflará los precios. En el frontend mostramos el total base.
     const targetSubtotal = (appliesMarkup && incrementoPct > 0) ? subtotal * (1 + (incrementoPct / 100)) : subtotal;
     const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
@@ -425,6 +419,7 @@ export const POSSystem = () => {
                 tasa_cambio: parseFloat(pagos[0].tasa_cambio || '1'),
                 monto_pago_real: parseFloat(parseFloat(pagos[0].monto_real || '0').toFixed(2)),
                 incremento_pct: appliesMarkup ? incrementoPct : 0,
+                aplicar_porcentaje: aplicarPorcentaje,
                 pagos: pagos.map(p => {
                     const acc = cuentas.find(c => String(c.id_cuenta) === p.id_cuenta);
                     return {
@@ -932,10 +927,16 @@ export const POSSystem = () => {
                         })}
                     </div>
 
-                    {appliesMarkup && incrementoPct > 0 && (
-                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 text-[10px] font-bold text-amber-500 animate-in fade-in duration-300">
-                            <AlertTriangle className="h-4 w-4 animate-pulse flex-shrink-0" />
-                            <span>Venta en Bs: Recargo del {incrementoPct}% aplicado al total en Bolívares (El subtotal en USD refleja el precio base real).</span>
+                    {incrementoPct > 0 && (
+                        <div className="p-3 bg-muted border border-border rounded-xl flex items-center justify-between animate-in fade-in duration-300">
+                            <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                <span>Aplicar porcentaje de incremento (+{incrementoPct}%) al total</span>
+                            </div>
+                            <Checkbox 
+                                checked={aplicarPorcentaje} 
+                                onCheckedChange={(checked) => setAplicarPorcentaje(!!checked)} 
+                            />
                         </div>
                     )}
 
